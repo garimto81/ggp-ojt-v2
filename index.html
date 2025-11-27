@@ -964,7 +964,7 @@ ${rawText}
       const OllamaStatusBadge = () => (
         <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${ollamaStatus.online ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
           <Icon name="server" className="w-3 h-3" />
-          {ollamaStatus.online ? `Ollama 연결됨` : 'Ollama 오프라인'}
+          {ollamaStatus.online ? `Ollama: ${OLLAMA_MODEL}` : 'Ollama 오프라인'}
         </div>
       );
 
@@ -1289,7 +1289,7 @@ ${rawText}
                 }
                 className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold disabled:bg-slate-400 hover:bg-indigo-700 transition-colors"
               >
-                {isProcessing ? processingStatus || "생성 중..." : "AI 변환 (Ollama)"}
+                {isProcessing ? processingStatus || "생성 중..." : `AI 자료 생성 (${OLLAMA_MODEL})`}
               </button>
             </div>
 
