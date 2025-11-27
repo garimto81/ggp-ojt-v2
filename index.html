@@ -302,7 +302,39 @@ ${rawText}
           throw new Error("JSON 형식 응답을 받지 못했습니다.");
         }
 
-        const result = JSON.parse(jsonMatch[0]);
+        // 잘못된 유니코드 이스케이프 및 특수문자 정리
+        let jsonStr = jsonMatch[0];
+        // 잘못된 \uXXXX 패턴 수정 (불완전한 유니코드 이스케이프)
+        jsonStr = jsonStr.replace(/\\u(?![0-9a-fA-F]{4})/g, '\\\\u');
+        // 제어 문자 제거 (줄바꿈, 탭 제외)
+        jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+        // 실제 줄바꿈/캐리지리턴을 이스케이프 시퀀스로 변환
+        jsonStr = jsonStr.split('\n').join('\\n').split('\r').join('\\r');
+
+        let result;
+        try {
+          result = JSON.parse(jsonStr);
+        } catch (parseError) {
+          console.error("JSON Parse Error, attempting recovery:", parseError);
+          // 더 공격적인 정리 시도
+          jsonStr = jsonStr
+            .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // 제어 문자 제거
+            .replace(/\\'/g, "'") // 잘못된 이스케이프 수정
+            .replace(/\\"/g, '"') // 따옴표 이스케이프 복원
+            .replace(/"/g, '\\"') // 다시 이스케이프
+            .replace(/\\\\"/g, '\\"'); // 이중 이스케이프 수정
+
+          // 수동 파싱 시도 (기본 구조만 추출)
+          const titleMatch = responseText.match(/"title"\s*:\s*"([^"]+)"/);
+          const title = titleMatch ? titleMatch[1] : "생성된 문서";
+
+          result = {
+            title: title,
+            sections: [{ title: "내용", content: "AI 응답 파싱 실패. 원본 응답을 확인하세요." }],
+            quiz: []
+          };
+          console.warn("Using fallback result due to JSON parse error");
+        }
 
         // 퀴즈가 20개 미만이면 더미로 채우기
         while (result.quiz && result.quiz.length < 20) {
