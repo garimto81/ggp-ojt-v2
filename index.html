@@ -373,44 +373,104 @@ estimatedMinutes는 예상 학습 시간(분)으로 40 이하여야 합니다.`;
         const data = await response.json();
         const responseText = data.response;
 
+        // 디버깅: 원본 응답 로깅
+        console.log("Ollama raw response:", responseText.substring(0, 500));
+
+        // 마크다운 코드블록 제거 (```json ... ``` 또는 ``` ... ```)
+        let cleanedResponse = responseText
+          .replace(/```json\s*/gi, '')
+          .replace(/```\s*/g, '')
+          .trim();
+
         // JSON 추출 (응답에서 JSON 부분만 파싱)
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
+          console.error("No JSON found in response:", cleanedResponse.substring(0, 200));
           throw new Error("JSON 형식 응답을 받지 못했습니다.");
         }
 
-        // 잘못된 유니코드 이스케이프 및 특수문자 정리
         let jsonStr = jsonMatch[0];
-        // 잘못된 \uXXXX 패턴 수정 (불완전한 유니코드 이스케이프)
-        jsonStr = jsonStr.replace(/\\u(?![0-9a-fA-F]{4})/g, '\\\\u');
-        // 제어 문자 제거 (줄바꿈, 탭 제외)
-        jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
-        // 실제 줄바꿈/캐리지리턴을 이스케이프 시퀀스로 변환
-        jsonStr = jsonStr.split('\n').join('\\n').split('\r').join('\\r');
+
+        // JSON 문자열 정리 함수
+        function cleanJsonString(str) {
+          // 1. 제어 문자 제거 (탭과 줄바꿈은 유지)
+          str = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+          // 2. JSON 문자열 내부의 실제 줄바꿈을 \\n으로 변환
+          // 문자열 내부(따옴표 사이)의 줄바꿈만 처리
+          str = str.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) => {
+            return match
+              .replace(/\n/g, '\\n')
+              .replace(/\r/g, '\\r')
+              .replace(/\t/g, '\\t');
+          });
+
+          // 3. JSON 구조 밖의 줄바꿈 제거
+          str = str.replace(/\n/g, ' ').replace(/\r/g, '');
+
+          // 4. 잘못된 유니코드 이스케이프 수정
+          str = str.replace(/\\u(?![0-9a-fA-F]{4})/g, '\\\\u');
+
+          return str;
+        }
 
         let result;
         try {
-          result = JSON.parse(jsonStr);
+          const cleanedJson = cleanJsonString(jsonStr);
+          result = JSON.parse(cleanedJson);
         } catch (parseError) {
-          console.error("JSON Parse Error, attempting recovery:", parseError);
-          // 더 공격적인 정리 시도
-          jsonStr = jsonStr
-            .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // 제어 문자 제거
-            .replace(/\\'/g, "'") // 잘못된 이스케이프 수정
-            .replace(/\\"/g, '"') // 따옴표 이스케이프 복원
-            .replace(/"/g, '\\"') // 다시 이스케이프
-            .replace(/\\\\"/g, '\\"'); // 이중 이스케이프 수정
+          console.error("JSON Parse Error:", parseError.message);
+          console.error("Attempted to parse:", jsonStr.substring(0, 300));
 
-          // 수동 파싱 시도 (기본 구조만 추출)
-          const titleMatch = responseText.match(/"title"\s*:\s*"([^"]+)"/);
-          const title = titleMatch ? titleMatch[1] : "생성된 문서";
+          // 수동 파싱 시도 (regex로 각 필드 추출)
+          try {
+            const titleMatch = cleanedResponse.match(/"title"\s*:\s*"([^"]+)"/);
+            const title = titleMatch ? titleMatch[1] : "생성된 문서";
 
-          result = {
-            title: title,
-            sections: [{ title: "내용", content: "AI 응답 파싱 실패. 원본 응답을 확인하세요." }],
-            quiz: []
-          };
-          console.warn("Using fallback result due to JSON parse error");
+            // sections 추출 시도
+            const sections = [];
+            const sectionRegex = /\{\s*"title"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"([^"]+)"\s*\}/g;
+            let sectionMatch;
+            // sections 배열 부분만 추출
+            const sectionsArrayMatch = cleanedResponse.match(/"sections"\s*:\s*\[([\s\S]*?)\]/);
+            if (sectionsArrayMatch) {
+              const sectionsStr = sectionsArrayMatch[1];
+              while ((sectionMatch = sectionRegex.exec(sectionsStr)) !== null) {
+                sections.push({ title: sectionMatch[1], content: sectionMatch[2] });
+              }
+            }
+
+            // quiz 추출 시도
+            const quiz = [];
+            const quizArrayMatch = cleanedResponse.match(/"quiz"\s*:\s*\[([\s\S]*?)\]/);
+            if (quizArrayMatch) {
+              const quizRegex = /\{\s*"id"\s*:\s*(\d+)\s*,\s*"question"\s*:\s*"([^"]+)"\s*,\s*"options"\s*:\s*\[([^\]]+)\]\s*,\s*"answer"\s*:\s*(\d+)\s*\}/g;
+              let quizMatch;
+              while ((quizMatch = quizRegex.exec(quizArrayMatch[1])) !== null) {
+                const options = quizMatch[3].match(/"([^"]+)"/g)?.map(o => o.replace(/"/g, '')) || [];
+                quiz.push({
+                  id: parseInt(quizMatch[1]),
+                  question: quizMatch[2],
+                  options: options,
+                  answer: parseInt(quizMatch[4])
+                });
+              }
+            }
+
+            result = {
+              title: title,
+              sections: sections.length > 0 ? sections : [{ title: "내용", content: "AI 응답에서 섹션을 파싱하지 못했습니다." }],
+              quiz: quiz
+            };
+            console.warn("Used regex fallback for JSON parsing");
+          } catch (regexError) {
+            console.error("Regex parsing also failed:", regexError);
+            result = {
+              title: "생성 실패",
+              sections: [{ title: "오류", content: "AI 응답을 파싱하지 못했습니다. 다시 시도해주세요." }],
+              quiz: []
+            };
+          }
         }
 
         // 퀴즈가 20개 미만이면 더미로 채우기
