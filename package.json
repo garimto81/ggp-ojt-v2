@@ -1,0 +1,29 @@
+{
+  "name": "ggp_ojt_v2",
+  "version": "2.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/garimto81/ggp-ojt-v2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/garimto81/ggp-ojt-v2/issues"
+  },
+  "homepage": "https://github.com/garimto81/ggp-ojt-v2#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0"
+  }
+}
