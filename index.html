@@ -12,16 +12,38 @@
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   </script>
+  <!-- Quill 2.0 Rich Text Editor -->
+  <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
   <style>
     @keyframes spin { to { transform: rotate(360deg); } }
     .animate-spin { animation: spin 1s linear infinite; }
+    /* Quill 에디터 스타일 커스터마이징 */
+    .ql-container {
+      font-size: 14px;
+      min-height: 200px;
+      border-bottom-left-radius: 0.5rem;
+      border-bottom-right-radius: 0.5rem;
+    }
+    .ql-toolbar {
+      border-top-left-radius: 0.5rem;
+      border-top-right-radius: 0.5rem;
+      background: #f8fafc;
+    }
+    .ql-editor {
+      min-height: 180px;
+    }
+    .ql-editor.ql-blank::before {
+      font-style: normal;
+      color: #94a3b8;
+    }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useCallback, useMemo } = React;
+    const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
     // 간단한 아이콘 컴포넌트 (SVG 기반)
     const Icon = ({ name, className = "w-5 h-5" }) => {
@@ -512,6 +534,9 @@ estimatedMinutes는 예상 학습 시간(분)으로 40 이하여야 합니다.`;
       const [rawInput, setRawInput] = useState('');
       const [urlInput, setUrlInput] = useState('');
       const [pdfFile, setPdfFile] = useState(null);
+      // Quill Editor
+      const quillRef = useRef(null);
+      const quillInstanceRef = useRef(null);
       const [inputTeam, setInputTeam] = useState(TEAMS[0]);
       const [inputStep, setInputStep] = useState(1);
       const [isCustomTeam, setIsCustomTeam] = useState(false);
@@ -566,6 +591,42 @@ estimatedMinutes는 예상 학습 시간(분)으로 40 이하여야 합니다.`;
           setRequiredSteps(1);
         }
       }, [rawInput]);
+
+      // Quill 에디터 초기화
+      useEffect(() => {
+        if (inputType === 'text' && quillRef.current && !quillInstanceRef.current) {
+          // Quill 인스턴스 생성
+          quillInstanceRef.current = new Quill(quillRef.current, {
+            theme: 'snow',
+            placeholder: '교육 내용을 자유롭게 입력하세요...\n\n• 서식 도구를 사용하여 제목, 목록, 강조 등을 추가할 수 있습니다\n• Ctrl+B: 굵게, Ctrl+I: 기울임, Ctrl+U: 밑줄',
+            modules: {
+              toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'indent': '-1'}, { 'indent': '+1' }],
+                ['blockquote', 'code-block'],
+                ['link'],
+                ['clean']
+              ]
+            }
+          });
+
+          // 텍스트 변경 시 rawInput 업데이트
+          quillInstanceRef.current.on('text-change', () => {
+            const text = quillInstanceRef.current.getText().trim();
+            setRawInput(text);
+          });
+        }
+
+        // inputType이 변경되면 Quill 인스턴스 정리
+        return () => {
+          if (inputType !== 'text' && quillInstanceRef.current) {
+            quillInstanceRef.current = null;
+          }
+        };
+      }, [inputType, viewState]);
 
       // 초기 로드: 저장된 사용자 확인
       useEffect(() => {
@@ -685,7 +746,16 @@ estimatedMinutes는 예상 학습 시간(분)으로 40 이하여야 합니다.`;
           let contentText = '';
 
           if (inputType === 'text') {
-            contentText = rawInput;
+            // Quill에서 서식 있는 HTML과 플레인 텍스트 모두 가져오기
+            if (quillInstanceRef.current) {
+              const html = quillInstanceRef.current.root.innerHTML;
+              const plainText = quillInstanceRef.current.getText().trim();
+              // HTML이 의미 있는 서식을 포함하면 HTML 사용, 아니면 플레인 텍스트 사용
+              const hasFormatting = /<(h[1-6]|strong|em|u|ol|ul|li|blockquote|pre)/.test(html);
+              contentText = hasFormatting ? html : plainText;
+            } else {
+              contentText = rawInput;
+            }
           } else if (inputType === 'url') {
             contentText = await extractUrlText(urlInput, setProcessingStatus);
             setRawInput(contentText); // 추출된 텍스트를 rawInput에도 저장
@@ -786,6 +856,10 @@ estimatedMinutes는 예상 학습 시간(분)으로 40 이하여야 합니다.`;
           setUrlInput("");
           setPdfFile(null);
           setInputTitle("");
+          // Quill 에디터 초기화
+          if (quillInstanceRef.current) {
+            quillInstanceRef.current.setText('');
+          }
           // 목록 새로고침
           const allDocs = await dbGetAll("ojt_docs");
           const filtered = allDocs.filter(doc => doc.authorId === user.id);
@@ -1100,12 +1174,9 @@ estimatedMinutes는 예상 학습 시간(분)으로 40 이하여야 합니다.`;
 
               {/* 입력 타입별 UI */}
               {inputType === 'text' && (
-                <textarea
-                  className="w-full p-3 border rounded-lg resize-none min-h-[200px]"
-                  placeholder="교육 내용을 자유롭게 입력하세요..."
-                  value={rawInput}
-                  onChange={(e) => setRawInput(e.target.value)}
-                />
+                <div className="border border-slate-300 rounded-lg overflow-hidden">
+                  <div ref={quillRef} />
+                </div>
               )}
 
               {inputType === 'url' && (
