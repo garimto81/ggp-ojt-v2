@@ -1,620 +1,1123 @@
-import React, { useState, useEffect } from 'react';
-import { BookOpen, FileText, Upload, CheckCircle, Brain, Users, BarChart2, Save, RefreshCw, X, List, Trash2, RotateCcw, Award, AlertCircle, Layers, GitBranch, Briefcase, Map, Plus, LogOut, UserCheck } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OJT Master - AI 기반 온보딩 교육 플랫폼 (로컬 버전)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
 
-// --- Firebase Imports ---
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signInWithCustomToken, signOut } from "firebase/auth";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, serverTimestamp, setDoc, getDoc } from "firebase/firestore";
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useMemo } = React;
 
-// --- Firebase Initialization ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    // 간단한 아이콘 컴포넌트 (SVG 기반)
+    const Icon = ({ name, className = "w-5 h-5" }) => {
+      const icons = {
+        brain: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
+        book: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
+        upload: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>,
+        save: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>,
+        refresh: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
+        x: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>,
+        logout: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
+        user: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+        trash: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+        server: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>,
+        alert: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
+        settings: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+        check: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
+        play: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+        link: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>,
+        file: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+        globe: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>,
+        text: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+      };
+      return icons[name] || null;
+    };
 
-// --- Gemini API Configuration ---
-const GEMINI_API_KEY = ""; // 런타임 환경에서 주입됨
-const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+    // =========================================
+    // 설정 (Ollama)
+    // =========================================
+    const OLLAMA_URL = "http://localhost:11434";
+    const OLLAMA_MODEL = "llama3.2:3b"; // 또는 "llama3.2:8b", "mistral", "gemma2" 등
 
-// --- Constants ---
-const TEAMS = ["공통 (Common)", "개발팀 (Dev)", "디자인팀 (Design)", "기획팀 (PM)", "인사팀 (HR)", "영업팀 (Sales)"];
-const STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    // =========================================
+    // IndexedDB 헬퍼
+    // =========================================
+    const DB_NAME = "OJTMasterDB";
+    const DB_VERSION = 1;
 
-// --- AI Logic ---
-async function generateOJTContent(rawText, team, step) {
-  const prompt = `
-    당신은 세계 최고의 OJT 전문가입니다. 
-    대상 독자는 [${team}]의 신입사원이며, 현재 [Step ${step}] 단계의 교육을 진행 중입니다.
-    아래의 [입력 텍스트]는 현업 담당자가 급하게 작성한 비정형 데이터입니다.
-    이것을 신입사원이 이해하기 쉬운 완벽한 가이드 문서로 변환하고, 이해도를 평가할 문제 은행을 만드세요.
+    const openDB = () => {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    [입력 텍스트]:
-    "${rawText}"
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
 
-    [필수 요구사항]:
-    1. 어조는 정중하고 명확한 비즈니스 톤으로 변경하세요.
-    2. 내용은 논리적인 섹션으로 나누세요.
-    3. 퀴즈(문제 은행)는 본문 내용을 바탕으로 **반드시 20개**를 만드세요. 
-       - 다양한 유형(내용 확인, 응용, 주의사항 등)을 섞으세요.
-       - 만약 입력 내용이 짧다면, 관련된 일반적인 비즈니스 상식이나 유추할 수 있는 내용을 포함하여 20개를 채우세요.
-    4. 반드시 아래 JSON 포맷으로만 응답하세요. 마크다운이나 다른 텍스트를 포함하지 마세요.
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
 
-    {
-      "title": "여기에 적절한 문서 제목",
-      "sections": [
-        { "title": "섹션 제목", "content": "상세 내용..." }
-      ],
-      "quiz": [
-        {
-          "id": 1,
-          "question": "문제 질문",
-          "options": ["보기1", "보기2", "보기3", "보기4"],
-          "answer": 0 (정답 인덱스 0-3)
-        }
-        ... (총 20개)
-      ]
-    }
-  `;
+          // 사용자 저장소
+          if (!db.objectStoreNames.contains("users")) {
+            db.createObjectStore("users", { keyPath: "id" });
+          }
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: "application/json" } // JSON 모드 강제
-        }),
+          // OJT 문서 저장소
+          if (!db.objectStoreNames.contains("ojt_docs")) {
+            const store = db.createObjectStore("ojt_docs", { keyPath: "id", autoIncrement: true });
+            store.createIndex("team", "team", { unique: false });
+            store.createIndex("authorId", "authorId", { unique: false });
+          }
+        };
+      });
+    };
+
+    const dbGet = async (storeName, key) => {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const request = store.get(key);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    };
+
+    const dbGetAll = async (storeName) => {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readonly");
+        const store = tx.objectStore(storeName);
+        const request = store.getAll();
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    };
+
+    const dbPut = async (storeName, data) => {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        const request = store.put(data);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    };
+
+    const dbAdd = async (storeName, data) => {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        const request = store.add(data);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    };
+
+    const dbDelete = async (storeName, key) => {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        const request = store.delete(key);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+    };
+
+    // =========================================
+    // Constants
+    // =========================================
+    const TEAMS = ["공통 (Common)", "개발팀 (Dev)", "디자인팀 (Design)", "기획팀 (PM)", "인사팀 (HR)", "영업팀 (Sales)"];
+    const STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const QUIZ_PASS_THRESHOLD = 3;
+    const INPUT_TYPES = [
+      { id: 'text', label: '직접 입력', icon: 'text', desc: '텍스트를 직접 작성' },
+      { id: 'url', label: 'URL', icon: 'globe', desc: '웹페이지 텍스트 추출' },
+      { id: 'pdf', label: 'PDF', icon: 'file', desc: 'PDF 파일에서 추출' },
+    ];
+
+    // =========================================
+    // Content Extraction Functions
+    // =========================================
+
+    // PDF 텍스트 추출
+    async function extractPdfText(file, setProgress) {
+      setProgress && setProgress("PDF 로딩 중...");
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      let fullText = '';
+      const numPages = pdf.numPages;
+
+      for (let i = 1; i <= numPages; i++) {
+        setProgress && setProgress(`PDF 페이지 ${i}/${numPages} 처리 중...`);
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n\n';
       }
-    );
 
-    const data = await response.json();
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error("AI 응답 생성 실패");
+      return fullText.trim();
     }
-    
-    const resultText = data.candidates[0].content.parts[0].text;
-    return JSON.parse(resultText);
 
-  } catch (error) {
-    console.error("AI Generation Error:", error);
-    alert("AI 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-    return null;
-  }
+    // URL 텍스트 추출 (CORS 프록시 사용)
+    async function extractUrlText(url, setProgress) {
+      setProgress && setProgress("웹페이지 가져오는 중...");
+
+      // 여러 CORS 프록시 시도
+      const corsProxies = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        `https://corsproxy.io/?${encodeURIComponent(url)}`,
+      ];
+
+      let html = null;
+      for (const proxyUrl of corsProxies) {
+        try {
+          const response = await fetch(proxyUrl);
+          if (response.ok) {
+            html = await response.text();
+            break;
+          }
+        } catch (e) {
+          console.log("Proxy failed:", proxyUrl);
+        }
+      }
+
+      if (!html) {
+        throw new Error("웹페이지를 가져올 수 없습니다. URL을 확인해주세요.");
+      }
+
+      setProgress && setProgress("텍스트 추출 중...");
+
+      // HTML을 텍스트로 변환 (간단한 파싱)
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+
+      // 스크립트, 스타일 태그 제거
+      const removeElements = doc.querySelectorAll('script, style, nav, footer, header, aside, noscript');
+      removeElements.forEach(el => el.remove());
+
+      // 본문 텍스트 추출 (우선순위: article > main > body)
+      const article = doc.querySelector('article');
+      const main = doc.querySelector('main');
+      const body = doc.body;
+
+      const targetElement = article || main || body;
+      let text = targetElement ? targetElement.innerText : '';
+
+      // 중복 공백/줄바꿈 정리
+      text = text.replace(/\s+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
+
+      // 최대 15000자로 제한
+      if (text.length > 15000) {
+        text = text.substring(0, 15000) + '...\n\n[내용이 너무 길어 일부만 추출되었습니다]';
+      }
+
+      return text;
+    }
+
+    // =========================================
+    // Ollama AI Logic
+    // =========================================
+    async function checkOllamaStatus() {
+      try {
+        const response = await fetch(`${OLLAMA_URL}/api/tags`, { method: "GET" });
+        if (response.ok) {
+          const data = await response.json();
+          return { online: true, models: data.models || [] };
+        }
+        return { online: false, models: [] };
+      } catch (error) {
+        return { online: false, models: [] };
+      }
+    }
+
+    async function generateOJTContent(rawText, team, step, setProgress) {
+      const prompt = `당신은 OJT 전문가입니다. 아래 입력을 교육 자료와 퀴즈로 변환하세요.
+
+대상: ${team} 신입사원, Step ${step}
+
+입력 텍스트:
+${rawText}
+
+반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요:
+{
+  "title": "문서 제목",
+  "sections": [
+    {"title": "섹션1 제목", "content": "섹션1 내용"},
+    {"title": "섹션2 제목", "content": "섹션2 내용"}
+  ],
+  "quiz": [
+    {"id": 1, "question": "질문1", "options": ["A", "B", "C", "D"], "answer": 0},
+    {"id": 2, "question": "질문2", "options": ["A", "B", "C", "D"], "answer": 1}
+  ]
 }
 
-export default function App() {
-  // User State
-  const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState(null); // DB에 저장된 사용자 정보 (role 등)
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+섹션은 2-5개, 퀴즈는 반드시 20개를 만드세요. answer는 정답 인덱스(0-3)입니다.`;
 
-  // App State
-  const [viewState, setViewState] = useState('loading'); // loading, login, role_select, mentor_dashboard, mentee_list, mentee_study
+      try {
+        setProgress && setProgress("Ollama 연결 중...");
 
-  // Mentor State
-  const [inputTitle, setInputTitle] = useState('');
-  const [rawInput, setRawInput] = useState('');
-  const [inputTeam, setInputTeam] = useState(TEAMS[0]);
-  const [inputStep, setInputStep] = useState(1);
-  const [isCustomTeam, setIsCustomTeam] = useState(false);
-  const [isCustomStep, setIsCustomStep] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedDoc, setGeneratedDoc] = useState(null);
+        const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: OLLAMA_MODEL,
+            prompt: prompt,
+            stream: false,
+            options: {
+              temperature: 0.7,
+              num_predict: 4096
+            }
+          }),
+        });
 
-  // Mentee/Shared State
-  const [docList, setDocList] = useState([]); 
-  const [selectedTeam, setSelectedTeam] = useState(null); 
-  const [selectedDoc, setSelectedDoc] = useState(null); 
+        if (!response.ok) {
+          throw new Error(`Ollama 오류: ${response.status}`);
+        }
 
-  // Quiz State
-  const [quizMode, setQuizMode] = useState(false);
-  const [activeQuizSet, setActiveQuizSet] = useState([]);
-  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [quizSubmitted, setQuizSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [passed, setPassed] = useState(false);
+        setProgress && setProgress("AI 응답 처리 중...");
+        const data = await response.json();
+        const responseText = data.response;
 
-  // --- Auth & Role Management Logic ---
+        // JSON 추출 (응답에서 JSON 부분만 파싱)
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error("JSON 형식 응답을 받지 못했습니다.");
+        }
 
-  const handleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login error:", error);
+        const result = JSON.parse(jsonMatch[0]);
 
-      // 에러 타입별 분기 처리
-      if (error.code === 'auth/popup-closed-by-user') {
-        alert("로그인이 취소되었습니다.");
-      } else if (error.code === 'auth/popup-blocked') {
-        alert("팝업이 차단되었습니다. 브라우저 설정을 확인해주세요.");
-      } else if (error.code === 'auth/network-request-failed') {
-        alert("네트워크 연결을 확인해주세요.");
-      } else {
-        alert("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+        // 퀴즈가 20개 미만이면 더미로 채우기
+        while (result.quiz && result.quiz.length < 20) {
+          result.quiz.push({
+            id: result.quiz.length + 1,
+            question: `${result.title} 관련 추가 문제 ${result.quiz.length + 1}`,
+            options: ["정답", "오답1", "오답2", "오답3"],
+            answer: 0
+          });
+        }
+
+        return result;
+
+      } catch (error) {
+        console.error("AI Generation Error:", error);
+        throw error;
       }
     }
-  };
 
-  useEffect(() => {
-    const initAuth = async () => {
-      // Custom token이 있는 경우에만 사용 (배포 환경)
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      }
-      // 그 외에는 onAuthStateChanged에서 처리
-    };
-    initAuth();
+    // =========================================
+    // Main App
+    // =========================================
+    function App() {
+      // User State
+      const [user, setUser] = useState(null);
+      const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchUserProfile(currentUser.uid);
-      } else {
-        setUserData(null);
-        setViewState('login');
-      }
-      setIsLoadingAuth(false);
-    });
-    return () => unsubscribe();
-  }, []);
+      // Ollama Status
+      const [ollamaStatus, setOllamaStatus] = useState({ online: false, models: [] });
+      const [showSettings, setShowSettings] = useState(false);
 
-  // 사용자 프로필(역할) 가져오기
-  const fetchUserProfile = async (uid) => {
-    try {
-      // 1. users 컬렉션에서 내 정보 조회
-      const userDocRef = doc(db, 'artifacts', appId, 'users', uid); // 실제 앱에서는 'users' 컬렉션 사용 권장
-      // (이 예제에서는 artifacts/appId/users/uid 를 프로필 저장소로 사용)
-      // 주의: 실제 프로덕션에서는 별도의 'users' 루트 컬렉션을 사용하는 것이 일반적입니다.
-      // 여기서는 규칙상 허용된 경로인 artifacts/{appId}/users/{userId}/profile/me 로 저장하겠습니다.
-      
-      const profileRef = doc(db, 'artifacts', appId, 'users', uid, 'profile', 'me');
-      const docSnap = await getDoc(profileRef);
+      // App State
+      const [viewState, setViewState] = useState('loading');
 
-      if (docSnap.exists()) {
-        // 이미 가입된 유저 -> 역할에 따라 이동
-        const data = docSnap.data();
-        setUserData(data);
-        if (data.role === 'mentor') setViewState('mentor_dashboard');
-        else if (data.role === 'mentee') setViewState('mentee_list');
-      } else {
-        // 신규 유저 -> 역할 선택 화면으로
+      // Mentor State
+      const [inputType, setInputType] = useState('text'); // 'text', 'url', 'pdf'
+      const [inputTitle, setInputTitle] = useState('');
+      const [rawInput, setRawInput] = useState('');
+      const [urlInput, setUrlInput] = useState('');
+      const [pdfFile, setPdfFile] = useState(null);
+      const [inputTeam, setInputTeam] = useState(TEAMS[0]);
+      const [inputStep, setInputStep] = useState(1);
+      const [isCustomTeam, setIsCustomTeam] = useState(false);
+      const [isCustomStep, setIsCustomStep] = useState(false);
+      const [isProcessing, setIsProcessing] = useState(false);
+      const [processingStatus, setProcessingStatus] = useState('');
+      const [generatedDoc, setGeneratedDoc] = useState(null);
+      const [myDocs, setMyDocs] = useState([]);
+
+      // Mentee State
+      const [publicDocs, setPublicDocs] = useState([]);
+      const [selectedTeam, setSelectedTeam] = useState(null);
+      const [selectedDoc, setSelectedDoc] = useState(null);
+
+      // Quiz State
+      const [quizMode, setQuizMode] = useState(false);
+      const [activeQuizSet, setActiveQuizSet] = useState([]);
+      const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
+      const [selectedAnswers, setSelectedAnswers] = useState({});
+      const [quizSubmitted, setQuizSubmitted] = useState(false);
+      const [score, setScore] = useState(0);
+      const [passed, setPassed] = useState(false);
+
+      // =========================================
+      // Effects
+      // =========================================
+
+      // Ollama 상태 체크
+      useEffect(() => {
+        const checkStatus = async () => {
+          const status = await checkOllamaStatus();
+          setOllamaStatus(status);
+        };
+        checkStatus();
+        const interval = setInterval(checkStatus, 30000); // 30초마다 체크
+        return () => clearInterval(interval);
+      }, []);
+
+      // 초기 로드: 저장된 사용자 확인
+      useEffect(() => {
+        const loadUser = async () => {
+          try {
+            const savedUserId = localStorage.getItem("ojt_user_id");
+            if (savedUserId) {
+              const userData = await dbGet("users", savedUserId);
+              if (userData) {
+                setUser(userData);
+                if (userData.role === 'mentor') setViewState('mentor_dashboard');
+                else if (userData.role === 'mentee') setViewState('mentee_list');
+              } else {
+                setViewState('login');
+              }
+            } else {
+              setViewState('login');
+            }
+          } catch (e) {
+            console.error("Load user error:", e);
+            setViewState('login');
+          }
+          setIsLoadingAuth(false);
+        };
+        loadUser();
+      }, []);
+
+      // 멘토: 내 문서 로드
+      useEffect(() => {
+        if (!user || user.role !== 'mentor') return;
+        const loadMyDocs = async () => {
+          const allDocs = await dbGetAll("ojt_docs");
+          const filtered = allDocs.filter(doc => doc.authorId === user.id);
+          filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setMyDocs(filtered);
+        };
+        loadMyDocs();
+      }, [user, generatedDoc]); // generatedDoc 변경 시 리로드
+
+      // 멘티: 모든 문서 로드
+      useEffect(() => {
+        if (!user || user.role !== 'mentee') return;
+        const loadPublicDocs = async () => {
+          const allDocs = await dbGetAll("ojt_docs");
+          allDocs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setPublicDocs(allDocs);
+        };
+        loadPublicDocs();
+      }, [user]);
+
+      // =========================================
+      // Auth Handlers
+      // =========================================
+      const handleLogin = async (name) => {
+        if (!name.trim()) return;
+        const userId = `user_${name.trim().toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
         setViewState('role_select');
-      }
-    } catch (e) {
-      console.error("Profile fetch error:", e);
-    }
-  };
-
-  // 역할 선택 및 저장 (회원가입 절차)
-  const handleRoleSelect = async (selectedRole) => {
-    if (!user) return;
-    try {
-      const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'me');
-      const newUserData = {
-        uid: user.uid,
-        role: selectedRole,
-        joinedAt: serverTimestamp(),
+        // 임시로 이름만 저장, role은 선택 후 저장
+        setUser({ id: userId, name: name.trim(), role: null });
       };
-      
-      await setDoc(profileRef, newUserData);
-      setUserData(newUserData);
-      
-      if (selectedRole === 'mentor') setViewState('mentor_dashboard');
-      else setViewState('mentee_list');
 
-    } catch (e) {
-      console.error("Role save error:", e);
-      alert("역할 저장 중 오류가 발생했습니다.");
-    }
-  };
+      const handleRoleSelect = async (selectedRole) => {
+        if (!user) return;
+        try {
+          const userData = {
+            ...user,
+            role: selectedRole,
+            joinedAt: Date.now()
+          };
+          await dbPut("users", userData);
+          localStorage.setItem("ojt_user_id", userData.id);
+          setUser(userData);
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    setViewState('login');
-    setUser(null);
-    setUserData(null);
-  };
+          if (selectedRole === 'mentor') setViewState('mentor_dashboard');
+          else setViewState('mentee_list');
+        } catch (e) {
+          console.error("Role save error:", e);
+          alert("역할 저장 중 오류가 발생했습니다.");
+        }
+      };
 
-  // --- Data Fetching (Shared) ---
-  // 실제 앱에서는 모든 유저의 데이터를 볼 수 있어야 하므로 public/data 경로를 사용하거나
-  // 멘토가 작성한 데이터를 공유할 수 있는 구조가 필요합니다.
-  // 이 데모에서는 편의상 '자신의 데이터'만 보는 구조를 유지하되, 
-  // 실제 배포 시에는 'artifacts/{appId}/public/ojt_docs' 와 같은 공용 컬렉션을 사용해야 합니다.
-  useEffect(() => {
-    if (!user) return;
+      const handleLogout = () => {
+        localStorage.removeItem("ojt_user_id");
+        setUser(null);
+        setViewState('login');
+      };
 
-    // (수정됨) 멘토라면 내 데이터를, 멘티라면 (데모상) 내 데이터를 봅니다.
-    // 실제로는 멘티는 '모든 멘토의 공개 자료'를 봐야 합니다.
-    const q = query(
-      collection(db, 'artifacts', appId, 'users', user.uid, 'ojt_docs'),
-      orderBy('createdAt', 'desc')
-    );
+      // =========================================
+      // Mentor Handlers
+      // =========================================
+      const handleGenerate = async () => {
+        // 입력 타입에 따른 검증
+        if (inputType === 'text' && !rawInput.trim()) {
+          alert("텍스트를 입력해주세요.");
+          return;
+        }
+        if (inputType === 'url' && !urlInput.trim()) {
+          alert("URL을 입력해주세요.");
+          return;
+        }
+        if (inputType === 'pdf' && !pdfFile) {
+          alert("PDF 파일을 선택해주세요.");
+          return;
+        }
+        if (!ollamaStatus.online) {
+          alert("Ollama가 실행되지 않았습니다. Ollama를 먼저 시작해주세요.");
+          return;
+        }
 
-    const unsubscribeDocs = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setDocList(docs);
-    }, (error) => {
-      console.error("Data fetch error:", error);
-    });
+        setIsProcessing(true);
+        setGeneratedDoc(null);
+        setProcessingStatus("콘텐츠 추출 중...");
 
-    return () => unsubscribeDocs();
-  }, [user]);
+        try {
+          // 입력 타입에 따라 텍스트 추출
+          let contentText = '';
 
+          if (inputType === 'text') {
+            contentText = rawInput;
+          } else if (inputType === 'url') {
+            contentText = await extractUrlText(urlInput, setProcessingStatus);
+            setRawInput(contentText); // 추출된 텍스트를 rawInput에도 저장
+          } else if (inputType === 'pdf') {
+            contentText = await extractPdfText(pdfFile, setProcessingStatus);
+            setRawInput(contentText); // 추출된 텍스트를 rawInput에도 저장
+          }
 
-  // --- Handlers (Mentor) ---
-  const handleGenerate = async () => {
-    if (!rawInput.trim()) return;
-    setIsProcessing(true);
-    setGeneratedDoc(null);
-    const aiResult = await generateOJTContent(rawInput, inputTeam, inputStep);
-    if (aiResult) {
-      const finalTitle = inputTitle.trim() || aiResult.title;
-      setInputTitle(finalTitle);
-      const finalDoc = { ...aiResult, title: finalTitle, team: inputTeam, step: parseInt(inputStep) };
-      setGeneratedDoc(finalDoc);
-    }
-    setIsProcessing(false);
-  };
+          if (!contentText.trim()) {
+            throw new Error("추출된 텍스트가 없습니다.");
+          }
 
-  const handleSaveToDB = async () => {
-    if (!user || !generatedDoc) return;
-    const docToSave = {
-      ...generatedDoc,
-      title: inputTitle,
-      team: inputTeam,
-      step: parseInt(inputStep),
-      createdAt: serverTimestamp(),
-      author: "AI Mentor", // 실제로는 userData.name 등을 사용
-      authorId: user.uid
-    };
+          setProcessingStatus("AI 생성 시작...");
+          const aiResult = await generateOJTContent(contentText, inputTeam, inputStep, setProcessingStatus);
+          const finalTitle = inputTitle.trim() || aiResult.title;
+          setInputTitle(finalTitle);
+          const finalDoc = { ...aiResult, title: finalTitle, team: inputTeam, step: parseInt(inputStep) };
+          setGeneratedDoc(finalDoc);
+          setProcessingStatus("");
+        } catch (error) {
+          alert(`오류: ${error.message}`);
+          setProcessingStatus("");
+        }
 
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'ojt_docs'), docToSave);
-      alert(`저장되었습니다.`);
-      setGeneratedDoc(null);
-      setRawInput("");
-      setInputTitle("");
-    } catch (e) {
-      console.error("Save error:", e);
-      alert("오류 발생");
-    }
-  };
+        setIsProcessing(false);
+      };
 
-  const handleDeleteDoc = async (docId) => {
-    if(!confirm("정말 삭제하시겠습니까?")) return;
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'ojt_docs', docId));
-    } catch (e) {
-      console.error("Delete error", e);
-    }
-  };
+      const handleSaveToDB = async () => {
+        if (!user || !generatedDoc) return;
 
-  // --- Handlers (Mentee/Common) ---
-  const handleSelectDoc = (doc) => {
-    setSelectedDoc(doc);
-    setQuizMode(false);
-    setViewState('mentee_study');
-  };
+        const docToSave = {
+          ...generatedDoc,
+          title: inputTitle || generatedDoc.title,
+          team: inputTeam,
+          step: parseInt(inputStep),
+          createdAt: Date.now(),
+          author: user.name,
+          authorId: user.id
+        };
 
-  const startQuizSession = () => {
-    if (!selectedDoc || !selectedDoc.quiz) return;
-    const fullPool = [...selectedDoc.quiz];
-    for (let i = fullPool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [fullPool[i], fullPool[j]] = [fullPool[j], fullPool[i]];
-    }
-    setActiveQuizSet(fullPool.slice(0, 4));
-    setQuizMode(true);
-    setSelectedAnswers({});
-    setQuizSubmitted(false);
-    setCurrentQuizIndex(0);
-    setScore(0);
-    setPassed(false);
-  };
+        try {
+          await dbAdd("ojt_docs", docToSave);
+          alert("저장되었습니다.");
+          setGeneratedDoc(null);
+          setRawInput("");
+          setInputTitle("");
+          // 목록 새로고침
+          const allDocs = await dbGetAll("ojt_docs");
+          const filtered = allDocs.filter(doc => doc.authorId === user.id);
+          filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setMyDocs(filtered);
+        } catch (e) {
+          console.error("Save error:", e);
+          alert("저장 중 오류가 발생했습니다.");
+        }
+      };
 
-  const handleAnswerSelect = (qIndex, optionIndex) => {
-    if (quizSubmitted) return;
-    setSelectedAnswers(prev => ({...prev, [qIndex]: optionIndex}));
-  };
+      const handleDeleteDoc = async (docId) => {
+        if (!confirm("정말 삭제하시겠습니까?")) return;
+        try {
+          await dbDelete("ojt_docs", docId);
+          setMyDocs(prev => prev.filter(d => d.id !== docId));
+        } catch (e) {
+          console.error("Delete error:", e);
+        }
+      };
 
-  const submitQuiz = () => {
-    if (!activeQuizSet.length) return;
-    let correctCount = 0;
-    activeQuizSet.forEach((q, idx) => {
-      if (selectedAnswers[idx] === q.answer) correctCount++;
-    });
-    setScore(correctCount);
-    const isPassed = correctCount >= 3;
-    setPassed(isPassed);
-    setQuizSubmitted(true);
-  };
+      // =========================================
+      // Mentee Handlers
+      // =========================================
+      const handleSelectDoc = (doc) => {
+        setSelectedDoc(doc);
+        setQuizMode(false);
+        setViewState('mentee_study');
+      };
 
-  // --- Views ---
+      const startQuizSession = () => {
+        if (!selectedDoc || !selectedDoc.quiz) return;
+        const fullPool = [...selectedDoc.quiz];
+        for (let i = fullPool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [fullPool[i], fullPool[j]] = [fullPool[j], fullPool[i]];
+        }
+        setActiveQuizSet(fullPool.slice(0, 4));
+        setQuizMode(true);
+        setSelectedAnswers({});
+        setQuizSubmitted(false);
+        setCurrentQuizIndex(0);
+        setScore(0);
+        setPassed(false);
+      };
 
-  const LoginPage = () => (
-    <div className="flex flex-col items-center justify-center h-[calc(100vh-80px)] bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-10 text-center animate-in zoom-in duration-300">
-        <div className="mb-8">
-          <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Brain className="w-12 h-12 text-indigo-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
-          <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
+      const handleAnswerSelect = (qIndex, optionIndex) => {
+        if (quizSubmitted) return;
+        setSelectedAnswers(prev => ({ ...prev, [qIndex]: optionIndex }));
+      };
+
+      const submitQuiz = () => {
+        if (!activeQuizSet.length) return;
+        let correctCount = 0;
+        activeQuizSet.forEach((q, idx) => {
+          if (selectedAnswers[idx] === q.answer) correctCount++;
+        });
+        setScore(correctCount);
+        setPassed(correctCount >= QUIZ_PASS_THRESHOLD);
+        setQuizSubmitted(true);
+      };
+
+      // =========================================
+      // Views
+      // =========================================
+
+      const OllamaStatusBadge = () => (
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${ollamaStatus.online ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          <Icon name="server" className="w-3 h-3" />
+          {ollamaStatus.online ? `Ollama 연결됨` : 'Ollama 오프라인'}
         </div>
+      );
 
-        <div className="space-y-4">
-          <button
-            onClick={handleLogin}
-            className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-300 rounded-lg px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm hover:shadow-md"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            <span>Google로 로그인</span>
-          </button>
+      const LoginPage = () => {
+        const [loginName, setLoginName] = useState('');
 
-          <p className="text-xs text-slate-400 mt-6">
-            계속 진행하면 서비스 이용약관 및 개인정보처리방침에 동의하는 것으로 간주됩니다.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+        return (
+          <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
+            <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-10 text-center">
+              <div className="mb-8">
+                <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon name="brain" className="w-12 h-12 text-indigo-600" />
+                </div>
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
+                <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
+                <p className="text-xs text-slate-400 mt-1">로컬 버전 (Ollama + IndexedDB)</p>
+              </div>
 
-  const Header = () => (
-    <header className="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-50">
-      <div className="flex items-center gap-2 cursor-pointer" onClick={() => {
-        if(userData?.role === 'mentor') setViewState('mentor_dashboard');
-        else if(userData?.role === 'mentee') setViewState('mentee_list');
-      }}>
-        <Brain className="w-8 h-8" />
-        <div>
-          <h1 className="text-xl font-bold">OJT Master</h1>
-          <p className="text-xs text-indigo-200">
-             {userData ? `${userData.role.toUpperCase()} MODE` : 'Welcome'}
-          </p>
-        </div>
-      </div>
-      {user && userData && (
-        <div className="flex items-center gap-3">
-           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${userData.role === 'mentor' ? 'bg-indigo-800 text-indigo-100' : 'bg-green-600 text-white'}`}>
-            {userData.role}
-          </span>
-          <button onClick={handleLogout} className="text-sm flex items-center gap-1 hover:text-red-200">
-            <LogOut className="w-4 h-4" /> 로그아웃
-          </button>
-        </div>
-      )}
-    </header>
-  );
+              <div className="mb-6">
+                <OllamaStatusBadge />
+                {!ollamaStatus.online && (
+                  <p className="text-xs text-red-500 mt-2">
+                    Ollama를 먼저 실행해주세요: <code className="bg-slate-100 px-1 rounded">ollama serve</code>
+                  </p>
+                )}
+              </div>
 
-  const RoleSelectionPage = () => (
-    <div className="flex flex-col items-center justify-center h-[calc(100vh-80px)] bg-slate-50 p-6">
-      <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-8 text-center animate-in zoom-in duration-300">
-        <UserCheck className="w-16 h-16 text-indigo-600 mx-auto mb-4" />
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">환영합니다!</h2>
-        <p className="text-slate-500 mb-8">서비스 이용을 위해 역할을 선택해주세요.<br/>한 번 선택하면 변경할 수 없습니다.</p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <button 
-            onClick={() => handleRoleSelect('mentor')}
-            className="group flex flex-col items-center p-8 border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all"
-          >
-            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Upload className="w-8 h-8 text-indigo-600" />
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="이름을 입력하세요"
+                  value={loginName}
+                  onChange={(e) => setLoginName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin(loginName)}
+                  className="w-full p-3 border border-slate-300 rounded-lg text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={() => handleLogin(loginName)}
+                  disabled={!loginName.trim()}
+                  className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 disabled:bg-slate-300 transition-colors"
+                >
+                  시작하기
+                </button>
+                <p className="text-xs text-slate-400 mt-4">
+                  모든 데이터는 이 브라우저에만 저장됩니다.
+                </p>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-slate-700">멘토 (Mentor)</h3>
-            <p className="text-slate-500 mt-2 text-sm">OJT 자료를 생성하고<br/>교육 과정을 관리합니다.</p>
-          </button>
-
-          <button 
-             onClick={() => handleRoleSelect('mentee')}
-             className="group flex flex-col items-center p-8 border-2 border-slate-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all"
-          >
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <BookOpen className="w-8 h-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-700">멘티 (Mentee)</h3>
-            <p className="text-slate-500 mt-2 text-sm">할당된 로드맵을 따라<br/>학습하고 평가받습니다.</p>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const MentorDashboard = () => (
-    <div className="max-w-6xl mx-auto p-6 h-[calc(100vh-80px)] flex flex-col">
-      <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 mb-4">
-        <Upload className="w-6 h-6 text-indigo-600" />
-        자료 생성 스튜디오
-      </h2>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-        <div className="flex flex-col gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-y-auto">
-          {/* 입력 폼 영역 (기존과 동일) */}
-           <div className="grid grid-cols-2 gap-4">
-             <div>
-               <label className="block text-xs font-bold text-slate-500 mb-1">대상 팀</label>
-               {!isCustomTeam ? (
-                 <select 
-                   value={inputTeam} 
-                   onChange={(e) => { e.target.value === 'custom' ? (setIsCustomTeam(true), setInputTeam('')) : setInputTeam(e.target.value) }}
-                   className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-indigo-50"
-                 >
-                   {TEAMS.map(team => <option key={team} value={team}>{team}</option>)}
-                   <option value="custom">+ 직접 입력</option>
-                 </select>
-               ) : (
-                 <div className="flex gap-2">
-                   <input type="text" value={inputTeam} onChange={(e) => setInputTeam(e.target.value)} className="w-full p-2 border rounded-lg text-sm" autoFocus />
-                   <button onClick={() => {setIsCustomTeam(false); setInputTeam(TEAMS[0]);}} className="p-2 bg-slate-200 rounded"><RotateCcw className="w-4 h-4"/></button>
-                 </div>
-               )}
-             </div>
-             <div>
-               <label className="block text-xs font-bold text-slate-500 mb-1">단계</label>
-               {!isCustomStep ? (
-                  <select 
-                    value={inputStep} 
-                    onChange={(e) => { e.target.value === 'custom' ? (setIsCustomStep(true), setInputStep('')) : setInputStep(e.target.value) }}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-indigo-50"
-                  >
-                    {STEPS.map(step => <option key={step} value={step}>Step {step}</option>)}
-                    <option value="custom">+ 직접 입력</option>
-                  </select>
-               ) : (
-                  <div className="flex gap-2">
-                    <input type="number" value={inputStep} onChange={(e) => setInputStep(e.target.value)} className="w-full p-2 border rounded-lg text-sm" autoFocus />
-                    <button onClick={() => {setIsCustomStep(false); setInputStep(1);}} className="p-2 bg-slate-200 rounded"><RotateCcw className="w-4 h-4"/></button>
-                  </div>
-               )}
-             </div>
           </div>
-          <input type="text" placeholder="제목" className="w-full p-3 border rounded-lg" value={inputTitle} onChange={(e) => setInputTitle(e.target.value)} />
-          <textarea className="flex-1 w-full p-3 border rounded-lg resize-none min-h-[200px]" placeholder="내용 입력..." value={rawInput} onChange={(e) => setRawInput(e.target.value)}></textarea>
-          <button onClick={handleGenerate} disabled={isProcessing || !rawInput} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold disabled:bg-slate-400">
-            {isProcessing ? "생성 중..." : "AI 변환"}
-          </button>
-        </div>
+        );
+      };
 
-        <div className="bg-slate-50 p-6 rounded-xl shadow-inner border border-slate-200 overflow-y-auto relative flex flex-col">
-          {/* 결과 미리보기 영역 (기존과 동일) */}
-           <div className="sticky top-0 bg-slate-50 pb-4 border-b border-slate-200 z-10 flex justify-between items-center">
-            <h3 className="font-semibold text-slate-700">미리보기</h3>
-            {generatedDoc && (
-              <button onClick={handleSaveToDB} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">
-                <Save className="w-4 h-4" /> 저장
-              </button>
+      const Header = () => (
+        <header className="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-50">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => {
+            if (user?.role === 'mentor') setViewState('mentor_dashboard');
+            else if (user?.role === 'mentee') { setViewState('mentee_list'); setSelectedTeam(null); }
+          }}>
+            <Icon name="brain" className="w-8 h-8" />
+            <div>
+              <h1 className="text-xl font-bold">OJT Master</h1>
+              <p className="text-xs text-indigo-200">
+                {user ? `${user.role?.toUpperCase()} MODE` : 'Welcome'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <OllamaStatusBadge />
+            {user && (
+              <>
+                <span className="text-sm hidden sm:block">{user.name}</span>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${user.role === 'mentor' ? 'bg-indigo-800 text-indigo-100' : 'bg-green-600 text-white'}`}>
+                  {user.role}
+                </span>
+                <button onClick={handleLogout} className="text-sm flex items-center gap-1 hover:text-red-200">
+                  <Icon name="logout" className="w-4 h-4" /> 로그아웃
+                </button>
+              </>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto mt-4">
-            {generatedDoc ? (
-               <div className="prose prose-slate max-w-none">
-                 <h1 className="text-xl font-bold">{inputTitle || generatedDoc.title}</h1>
-                 {generatedDoc.sections.map((s, i) => (
-                   <div key={i} className="my-4 bg-white p-4 rounded shadow-sm">
-                     <h3 className="font-bold text-indigo-700">{s.title}</h3>
-                     <p className="text-sm text-slate-600 whitespace-pre-line">{s.content}</p>
-                   </div>
-                 ))}
-               </div>
-            ) : (
-              <div className="flex justify-center items-center h-full text-slate-400">내용을 입력해주세요.</div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+        </header>
+      );
 
-  const MenteeList = () => {
-    // 기존 MenteeList와 동일
-    const availableTeams = Array.from(new Set(docList.map(doc => doc.team).filter(Boolean)));
-    if (!selectedTeam) {
-      return (
-        <div className="max-w-4xl mx-auto p-6">
-          <h2 className="text-2xl font-bold text-slate-800 mb-6">팀 선택</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {availableTeams.map(team => (
-              <button key={team} onClick={() => setSelectedTeam(team)} className="bg-white p-6 rounded-xl shadow hover:shadow-lg border text-left">
-                <h3 className="font-bold text-lg text-slate-800">{team}</h3>
-                <p className="text-sm text-slate-500">{docList.filter(d => d.team === team).length} 과정</p>
+      const RoleSelectionPage = () => (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-slate-50 p-6">
+          <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+            <Icon name="user" className="w-16 h-16 text-indigo-600 mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-slate-800 mb-2">환영합니다, {user?.name}!</h2>
+            <p className="text-slate-500 mb-8">서비스 이용을 위해 역할을 선택해주세요.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <button
+                onClick={() => handleRoleSelect('mentor')}
+                className="group flex flex-col items-center p-8 border-2 border-slate-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all"
+              >
+                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Icon name="upload" className="w-8 h-8 text-indigo-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-700">멘토 (Mentor)</h3>
+                <p className="text-slate-500 mt-2 text-sm">OJT 자료를 생성하고<br />교육 과정을 관리합니다.</p>
               </button>
-            ))}
-            {availableTeams.length === 0 && <p className="text-slate-500">등록된 과정이 없습니다.</p>}
+
+              <button
+                onClick={() => handleRoleSelect('mentee')}
+                className="group flex flex-col items-center p-8 border-2 border-slate-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all"
+              >
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Icon name="book" className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-700">멘티 (Mentee)</h3>
+                <p className="text-slate-500 mt-2 text-sm">공개된 교육 자료를 학습하고<br />퀴즈로 이해도를 검증합니다.</p>
+              </button>
+            </div>
           </div>
         </div>
       );
-    }
-    const teamDocs = docList.filter(doc => doc.team === selectedTeam).sort((a, b) => (a.step || 0) - (b.step || 0));
-    return (
-       <div className="max-w-4xl mx-auto p-6">
-         <button onClick={() => setSelectedTeam(null)} className="mb-4 text-slate-500">&larr; 뒤로가기</button>
-         <h2 className="text-2xl font-bold mb-6">{selectedTeam} 로드맵</h2>
-         <div className="space-y-4">
-           {teamDocs.map((doc, idx) => (
-             <div key={doc.id} className="bg-white p-6 rounded-xl shadow border flex justify-between items-center">
-               <div>
-                 <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Step {doc.step}</span>
-                 <h3 className="font-bold text-lg mt-2">{doc.title}</h3>
-               </div>
-               <button onClick={() => handleSelectDoc(doc)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">학습하기</button>
-             </div>
-           ))}
-         </div>
-       </div>
-    );
-  };
 
-  const MenteeStudy = () => {
-    // 기존 MenteeStudy와 동일 (뷰만 리턴)
-     if (!selectedDoc) return null;
-     return (
-       <div className="max-w-4xl mx-auto p-6">
-         <button onClick={() => {setViewState('mentee_list'); setSelectedDoc(null);}} className="mb-4 text-slate-500">&larr; 목록으로</button>
-         {!quizMode ? (
-           <div className="bg-white p-8 rounded-xl shadow border">
-             <h1 className="text-2xl font-bold mb-6">{selectedDoc.title}</h1>
-             {selectedDoc.sections.map((s, i) => (
-               <div key={i} className="mb-6">
-                 <h3 className="font-bold text-indigo-700 mb-2">{s.title}</h3>
-                 <p className="whitespace-pre-line text-slate-700">{s.content}</p>
-               </div>
-             ))}
-             <button onClick={startQuizSession} className="w-full py-4 bg-indigo-600 text-white rounded-lg font-bold mt-8">퀴즈 도전</button>
-           </div>
-         ) : (
-           <div className="bg-white p-8 rounded-xl shadow border text-center">
-              {!quizSubmitted ? (
+      const mentorDashboardContent = (
+        <div className="max-w-6xl mx-auto p-6">
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 mb-4">
+            <Icon name="upload" className="w-6 h-6 text-indigo-600" />
+            자료 생성 스튜디오
+          </h2>
+
+          {!ollamaStatus.online && (
+            <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
+              <Icon name="alert" className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-yellow-800">Ollama가 실행되지 않았습니다</p>
+                <p className="text-sm text-yellow-700 mt-1">
+                  터미널에서 <code className="bg-yellow-100 px-1 rounded">ollama serve</code> 명령을 실행하고,<br />
+                  <code className="bg-yellow-100 px-1 rounded">ollama pull {OLLAMA_MODEL}</code> 로 모델을 다운로드하세요.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 입력 폼 */}
+            <div className="flex flex-col gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                   <div className="flex justify-between mb-4"><span className="font-bold text-indigo-600">Q{currentQuizIndex+1}</span><button onClick={()=>setQuizMode(false)}><X/></button></div>
-                   <h3 className="text-xl font-bold mb-6">{activeQuizSet[currentQuizIndex].question}</h3>
-                   <div className="space-y-2">
-                     {activeQuizSet[currentQuizIndex].options.map((opt, i) => (
-                       <button key={i} onClick={()=>handleAnswerSelect(currentQuizIndex, i)} className={`w-full p-4 border rounded text-left ${selectedAnswers[currentQuizIndex]===i ? 'bg-indigo-50 border-indigo-600' : ''}`}>{opt}</button>
-                     ))}
-                   </div>
-                   <div className="flex justify-between mt-6">
-                     <button onClick={()=>setCurrentQuizIndex(prev=>Math.max(0, prev-1))} disabled={currentQuizIndex===0} className="text-slate-400">이전</button>
-                     {currentQuizIndex < 3 ? <button onClick={()=>setCurrentQuizIndex(prev=>prev+1)} className="bg-slate-800 text-white px-4 py-2 rounded">다음</button> : <button onClick={submitQuiz} className="bg-green-600 text-white px-4 py-2 rounded">제출</button>}
-                   </div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">대상 팀</label>
+                  {!isCustomTeam ? (
+                    <select
+                      value={inputTeam}
+                      onChange={(e) => { e.target.value === 'custom' ? (setIsCustomTeam(true), setInputTeam('')) : setInputTeam(e.target.value) }}
+                      className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-indigo-50"
+                    >
+                      {TEAMS.map(team => <option key={team} value={team}>{team}</option>)}
+                      <option value="custom">+ 직접 입력</option>
+                    </select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input type="text" value={inputTeam} onChange={(e) => setInputTeam(e.target.value)} className="w-full p-2 border rounded-lg text-sm" autoFocus />
+                      <button onClick={() => { setIsCustomTeam(false); setInputTeam(TEAMS[0]); }} className="p-2 bg-slate-200 rounded"><Icon name="refresh" className="w-4 h-4" /></button>
+                    </div>
+                  )}
                 </div>
-              ) : (
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">{passed ? "통과! 🎉" : "재도전!"}</h2>
-                  <p className="mb-6 text-slate-500">{score} / 4 문제 정답</p>
-                  <button onClick={() => {setViewState('mentee_list'); setSelectedDoc(null);}} className="bg-indigo-600 text-white px-6 py-2 rounded">목록으로</button>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">단계</label>
+                  {!isCustomStep ? (
+                    <select
+                      value={inputStep}
+                      onChange={(e) => { e.target.value === 'custom' ? (setIsCustomStep(true), setInputStep('')) : setInputStep(e.target.value) }}
+                      className="w-full p-2 border border-slate-300 rounded-lg text-sm bg-indigo-50"
+                    >
+                      {STEPS.map(step => <option key={step} value={step}>Step {step}</option>)}
+                      <option value="custom">+ 직접 입력</option>
+                    </select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input type="number" value={inputStep} onChange={(e) => setInputStep(e.target.value)} className="w-full p-2 border rounded-lg text-sm" autoFocus />
+                      <button onClick={() => { setIsCustomStep(false); setInputStep(1); }} className="p-2 bg-slate-200 rounded"><Icon name="refresh" className="w-4 h-4" /></button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <input type="text" placeholder="제목 (선택사항 - AI가 자동 생성)" className="w-full p-3 border rounded-lg" value={inputTitle} onChange={(e) => setInputTitle(e.target.value)} />
+
+              {/* 입력 타입 선택 */}
+              <div className="flex gap-2 border-b border-slate-200 pb-2">
+                {INPUT_TYPES.map(type => (
+                  <button
+                    key={type.id}
+                    onClick={() => setInputType(type.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      inputType === type.id
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Icon name={type.icon} className="w-4 h-4" />
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 입력 타입별 UI */}
+              {inputType === 'text' && (
+                <textarea
+                  className="w-full p-3 border rounded-lg resize-none min-h-[200px]"
+                  placeholder="교육 내용을 자유롭게 입력하세요..."
+                  value={rawInput}
+                  onChange={(e) => setRawInput(e.target.value)}
+                />
+              )}
+
+              {inputType === 'url' && (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Icon name="globe" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="url"
+                        placeholder="https://example.com/article"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        className="w-full pl-10 p-3 border rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    웹페이지의 텍스트 콘텐츠를 추출합니다. 구글 드라이브 공개 문서, 블로그, 뉴스 기사 등을 지원합니다.
+                  </p>
+                  {rawInput && inputType === 'url' && (
+                    <div className="bg-slate-50 p-3 rounded-lg max-h-[150px] overflow-y-auto">
+                      <p className="text-xs font-bold text-slate-500 mb-1">추출된 텍스트 미리보기:</p>
+                      <p className="text-sm text-slate-600 whitespace-pre-wrap">{rawInput.substring(0, 500)}...</p>
+                    </div>
+                  )}
                 </div>
               )}
-           </div>
-         )}
-       </div>
-     );
-  };
 
-  if (isLoadingAuth) {
-    return <div className="flex h-screen items-center justify-center"><RefreshCw className="w-8 h-8 animate-spin text-indigo-600" /></div>;
-  }
+              {inputType === 'pdf' && (
+                <div className="space-y-3">
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Icon name="file" className="w-10 h-10 mb-3 text-slate-400" />
+                      {pdfFile ? (
+                        <p className="text-sm text-indigo-600 font-medium">{pdfFile.name}</p>
+                      ) : (
+                        <>
+                          <p className="mb-2 text-sm text-slate-500">
+                            <span className="font-semibold">클릭하여 PDF 선택</span>
+                          </p>
+                          <p className="text-xs text-slate-400">PDF 파일만 지원</p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      className="hidden"
+                      onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                  {pdfFile && (
+                    <button
+                      onClick={() => setPdfFile(null)}
+                      className="text-sm text-red-500 hover:text-red-700"
+                    >
+                      파일 제거
+                    </button>
+                  )}
+                  {rawInput && inputType === 'pdf' && (
+                    <div className="bg-slate-50 p-3 rounded-lg max-h-[150px] overflow-y-auto">
+                      <p className="text-xs font-bold text-slate-500 mb-1">추출된 텍스트 미리보기:</p>
+                      <p className="text-sm text-slate-600 whitespace-pre-wrap">{rawInput.substring(0, 500)}...</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <Header />
-      <main className="container mx-auto">
-        {viewState === 'login' && <LoginPage />}
-        {viewState === 'role_select' && <RoleSelectionPage />}
-        {viewState === 'mentor_dashboard' && <MentorDashboard />}
-        {(viewState === 'mentee_list' || viewState === 'mentee_study') && (
-           viewState === 'mentee_list' ? <MenteeList /> : <MenteeStudy />
-        )}
-      </main>
-    </div>
-  );
-}
+              <button
+                onClick={handleGenerate}
+                disabled={isProcessing || !ollamaStatus.online ||
+                  (inputType === 'text' && !rawInput) ||
+                  (inputType === 'url' && !urlInput) ||
+                  (inputType === 'pdf' && !pdfFile)
+                }
+                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold disabled:bg-slate-400 hover:bg-indigo-700 transition-colors"
+              >
+                {isProcessing ? processingStatus || "생성 중..." : "AI 변환 (Ollama)"}
+              </button>
+            </div>
+
+            {/* 미리보기 */}
+            <div className="bg-slate-50 p-6 rounded-xl shadow-inner border border-slate-200 overflow-y-auto max-h-[600px]">
+              <div className="sticky top-0 bg-slate-50 pb-4 border-b border-slate-200 z-10 flex justify-between items-center">
+                <h3 className="font-semibold text-slate-700">미리보기</h3>
+                {generatedDoc && (
+                  <button onClick={handleSaveToDB} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700">
+                    <Icon name="save" className="w-4 h-4" /> 저장
+                  </button>
+                )}
+              </div>
+              <div className="mt-4">
+                {generatedDoc ? (
+                  <div>
+                    <h1 className="text-xl font-bold mb-4">{inputTitle || generatedDoc.title}</h1>
+                    {generatedDoc.sections?.map((s, i) => (
+                      <div key={i} className="my-4 bg-white p-4 rounded shadow-sm">
+                        <h3 className="font-bold text-indigo-700">{s.title}</h3>
+                        <p className="text-sm text-slate-600 whitespace-pre-line mt-2">{s.content}</p>
+                      </div>
+                    ))}
+                    <p className="text-sm text-slate-500 mt-4">퀴즈 {generatedDoc.quiz?.length || 0}문제 생성됨</p>
+                  </div>
+                ) : (
+                  <div className="flex justify-center items-center h-64 text-slate-400">내용을 입력해주세요.</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 내가 만든 자료 목록 */}
+          {myDocs.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-bold text-slate-800 mb-4">내가 만든 자료 ({myDocs.length})</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {myDocs.map(doc => (
+                  <div key={doc.id} className="bg-white p-4 rounded-xl shadow border flex justify-between items-start">
+                    <div>
+                      <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">{doc.team} - Step {doc.step}</span>
+                      <h4 className="font-bold mt-2">{doc.title}</h4>
+                    </div>
+                    <button onClick={() => handleDeleteDoc(doc.id)} className="text-red-500 hover:text-red-700">
+                      <Icon name="trash" className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+
+      // 멘티 문서 새로고침 함수
+      const refreshPublicDocs = async () => {
+        const allDocs = await dbGetAll("ojt_docs");
+        allDocs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setPublicDocs(allDocs);
+      };
+
+      // 멘티 리스트 계산값
+      const availableTeams = Array.from(new Set(publicDocs.map(doc => doc.team).filter(Boolean)));
+      const teamDocs = selectedTeam ? publicDocs.filter(doc => doc.team === selectedTeam).sort((a, b) => (a.step || 0) - (b.step || 0)) : [];
+
+      // 멘티 리스트 JSX
+      const menteeListContent = !selectedTeam ? (
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-slate-800">학습할 팀을 선택하세요</h2>
+            <button onClick={refreshPublicDocs} className="text-slate-500 hover:text-slate-700">
+              <Icon name="refresh" className="w-5 h-5" />
+            </button>
+          </div>
+          {availableTeams.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {availableTeams.map(team => (
+                <button key={team} onClick={() => setSelectedTeam(team)} className="bg-white p-6 rounded-xl shadow hover:shadow-lg border text-left transition-shadow">
+                  <h3 className="font-bold text-lg text-slate-800">{team}</h3>
+                  <p className="text-sm text-slate-500 mt-1">{publicDocs.filter(d => d.team === team).length}개 과정</p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 text-slate-500">
+              <Icon name="book" className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+              <p>아직 등록된 교육 자료가 없습니다.</p>
+              <p className="text-sm mt-2">멘토가 자료를 등록하면 여기에 표시됩니다.</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="max-w-4xl mx-auto p-6">
+          <button onClick={() => setSelectedTeam(null)} className="mb-4 text-slate-500 hover:text-slate-700">&larr; 뒤로가기</button>
+          <h2 className="text-2xl font-bold mb-6">{selectedTeam} 로드맵</h2>
+          <div className="space-y-4">
+            {teamDocs.map((doc) => (
+              <div key={doc.id} className="bg-white p-6 rounded-xl shadow border flex justify-between items-center">
+                <div>
+                  <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Step {doc.step}</span>
+                  <h3 className="font-bold text-lg mt-2">{doc.title}</h3>
+                  <p className="text-xs text-slate-400 mt-1">작성자: {doc.author}</p>
+                </div>
+                <button onClick={() => handleSelectDoc(doc)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition-colors">학습하기</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      // 멘티 학습 JSX
+      const menteeStudyContent = selectedDoc ? (
+        <div className="max-w-4xl mx-auto p-6">
+          <button onClick={() => { setViewState('mentee_list'); setSelectedDoc(null); }} className="mb-4 text-slate-500 hover:text-slate-700">&larr; 목록으로</button>
+
+          {!quizMode ? (
+            <div className="bg-white p-8 rounded-xl shadow border">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">{selectedDoc.team} - Step {selectedDoc.step}</span>
+                  <h1 className="text-2xl font-bold mt-2">{selectedDoc.title}</h1>
+                  <p className="text-sm text-slate-400 mt-1">작성자: {selectedDoc.author}</p>
+                </div>
+              </div>
+
+              {selectedDoc.sections?.map((s, i) => (
+                <div key={i} className="mb-6">
+                  <h3 className="font-bold text-indigo-700 mb-2">{s.title}</h3>
+                  <p className="whitespace-pre-line text-slate-700">{s.content}</p>
+                </div>
+              ))}
+
+              <button onClick={startQuizSession} className="w-full py-4 bg-indigo-600 text-white rounded-lg font-bold mt-8 hover:bg-indigo-700 transition-colors">
+                퀴즈 도전 ({selectedDoc.quiz?.length || 0}문제 중 4문제 출제)
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white p-8 rounded-xl shadow border">
+              {!quizSubmitted ? (
+                <div>
+                  <div className="flex justify-between mb-4">
+                    <span className="font-bold text-indigo-600">Q{currentQuizIndex + 1} / 4</span>
+                    <button onClick={() => setQuizMode(false)} className="text-slate-400 hover:text-slate-600"><Icon name="x" /></button>
+                  </div>
+                  <h3 className="text-xl font-bold mb-6">{activeQuizSet[currentQuizIndex]?.question}</h3>
+                  <div className="space-y-2">
+                    {activeQuizSet[currentQuizIndex]?.options?.map((opt, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleAnswerSelect(currentQuizIndex, i)}
+                        className={`w-full p-4 border rounded text-left transition-colors ${selectedAnswers[currentQuizIndex] === i ? 'bg-indigo-50 border-indigo-600' : 'hover:bg-slate-50'}`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex justify-between mt-6">
+                    <button
+                      onClick={() => setCurrentQuizIndex(prev => Math.max(0, prev - 1))}
+                      disabled={currentQuizIndex === 0}
+                      className="text-slate-400 disabled:opacity-50"
+                    >
+                      이전
+                    </button>
+                    {currentQuizIndex < 3 ? (
+                      <button onClick={() => setCurrentQuizIndex(prev => prev + 1)} className="bg-slate-800 text-white px-4 py-2 rounded hover:bg-slate-900">다음</button>
+                    ) : (
+                      <button onClick={submitQuiz} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">제출</button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <h2 className="text-3xl font-bold mb-2">{passed ? "통과!" : "아쉬워요"}</h2>
+                  <p className="text-xl mb-2 text-slate-600">{score} / 4 문제 정답</p>
+                  <p className="text-slate-500 mb-6">{passed ? "훌륭합니다! 다음 단계로 넘어가세요." : `${QUIZ_PASS_THRESHOLD}문제 이상 맞춰야 통과입니다.`}</p>
+                  <div className="flex gap-4 justify-center">
+                    {!passed && (
+                      <button onClick={startQuizSession} className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700">다시 도전</button>
+                    )}
+                    <button onClick={() => { setViewState('mentee_list'); setSelectedDoc(null); setSelectedTeam(null); }} className="bg-slate-600 text-white px-6 py-2 rounded hover:bg-slate-700">목록으로</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : null;
+
+      // =========================================
+      // Main Render
+      // =========================================
+      if (isLoadingAuth) {
+        return (
+          <div className="flex h-screen items-center justify-center">
+            <Icon name="refresh" className="w-8 h-8 animate-spin text-indigo-600" />
+          </div>
+        );
+      }
+
+      if (viewState === 'login') {
+        return <LoginPage />;
+      }
+
+      return (
+        <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+          <Header />
+          <main>
+            {viewState === 'role_select' && <RoleSelectionPage />}
+            {viewState === 'mentor_dashboard' && mentorDashboardContent}
+            {viewState === 'mentee_list' && menteeListContent}
+            {viewState === 'mentee_study' && menteeStudyContent}
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
