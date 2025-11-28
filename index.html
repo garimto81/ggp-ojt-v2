@@ -518,16 +518,34 @@
     // =========================================
     // Ollama AI Logic
     // =========================================
+
+    // 웹 배포 환경 감지 (HTTPS에서는 localhost 연결 불가)
+    const isWebDeployed = window.location.protocol === 'https:';
+
     async function checkOllamaStatus() {
+      // HTTPS 환경에서는 localhost 연결 시도하지 않음 (혼합 콘텐츠 차단)
+      if (isWebDeployed) {
+        return { online: false, models: [], webDeployed: true };
+      }
+
       try {
-        const response = await fetch(`${OLLAMA_URL}/api/tags`, { method: "GET" });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3초 타임아웃
+
+        const response = await fetch(`${OLLAMA_URL}/api/tags`, {
+          method: "GET",
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         if (response.ok) {
           const data = await response.json();
-          return { online: true, models: data.models || [] };
+          return { online: true, models: data.models || [], webDeployed: false };
         }
-        return { online: false, models: [] };
+        return { online: false, models: [], webDeployed: false };
       } catch (error) {
-        return { online: false, models: [] };
+        // 오류 로그 출력하지 않음 (정상적인 오프라인 상태)
+        return { online: false, models: [], webDeployed: false };
       }
     }
 
@@ -750,7 +768,7 @@ ${rawText}
       const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
       // Ollama Status
-      const [ollamaStatus, setOllamaStatus] = useState({ online: false, models: [] });
+      const [ollamaStatus, setOllamaStatus] = useState({ online: false, models: [], webDeployed: isWebDeployed });
       const [showSettings, setShowSettings] = useState(false);
 
       // App State
@@ -1022,7 +1040,11 @@ ${rawText}
           return;
         }
         if (!ollamaStatus.online) {
-          alert("Ollama가 실행되지 않았습니다. Ollama를 먼저 시작해주세요.");
+          if (ollamaStatus.webDeployed) {
+            alert("웹 배포 환경에서는 AI 자료 생성 기능을 사용할 수 없습니다.\n\n로컬에서 앱을 실행하고 Ollama를 시작해주세요:\n1. git clone 후 index.html 열기\n2. ollama serve 실행\n3. 자료 생성 가능");
+          } else {
+            alert("Ollama가 실행되지 않았습니다.\n\n터미널에서 'ollama serve' 명령을 실행해주세요.");
+          }
           return;
         }
 
@@ -1216,12 +1238,23 @@ ${rawText}
       // Views
       // =========================================
 
-      const OllamaStatusBadge = () => (
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${ollamaStatus.online ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          <Icon name="server" className="w-3 h-3" />
-          {ollamaStatus.online ? `Ollama: ${OLLAMA_MODEL}` : 'Ollama 오프라인'}
-        </div>
-      );
+      const OllamaStatusBadge = () => {
+        // 웹 배포 환경에서는 다른 메시지 표시
+        if (ollamaStatus.webDeployed) {
+          return (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700" title="웹 배포 환경에서는 로컬 Ollama에 연결할 수 없습니다. 로컬에서 실행해주세요.">
+              <Icon name="server" className="w-3 h-3" />
+              AI: 로컬 전용
+            </div>
+          );
+        }
+        return (
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${ollamaStatus.online ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <Icon name="server" className="w-3 h-3" />
+            {ollamaStatus.online ? `Ollama: ${OLLAMA_MODEL}` : 'Ollama 오프라인'}
+          </div>
+        );
+      };
 
       const LoginPage = () => {
         return (
