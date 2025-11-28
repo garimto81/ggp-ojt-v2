@@ -7,6 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Dexie.js (IndexedDB Wrapper for Local Cache) -->
+  <script src="https://unpkg.com/dexie@4/dist/dexie.min.js"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -83,6 +85,20 @@
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
     // =========================================
+    // 설정 (Dexie.js - 로컬 캐시)
+    // =========================================
+    const localDb = new Dexie('OJTMasterCache');
+    localDb.version(1).stores({
+      users: 'id, name, role',
+      ojt_docs: 'id, team, step, author_id, updated_at',
+      learning_records: 'id, user_id, doc_id',
+      sync_queue: '++id, table, action, created_at'
+    });
+
+    // 온라인 상태 확인
+    const isOnline = () => navigator.onLine;
+
+    // =========================================
     // 설정 (Ollama)
     // =========================================
     const OLLAMA_URL = "http://localhost:11434";
@@ -154,178 +170,257 @@
     }
 
     // =========================================
-    // Supabase DB 헬퍼 (IndexedDB 호환 인터페이스)
+    // DB 헬퍼 (Dexie 캐시 + Supabase 동기화)
     // =========================================
 
-    // 사용자 프로필 조회
+    // 오프라인 큐에 작업 추가
+    const addToSyncQueue = async (table, action, data) => {
+      await localDb.sync_queue.add({
+        table,
+        action,
+        data,
+        created_at: new Date().toISOString()
+      });
+    };
+
+    // 오프라인 큐 처리 (온라인 복귀 시)
+    const processSyncQueue = async () => {
+      const queue = await localDb.sync_queue.toArray();
+
+      for (const item of queue) {
+        try {
+          if (item.action === 'upsert') {
+            await supabase.from(item.table).upsert(item.data);
+          } else if (item.action === 'insert') {
+            await supabase.from(item.table).insert(item.data);
+          } else if (item.action === 'delete') {
+            await supabase.from(item.table).delete().eq('id', item.data.id);
+          }
+          // 성공하면 큐에서 제거
+          await localDb.sync_queue.delete(item.id);
+        } catch (e) {
+          console.error('Sync queue processing failed:', e);
+        }
+      }
+    };
+
+    // 온라인 상태 변경 감지
+    window.addEventListener('online', () => {
+      console.log('Online - Processing sync queue...');
+      processSyncQueue();
+    });
+
+    // 단일 조회 (캐시 우선, 온라인 시 동기화)
     const dbGet = async (storeName, key) => {
-      if (storeName === "users") {
-        const { data, error } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", key)
-          .maybeSingle();
-        // PGRST116: 결과 없음, 500: RLS 정책으로 인한 접근 불가 (신규 사용자)
-        if (error && error.code !== "PGRST116" && error.code !== "PGRST301") {
-          console.error("dbGet error:", error);
+      // 1. 로컬 캐시 먼저 확인
+      let cached = await localDb[storeName].get(key);
+
+      // 2. 온라인이면 Supabase에서 최신 데이터 가져오기
+      if (isOnline()) {
+        try {
+          const { data, error } = await supabase
+            .from(storeName)
+            .select("*")
+            .eq("id", key)
+            .maybeSingle();
+
+          if (data) {
+            // 캐시 업데이트
+            await localDb[storeName].put(data);
+            cached = data;
+          }
+          // 에러는 무시 (캐시 데이터 반환)
+        } catch (e) {
+          console.error("dbGet sync error:", e);
         }
-        return data;
       }
-      if (storeName === "ojt_docs") {
-        const { data, error } = await supabase
-          .from("ojt_docs")
-          .select("*")
-          .eq("id", key)
-          .single();
-        if (error) console.error("dbGet error:", error);
-        return data;
-      }
-      return null;
+
+      return cached;
     };
 
-    // 전체 조회
+    // 전체 조회 (캐시 먼저 반환, 백그라운드 동기화)
     const dbGetAll = async (storeName, filters = {}) => {
-      if (storeName === "users") {
-        const { data, error } = await supabase.from("users").select("*");
-        if (error) console.error("dbGetAll error:", error);
-        return data || [];
-      }
-      if (storeName === "ojt_docs") {
-        let query = supabase.from("ojt_docs").select("*").order("created_at", { ascending: false });
-        if (filters.team) {
-          query = query.eq("team", filters.team);
+      // 1. 로컬 캐시에서 먼저 조회
+      let cached = [];
+
+      try {
+        if (storeName === "ojt_docs") {
+          let collection = localDb.ojt_docs.toCollection();
+          if (filters.team) {
+            collection = localDb.ojt_docs.where('team').equals(filters.team);
+          }
+          cached = await collection.reverse().sortBy('updated_at');
+          if (filters.authorId) {
+            cached = cached.filter(doc => doc.author_id === filters.authorId);
+          }
+        } else if (storeName === "learning_records") {
+          if (filters.userId) {
+            cached = await localDb.learning_records.where('user_id').equals(filters.userId).toArray();
+          } else {
+            cached = await localDb.learning_records.toArray();
+          }
+        } else {
+          cached = await localDb[storeName].toArray();
         }
-        if (filters.authorId) {
-          query = query.eq("author_id", filters.authorId);
-        }
-        const { data, error } = await query;
-        if (error) console.error("dbGetAll error:", error);
-        return data || [];
+      } catch (e) {
+        console.error("Local cache read error:", e);
       }
-      if (storeName === "learning_records") {
-        let query = supabase.from("learning_records").select("*");
-        if (filters.userId) {
-          query = query.eq("user_id", filters.userId);
-        }
-        const { data, error } = await query;
-        if (error) console.error("dbGetAll error:", error);
-        return data || [];
+
+      // 2. 온라인이면 백그라운드에서 Supabase 동기화
+      if (isOnline()) {
+        (async () => {
+          try {
+            let query = supabase.from(storeName).select("*");
+
+            if (storeName === "ojt_docs") {
+              query = query.order("created_at", { ascending: false });
+              if (filters.team) query = query.eq("team", filters.team);
+              if (filters.authorId) query = query.eq("author_id", filters.authorId);
+            } else if (storeName === "learning_records") {
+              if (filters.userId) query = query.eq("user_id", filters.userId);
+            }
+
+            const { data, error } = await query;
+
+            if (data && !error) {
+              // 캐시 일괄 업데이트
+              await localDb[storeName].bulkPut(data);
+            }
+          } catch (e) {
+            console.error("Background sync error:", e);
+          }
+        })();
       }
-      return [];
+
+      return cached;
     };
 
-    // 생성/수정 (upsert)
+    // 생성/수정 (로컬 먼저, 온라인 시 동기화)
     const dbPut = async (storeName, data) => {
+      const now = new Date().toISOString();
+      let localData = { ...data, updated_at: now };
+
+      // Supabase 필드명으로 변환
       if (storeName === "users") {
-        // 먼저 insert 시도, 실패하면 update
-        const userData = {
+        localData = {
           id: data.id,
           name: data.name,
           role: data.role,
-          department: data.department || null
+          department: data.department || null,
+          updated_at: now
         };
+      } else if (storeName === "ojt_docs") {
+        localData = {
+          id: data.id,
+          title: data.title,
+          team: data.team,
+          step: data.step,
+          sections: data.sections,
+          quiz: data.quiz,
+          author_id: data.authorId,
+          author_name: data.author,
+          estimated_minutes: data.estimatedMinutes || 30,
+          updated_at: now
+        };
+      }
 
-        // insert 시도
-        let { data: result, error } = await supabase
-          .from("users")
-          .insert(userData)
-          .select()
-          .single();
+      // 1. 로컬 캐시에 즉시 저장
+      await localDb[storeName].put(localData);
 
-        // 이미 존재하면 update
-        if (error && error.code === "23505") {
-          const updateResult = await supabase
-            .from("users")
-            .update({ name: data.name, role: data.role, department: data.department || null })
-            .eq("id", data.id)
-            .select()
-            .single();
-          result = updateResult.data;
-          error = updateResult.error;
+      // 2. 온라인이면 Supabase에 동기화
+      if (isOnline()) {
+        try {
+          if (storeName === "users") {
+            // users는 insert/update 분리
+            let { error } = await supabase.from("users").insert(localData).select().single();
+            if (error && error.code === "23505") {
+              await supabase.from("users")
+                .update({ name: localData.name, role: localData.role, department: localData.department })
+                .eq("id", localData.id);
+            }
+          } else {
+            await supabase.from(storeName).upsert(localData);
+          }
+        } catch (e) {
+          console.error("dbPut sync error:", e);
+          await addToSyncQueue(storeName, 'upsert', localData);
         }
+      } else {
+        await addToSyncQueue(storeName, 'upsert', localData);
+      }
 
-        if (error) console.error("dbPut error:", error);
-        return result;
-      }
-      if (storeName === "ojt_docs") {
-        const { data: result, error } = await supabase
-          .from("ojt_docs")
-          .upsert({
-            id: data.id,
-            title: data.title,
-            team: data.team,
-            step: data.step,
-            sections: data.sections,
-            quiz: data.quiz,
-            author_id: data.authorId,
-            author_name: data.author,
-            estimated_minutes: data.estimatedMinutes || 30
-          })
-          .select()
-          .single();
-        if (error) console.error("dbPut error:", error);
-        return result;
-      }
-      return null;
+      return localData;
     };
 
-    // 새 데이터 추가
+    // 새 데이터 추가 (로컬 먼저, 온라인 시 동기화)
     const dbAdd = async (storeName, data) => {
+      const now = new Date().toISOString();
+      const newId = crypto.randomUUID();
+      let localData = { ...data, id: newId, created_at: now, updated_at: now };
+
+      // Supabase 필드명으로 변환
       if (storeName === "ojt_docs") {
-        const { data: result, error } = await supabase
-          .from("ojt_docs")
-          .insert({
-            title: data.title,
-            team: data.team,
-            step: data.step,
-            sections: data.sections,
-            quiz: data.quiz,
-            author_id: data.authorId,
-            author_name: data.author,
-            estimated_minutes: data.estimatedMinutes || 30
-          })
-          .select()
-          .single();
-        if (error) console.error("dbAdd error:", error);
-        return result?.id;
+        localData = {
+          id: newId,
+          title: data.title,
+          team: data.team,
+          step: data.step,
+          sections: data.sections,
+          quiz: data.quiz,
+          author_id: data.authorId,
+          author_name: data.author,
+          estimated_minutes: data.estimatedMinutes || 30,
+          created_at: now,
+          updated_at: now
+        };
+      } else if (storeName === "learning_records") {
+        localData = {
+          id: newId,
+          user_id: data.userId,
+          doc_id: data.docId,
+          score: data.score,
+          total_questions: data.totalQuestions || 4,
+          passed: data.passed,
+          completed_at: now
+        };
       }
-      if (storeName === "learning_records") {
-        const { data: result, error } = await supabase
-          .from("learning_records")
-          .upsert({
-            user_id: data.userId,
-            doc_id: data.docId,
-            score: data.score,
-            total_questions: data.totalQuestions || 4,
-            passed: data.passed
-          })
-          .select()
-          .single();
-        if (error) console.error("dbAdd error:", error);
-        return result?.id;
+
+      // 1. 로컬 캐시에 즉시 저장
+      await localDb[storeName].add(localData);
+
+      // 2. 온라인이면 Supabase에 동기화
+      if (isOnline()) {
+        try {
+          await supabase.from(storeName).insert(localData);
+        } catch (e) {
+          console.error("dbAdd sync error:", e);
+          await addToSyncQueue(storeName, 'insert', localData);
+        }
+      } else {
+        await addToSyncQueue(storeName, 'insert', localData);
       }
-      return null;
+
+      return newId;
     };
 
-    // 삭제
+    // 삭제 (로컬 먼저, 온라인 시 동기화)
     const dbDelete = async (storeName, key) => {
-      if (storeName === "ojt_docs") {
-        const { error } = await supabase
-          .from("ojt_docs")
-          .delete()
-          .eq("id", key);
-        if (error) console.error("dbDelete error:", error);
-        return !error;
+      // 1. 로컬 캐시에서 삭제
+      await localDb[storeName].delete(key);
+
+      // 2. 온라인이면 Supabase에서 삭제
+      if (isOnline()) {
+        try {
+          await supabase.from(storeName).delete().eq("id", key);
+        } catch (e) {
+          console.error("dbDelete sync error:", e);
+          await addToSyncQueue(storeName, 'delete', { id: key });
+        }
+      } else {
+        await addToSyncQueue(storeName, 'delete', { id: key });
       }
-      if (storeName === "learning_records") {
-        const { error } = await supabase
-          .from("learning_records")
-          .delete()
-          .eq("id", key);
-        if (error) console.error("dbDelete error:", error);
-        return !error;
-      }
-      return false;
+
+      return true;
     };
 
     // =========================================
