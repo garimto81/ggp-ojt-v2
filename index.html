@@ -164,8 +164,11 @@
           .from("users")
           .select("*")
           .eq("id", key)
-          .single();
-        if (error && error.code !== "PGRST116") console.error("dbGet error:", error);
+          .maybeSingle();
+        // PGRST116: 결과 없음, 500: RLS 정책으로 인한 접근 불가 (신규 사용자)
+        if (error && error.code !== "PGRST116" && error.code !== "PGRST301") {
+          console.error("dbGet error:", error);
+        }
         return data;
       }
       if (storeName === "ojt_docs") {
@@ -214,16 +217,33 @@
     // 생성/수정 (upsert)
     const dbPut = async (storeName, data) => {
       if (storeName === "users") {
-        const { data: result, error } = await supabase
+        // 먼저 insert 시도, 실패하면 update
+        const userData = {
+          id: data.id,
+          name: data.name,
+          role: data.role,
+          department: data.department || null
+        };
+
+        // insert 시도
+        let { data: result, error } = await supabase
           .from("users")
-          .upsert({
-            id: data.id,
-            name: data.name,
-            role: data.role,
-            department: data.department || null
-          })
+          .insert(userData)
           .select()
           .single();
+
+        // 이미 존재하면 update
+        if (error && error.code === "23505") {
+          const updateResult = await supabase
+            .from("users")
+            .update({ name: data.name, role: data.role, department: data.department || null })
+            .eq("id", data.id)
+            .select()
+            .single();
+          result = updateResult.data;
+          error = updateResult.error;
+        }
+
         if (error) console.error("dbPut error:", error);
         return result;
       }
