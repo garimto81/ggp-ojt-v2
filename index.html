@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.0.1 (48a525f) - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.0.2 (9a8ca51) - AI 기반 온보딩 교육 플랫폼</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1023,6 +1023,7 @@ ${rawText}
       // 초기 로드: Supabase Auth 세션 확인
       useEffect(() => {
         let isMounted = true;
+        let profileLoaded = false; // 중복 호출 방지 플래그
 
         // 타임아웃 헬퍼 함수
         const withTimeout = (promise, ms) => {
@@ -1055,6 +1056,7 @@ ${rawText}
             }
 
             if (session?.user) {
+              profileLoaded = true;
               await loadUserProfile(session);
             } else {
               console.log("initAuth: no session, showing login");
@@ -1087,6 +1089,7 @@ ${rawText}
           if (event === 'INITIAL_SESSION') return;
 
           if (event === 'SIGNED_OUT') {
+            profileLoaded = false; // 로그아웃 시 플래그 리셋
             setUser(null);
             setViewState('login');
             setIsLoadingAuth(false);
@@ -1094,9 +1097,13 @@ ${rawText}
           }
 
           // SIGNED_IN: 새 로그인 (OAuth 팝업 후)
+          // 이미 initAuth에서 처리했으면 스킵
           if (event === 'SIGNED_IN') {
-            if (session?.user) {
+            if (session?.user && !profileLoaded) {
+              profileLoaded = true;
               await loadUserProfile(session);
+            } else if (profileLoaded) {
+              console.log('Auth event: SIGNED_IN skipped (already loaded)');
             }
           }
         });
@@ -1516,7 +1523,7 @@ ${rawText}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.0.1 (48a525f) | Supabase + Gemini AI</p>
+                <p className="text-xs text-slate-400 mt-1">v2.0.2 (9a8ca51) | Supabase + Gemini AI</p>
               </div>
 
               <div className="mb-6">
@@ -1572,13 +1579,13 @@ ${rawText}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.0.1</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.0.2</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
                       ? `${sessionMode.toUpperCase()} MODE (임시)`
                       : `${user.role?.toUpperCase()} MODE`
-                  ) : 'Welcome'} | 48a525f
+                  ) : 'Welcome'} | 9a8ca51
                 </p>
               </div>
             </div>
