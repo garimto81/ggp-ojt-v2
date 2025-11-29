@@ -927,23 +927,30 @@ ${rawText}
 
       // 사용자 프로필 로드 및 뷰 상태 설정 (공통 함수)
       const loadUserProfile = async (session) => {
+        console.log("loadUserProfile called, session:", session?.user?.email);
+
         if (!session?.user) {
+          console.log("No session user, redirecting to login");
           setUser(null);
           setViewState('login');
+          setIsLoadingAuth(false);
           return;
         }
 
         try {
+          console.log("Fetching profile for user:", session.user.id);
           const profile = await dbGet("users", session.user.id);
+          console.log("Profile fetched:", profile);
 
-          if (profile) {
+          if (profile && profile.role) {
             setUser(profile);
             if (profile.role === 'admin') setViewState('admin_dashboard');
             else if (profile.role === 'mentor') setViewState('mentor_dashboard');
             else if (profile.role === 'mentee') setViewState('mentee_list');
             else setViewState('role_select');
           } else {
-            // 프로필이 없으면 역할 선택 화면으로
+            // 프로필이 없거나 역할이 없으면 역할 선택 화면으로
+            console.log("No profile or role, showing role select");
             setUser({
               id: session.user.id,
               name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
@@ -954,14 +961,33 @@ ${rawText}
           }
         } catch (e) {
           console.error("Load user profile error:", e);
-          setUser(null);
-          setViewState('login');
+          // 에러 발생 시에도 역할 선택 화면으로 (로그인 상태는 유지)
+          setUser({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+            email: session.user.email,
+            role: null
+          });
+          setViewState('role_select');
+        } finally {
+          // 항상 로딩 상태 종료
+          setIsLoadingAuth(false);
         }
       };
 
       // 초기 로드: Supabase Auth 세션 확인
       useEffect(() => {
         let isMounted = true;
+        let authHandled = false;
+
+        // 안전장치: 10초 후에도 로딩 중이면 로그인 화면으로 (타임아웃)
+        const timeoutId = setTimeout(() => {
+          if (isMounted && !authHandled) {
+            console.warn("Auth timeout - falling back to login");
+            setIsLoadingAuth(false);
+            setViewState('login');
+          }
+        }, 10000);
 
         // onAuthStateChange가 모든 세션 이벤트를 처리
         // INITIAL_SESSION: 페이지 로드 시 기존 세션 복원
@@ -972,6 +998,8 @@ ${rawText}
           console.log('Auth event:', event, session?.user?.email);
 
           if (!isMounted) return;
+          authHandled = true;
+          clearTimeout(timeoutId);
 
           // 토큰 갱신은 UI 변경 불필요
           if (event === 'TOKEN_REFRESHED') return;
@@ -987,15 +1015,17 @@ ${rawText}
           if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
             if (session?.user) {
               await loadUserProfile(session);
+              // loadUserProfile에서 setIsLoadingAuth(false) 호출됨
             } else {
               setViewState('login');
+              setIsLoadingAuth(false);
             }
-            setIsLoadingAuth(false);
           }
         });
 
         return () => {
           isMounted = false;
+          clearTimeout(timeoutId);
           subscription.unsubscribe();
         };
       }, []);
