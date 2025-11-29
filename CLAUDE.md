@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.0.0)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.1.0)
+
+### 버전 히스토리
+
+| 버전 | 날짜 | 주요 변경 |
+|------|------|----------|
+| v2.1.0 | 2025-11 | DB 성능 최적화, 인덱스 추가, RLS 개선 |
+| v2.0.0 | 2025-11 | Supabase + Gemini API 전환 |
+| v1.x | 2025-10 | Firebase + Ollama (레거시) |
 
 ## Tech Stack
 
@@ -137,6 +145,22 @@ learning_records (id UUID PK, user_id, doc_id, score, total_questions, passed, c
 
 RLS 정책: `supabase_schema.sql`, `supabase_fix_rls.sql` 참조
 
+### 확장 스키마 (v2.1.0)
+
+```sql
+-- learning_progress: 학습 진행률 추적 ✅ Phase 2 완료
+learning_progress (id UUID PK, user_id FK, doc_id FK, status, current_section, total_time_seconds, quiz_attempts, best_score)
+
+-- teams: 팀 마스터 ✅ Phase 3 완료
+teams (id UUID PK, name, slug, display_order, is_active)
+-- ojt_docs.team_id FK 추가됨
+
+-- notifications: 알림 - Phase 4 예정
+notifications (id UUID PK, user_id FK, type, title, message, is_read)
+```
+
+자세한 마이그레이션 가이드: [docs/DB_MIGRATION_GUIDE.md](docs/DB_MIGRATION_GUIDE.md)
+
 ### Dexie.js (로컬 캐시)
 
 ```javascript
@@ -179,9 +203,31 @@ npm run test:report    # HTML 리포트 보기
 
 | 역할 | 권한 |
 |------|------|
-| **Admin** | 전체 사용자/콘텐츠 관리, 역할 변경, 통계 대시보드 |
+| **Admin** | 전체 사용자/콘텐츠 관리, 역할 변경, 통계 대시보드, **Mentor 모드 전환** |
 | **Mentor** | 비정형 텍스트 → AI 변환 → Supabase 저장, 자료 CRUD |
 | **Mentee** | 팀별 로드맵 탐색 → 문서 학습 → 퀴즈 평가 (읽기 전용) |
+
+### Admin 모드 전환 (v2.1.0+)
+
+Admin은 Header의 "모드" 버튼을 통해 Mentor 작업실로 전환할 수 있습니다.
+
+| 기능 | 설명 |
+|------|------|
+| **모드 전환** | Admin → Mentor 작업실 (문서 생성/수정) |
+| **모드 복귀** | Mentor 작업실 → Admin 대시보드 |
+| **세션 유지** | sessionStorage로 페이지 새로고침 시에도 모드 유지 |
+| **자동 초기화** | 로그아웃 또는 브라우저 종료 시 모드 초기화 |
+
+**상태 관리:**
+```javascript
+const [sessionMode, setSessionMode] = useState(null); // 'admin' | 'mentor' | null
+const displayRole = sessionMode || user?.role;
+```
+
+**UI 표시:**
+- Header 서브타이틀: `MENTOR MODE (임시)`
+- 역할 배지: Amber 색상 (임시 모드 표시)
+- 경고 배너: "MENTOR 모드로 작업 중입니다 (임시)"
 
 ## Admin Dashboard
 
@@ -273,28 +319,34 @@ URL 콘텐츠 추출 시 사용하는 프록시 목록 (순차 시도):
 
 ```text
 ggp_ojt_v2/
-├── index.html              # 전체 앱 (단일 파일 SPA)
-├── supabase_schema.sql     # Supabase 스키마 및 RLS 정책
-├── supabase_fix_rls.sql    # RLS 수정 스크립트
-├── package.json            # 프로젝트 메타데이터 (v2.0.0)
-├── playwright.config.js    # E2E 테스트 설정
-├── CLAUDE.md               # AI 개발 가이드 (이 파일)
+├── index.html                           # 전체 앱 (단일 파일 SPA)
+├── supabase_schema.sql                  # Supabase 기본 스키마
+├── supabase_fix_rls.sql                 # RLS 수정 스크립트
+├── supabase_performance.sql             # Phase 1: 인덱스 최적화 ✅
+├── supabase_phase2_learning_progress.sql # Phase 2: 학습 진행률 ✅
+├── supabase_phase3_teams.sql            # Phase 3: teams 테이블 ✅
+├── package.json                         # 프로젝트 메타데이터 (v2.1.0)
+├── playwright.config.js                 # E2E 테스트 설정
+├── CLAUDE.md                            # AI 개발 가이드 (이 파일)
 ├── docs/
-│   ├── prd.md              # 원본 PRD (기획 참조용)
-│   └── guide.md            # 배포 가이드 (구버전 - Firebase)
+│   ├── prd.md                           # 원본 PRD (기획 참조용)
+│   ├── guide.md                         # 배포 가이드 (구버전 - Firebase)
+│   ├── DB_MIGRATION_GUIDE.md            # DB 마이그레이션 가이드
+│   └── PERFORMANCE_OPTIMIZATION.md      # 성능 최적화 가이드
 ├── tasks/
 │   └── prds/
 │       ├── 0001-rbac-deployment.md
-│       ├── 0002-mvp-optimized.md  # Ollama 버전 (레거시)
-│       └── 0003-web-deployment.md # Supabase + Dexie.js 설계
+│       ├── 0002-mvp-optimized.md        # Ollama 버전 (레거시)
+│       └── 0003-web-deployment.md       # Supabase + Dexie.js 설계
 └── tests/
-    └── e2e-homepage.spec.js  # Playwright E2E 테스트
+    └── e2e-homepage.spec.js             # Playwright E2E 테스트
 ```
 
 ## GitHub Issues
 
 | # | Status | Title |
 |---|--------|-------|
+| #25 | OPEN | Feature: Admin ↔ Mentor 모드 전환 기능 |
 | #24 | CLOSED | Security: SECURITY DEFINER 함수 NULL 체크 부재 |
 | #23 | CLOSED | Security: RLS 정책 - users.role UPDATE 검증 부재 |
 | #22 | CLOSED | Security: Gemini API 키 클라이언트 사이드 노출 |

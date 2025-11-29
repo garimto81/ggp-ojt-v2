@@ -835,6 +835,11 @@ ${rawText}
       // App State
       const [viewState, setViewState] = useState('loading');
 
+      // Admin Mode Switch (임시 모드 전환)
+      const [sessionMode, setSessionMode] = useState(null); // 'admin' | 'mentor' | null
+      const [showModeMenu, setShowModeMenu] = useState(false);
+      const displayRole = sessionMode || user?.role; // UI 표시용 역할
+
       // Mentor State
       const [inputType, setInputType] = useState('text'); // 'text', 'url', 'pdf'
       const [inputTitle, setInputTitle] = useState('');
@@ -885,6 +890,25 @@ ${rawText}
         const interval = setInterval(checkStatus, 30000); // 30초마다 체크
         return () => clearInterval(interval);
       }, []);
+
+      // Admin 모드 전환 상태 복원 (sessionStorage)
+      useEffect(() => {
+        const stored = sessionStorage.getItem('ojt_sessionMode');
+        if (stored && ['admin', 'mentor'].includes(stored)) {
+          setSessionMode(stored);
+        }
+      }, []);
+
+      // 모드 메뉴 외부 클릭 시 닫기
+      useEffect(() => {
+        const handleClickOutside = (e) => {
+          if (showModeMenu && !e.target.closest('.mode-menu-container')) {
+            setShowModeMenu(false);
+          }
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+      }, [showModeMenu]);
 
       // 입력 내용 변경 시 예상 학습 시간 및 필요 스텝 수 계산
       useEffect(() => {
@@ -954,10 +978,20 @@ ${rawText}
 
           if (profile && profile.role) {
             setUser(profile);
-            if (profile.role === 'admin') setViewState('admin_dashboard');
-            else if (profile.role === 'mentor') setViewState('mentor_dashboard');
-            else if (profile.role === 'mentee') setViewState('mentee_list');
-            else setViewState('role_select');
+            // Admin의 임시 모드 체크 (sessionStorage)
+            const tempMode = sessionStorage.getItem('ojt_sessionMode');
+            if (profile.role === 'admin' && tempMode === 'mentor') {
+              setSessionMode('mentor');
+              setViewState('mentor_dashboard');
+            } else if (profile.role === 'admin') {
+              setViewState('admin_dashboard');
+            } else if (profile.role === 'mentor') {
+              setViewState('mentor_dashboard');
+            } else if (profile.role === 'mentee') {
+              setViewState('mentee_list');
+            } else {
+              setViewState('role_select');
+            }
           } else {
             // 프로필이 없거나 역할이 없으면 역할 선택 화면으로
             console.log("No profile or role, showing role select");
@@ -1150,12 +1184,32 @@ ${rawText}
         try {
           // 캐시 먼저 클리어 (다른 사용자 데이터 노출 방지)
           await clearAllCache();
+          // 모드 전환 상태 초기화
+          sessionStorage.removeItem('ojt_sessionMode');
+          setSessionMode(null);
+          setShowModeMenu(false);
           await supabase.auth.signOut();
           setUser(null);
           setViewState('login');
         } catch (e) {
           console.error("Logout error:", e);
         }
+      };
+
+      // Admin 모드 전환 핸들러
+      const handleModeSwitch = (newMode) => {
+        if (newMode === null) {
+          // Admin 모드로 복귀
+          sessionStorage.removeItem('ojt_sessionMode');
+          setSessionMode(null);
+          setViewState('admin_dashboard');
+        } else {
+          // Mentor 모드로 전환
+          sessionStorage.setItem('ojt_sessionMode', newMode);
+          setSessionMode(newMode);
+          setViewState('mentor_dashboard');
+        }
+        setShowModeMenu(false);
       };
 
       // =========================================
@@ -1433,7 +1487,8 @@ ${rawText}
       };
 
       const Header = () => {
-        const getRoleBadgeColor = (role) => {
+        const getRoleBadgeColor = (role, isTemp) => {
+          if (isTemp) return 'bg-amber-500 text-white';
           switch (role) {
             case 'admin': return 'bg-red-600 text-white';
             case 'mentor': return 'bg-indigo-800 text-indigo-100';
@@ -1443,9 +1498,11 @@ ${rawText}
         };
 
         const handleHomeClick = () => {
-          if (user?.role === 'admin') setViewState('admin_dashboard');
-          else if (user?.role === 'mentor') setViewState('mentor_dashboard');
-          else if (user?.role === 'mentee') { setViewState('mentee_list'); setSelectedTeam(null); }
+          // 임시 모드일 때는 해당 모드의 홈으로
+          const effectiveRole = sessionMode || user?.role;
+          if (effectiveRole === 'admin') setViewState('admin_dashboard');
+          else if (effectiveRole === 'mentor') setViewState('mentor_dashboard');
+          else if (effectiveRole === 'mentee') { setViewState('mentee_list'); setSelectedTeam(null); }
         };
 
         return (
@@ -1455,7 +1512,11 @@ ${rawText}
               <div>
                 <h1 className="text-xl font-bold">OJT Master</h1>
                 <p className="text-xs text-indigo-200">
-                  {user ? `${user.role?.toUpperCase()} MODE` : 'Welcome'}
+                  {user ? (
+                    sessionMode
+                      ? `${sessionMode.toUpperCase()} MODE (임시)`
+                      : `${user.role?.toUpperCase()} MODE`
+                  ) : 'Welcome'}
                 </p>
               </div>
             </div>
@@ -1463,9 +1524,51 @@ ${rawText}
               <AIStatusBadge />
               {user && (
                 <>
+                  {/* Admin 모드 전환 버튼 */}
+                  {user.role === 'admin' && (
+                    <div className="relative mode-menu-container">
+                      <button
+                        onClick={() => setShowModeMenu(!showModeMenu)}
+                        className="text-sm flex items-center gap-1 px-2 py-1 rounded hover:bg-indigo-700 transition border border-indigo-400"
+                      >
+                        <Icon name="settings" className="w-4 h-4" />
+                        <span className="hidden sm:inline">모드</span>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {showModeMenu && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white text-slate-800 rounded-lg shadow-xl z-50 py-1">
+                          <button
+                            onClick={() => handleModeSwitch(null)}
+                            className={`w-full text-left px-4 py-2 hover:bg-slate-100 text-sm flex items-center gap-2 ${!sessionMode ? 'bg-slate-100 font-semibold' : ''}`}
+                          >
+                            <Icon name="shield" className="w-4 h-4 text-red-600" />
+                            Admin 대시보드
+                            {!sessionMode && <span className="ml-auto text-green-600">✓</span>}
+                          </button>
+                          <button
+                            onClick={() => handleModeSwitch('mentor')}
+                            className={`w-full text-left px-4 py-2 hover:bg-slate-100 text-sm flex items-center gap-2 ${sessionMode === 'mentor' ? 'bg-slate-100 font-semibold' : ''}`}
+                          >
+                            <Icon name="edit" className="w-4 h-4 text-indigo-600" />
+                            Mentor 작업실
+                            {sessionMode === 'mentor' && <span className="ml-auto text-green-600">✓</span>}
+                          </button>
+                          <hr className="my-1" />
+                          <button
+                            onClick={() => setShowModeMenu(false)}
+                            className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm text-slate-500"
+                          >
+                            닫기
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <span className="text-sm hidden sm:block">{user.name}</span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getRoleBadgeColor(user.role)}`}>
-                    {user.role}
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getRoleBadgeColor(sessionMode || user.role, !!sessionMode)}`}>
+                    {sessionMode || user.role}
                   </span>
                   <button onClick={handleLogout} className="text-sm flex items-center gap-1 hover:text-red-200">
                     <Icon name="logout" className="w-4 h-4" /> 로그아웃
@@ -2356,6 +2459,25 @@ ${rawText}
       return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
           <Header />
+          {/* Admin 임시 모드 경고 배너 */}
+          {user?.role === 'admin' && sessionMode && (
+            <div className="bg-amber-100 border-b-2 border-amber-400 px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-800">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="text-sm font-medium">
+                  <strong>{sessionMode.toUpperCase()}</strong> 모드로 작업 중입니다 (임시)
+                </span>
+              </div>
+              <button
+                onClick={() => handleModeSwitch(null)}
+                className="text-amber-700 hover:text-amber-900 text-sm font-semibold px-3 py-1 rounded hover:bg-amber-200 transition"
+              >
+                Admin으로 돌아가기
+              </button>
+            </div>
+          )}
           <main>
             {viewState === 'role_select' && <RoleSelectionPage />}
             {viewState === 'admin_dashboard' && <AdminDashboard />}
