@@ -10,7 +10,8 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|----------|
-| v2.1.0 | 2025-11 | DB 성능 최적화, 인덱스 추가, RLS 개선 |
+| v2.1.0 | 2025-11-30 | MentorDashboard 탭 기반 레이아웃, edit/eye 아이콘 추가 |
+| v2.0.5 | 2025-11 | 콘텐츠 편집 시 Quill 에디터 로드 수정 |
 | v2.0.0 | 2025-11 | Supabase + Gemini API 전환 |
 | v1.x | 2025-10 | Firebase + Ollama (레거시) |
 
@@ -342,10 +343,42 @@ ggp_ojt_v2/
     └── e2e-homepage.spec.js             # Playwright E2E 테스트
 ```
 
+## Future Development (Research)
+
+### 멀티미디어 블로그 확장 (v3.0 계획)
+
+현재 Quill 에디터의 텍스트 중심 한계를 극복하고, 이미지/영상 첨부가 자유로운 블로그 형태로 확장하기 위한 리서치 결과:
+
+#### 추천 아키텍처
+```
+Supabase (Auth + PostgreSQL) + Cloudflare R2 (미디어) + BlockNote (에디터)
+```
+
+#### 스토리지 솔루션 비교
+| 서비스 | 무료 용량 | 월 100GB 비용 | 다운로드 비용 |
+|--------|----------|---------------|--------------|
+| **Cloudflare R2** | 10GB | $1.50 | **무료** |
+| **Backblaze B2 + CF** | 10GB | $0.60 | **무료** |
+| Supabase Storage | 1GB | ~$2.50 | 유료 |
+
+#### 블록 에디터 비교
+| 에디터 | GitHub Stars | 이미지 업로드 | 추천도 |
+|--------|-------------|--------------|--------|
+| **BlockNote** | 7,000+ | 내장 | 🥇 |
+| **Tiptap** | 33,000+ | 확장 필요 | 🥈 |
+| Lexical | 22,500+ | 직접 구현 | 🥉 |
+
+#### 참고 문서
+- `docs/rich-text-editor-comparison.md` - 에디터 상세 비교
+- 리서치 일자: 2025-11-30
+
+---
+
 ## GitHub Issues
 
 | # | Status | Title |
 |---|--------|-------|
+| #26 | OPEN | Feature: 멀티미디어 블로그 확장 (BlockNote + R2) |
 | #25 | OPEN | Feature: Admin ↔ Mentor 모드 전환 기능 |
 | #24 | CLOSED | Security: SECURITY DEFINER 함수 NULL 체크 부재 |
 | #23 | CLOSED | Security: RLS 정책 - users.role UPDATE 검증 부재 |
