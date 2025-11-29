@@ -989,11 +989,25 @@ ${rawText}
       useEffect(() => {
         let isMounted = true;
 
+        // 타임아웃 헬퍼 함수
+        const withTimeout = (promise, ms) => {
+          return Promise.race([
+            promise,
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Timeout')), ms)
+            )
+          ]);
+        };
+
         // 초기 세션 확인 (getSession 직접 호출)
         const initAuth = async () => {
           console.log("initAuth: checking session...");
           try {
-            const { data: { session }, error } = await supabase.auth.getSession();
+            // 5초 타임아웃
+            const { data: { session }, error } = await withTimeout(
+              supabase.auth.getSession(),
+              5000
+            );
             console.log("initAuth: session result", session?.user?.email, error);
 
             if (!isMounted) return;
@@ -1008,12 +1022,14 @@ ${rawText}
             if (session?.user) {
               await loadUserProfile(session);
             } else {
+              console.log("initAuth: no session, showing login");
               setViewState('login');
               setIsLoadingAuth(false);
             }
           } catch (e) {
-            console.error("initAuth error:", e);
+            console.error("initAuth error:", e.message);
             if (isMounted) {
+              console.log("initAuth: error or timeout, showing login");
               setViewState('login');
               setIsLoadingAuth(false);
             }
