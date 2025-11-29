@@ -1,5 +1,12 @@
 # PRD-0001: 역할 기반 접근 제어(RBAC) 및 웹 배포 시스템
 
+> ⚠️ **레거시 문서**: 이 PRD는 Firebase 기반 v1.x 설계입니다.
+>
+> 현재 v2.0.0은 **Supabase (PostgreSQL + RLS)** 아키텍처를 사용합니다.
+> 최신 설계: [0003-web-deployment.md](./0003-web-deployment.md)
+
+---
+
 ## 1. 개요 (Overview)
 
 ### 1.1 목적
