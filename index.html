@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.1.0 (68a5e30) - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.2.0 - AI 기반 온보딩 교육 플랫폼</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -42,6 +42,25 @@
     .ql-editor.ql-blank::before {
       font-style: normal;
       color: #94a3b8;
+    }
+    /* Quill 에디터 이미지 스타일 */
+    .ql-editor img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.5rem;
+      margin: 0.5rem 0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .ql-editor img:hover {
+      transform: scale(1.01);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    /* 드래그 드롭 영역 하이라이트 */
+    .ql-editor.drag-over {
+      background-color: #e0e7ff;
+      border: 2px dashed #6366f1;
     }
   </style>
 </head>
@@ -141,6 +160,103 @@
     const GEMINI_API_KEY = "AIzaSyCvH1uc1OJ7EHmiWfsjbKVFH-X8KuvXH2I"; // Google AI Studio에서 발급
     const GEMINI_MODEL = "gemini-2.0-flash-exp"; // 무료 티어: gemini-2.0-flash-exp (권장)
     const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
+
+    // =========================================
+    // 설정 (Cloudflare R2 이미지 스토리지)
+    // ⚠️ Worker URL은 배포 후 실제 URL로 변경 필요
+    // =========================================
+    const R2_WORKER_URL = "https://ojt-r2-upload.garimto81.workers.dev"; // Cloudflare Worker URL
+    const R2_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const R2_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    // R2 이미지 업로드 함수
+    async function uploadImageToR2(file) {
+      // 파일 유효성 검사
+      if (!file) {
+        throw new Error('파일이 선택되지 않았습니다');
+      }
+
+      if (!R2_ALLOWED_TYPES.includes(file.type)) {
+        throw new Error('허용되지 않는 파일 형식입니다. (JPG, PNG, GIF, WebP만 지원)');
+      }
+
+      if (file.size > R2_MAX_FILE_SIZE) {
+        throw new Error('파일 크기는 10MB를 초과할 수 없습니다');
+      }
+
+      try {
+        // 1. Worker에 업로드 URL 요청
+        const prepareRes = await fetch(R2_WORKER_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type,
+            fileSize: file.size
+          })
+        });
+
+        if (!prepareRes.ok) {
+          const error = await prepareRes.json();
+          throw new Error(error.error || '업로드 준비 실패');
+        }
+
+        const { uploadUrl, key, publicUrl } = await prepareRes.json();
+
+        // 2. 파일 업로드
+        const uploadRes = await fetch(`${R2_WORKER_URL}/upload`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type,
+            'X-Upload-Key': key
+          },
+          body: file
+        });
+
+        if (!uploadRes.ok) {
+          const error = await uploadRes.json();
+          throw new Error(error.error || '파일 업로드 실패');
+        }
+
+        const result = await uploadRes.json();
+        console.log('Image uploaded to R2:', result.url);
+        return result.url;
+
+      } catch (error) {
+        console.error('R2 upload error:', error);
+        throw error;
+      }
+    }
+
+    // R2 이미지 삭제 함수
+    async function deleteImageFromR2(imageUrl) {
+      try {
+        // URL에서 key 추출
+        const urlParts = imageUrl.split('/');
+        const key = urlParts.slice(-2).join('/'); // uploads/timestamp-random.ext
+
+        const response = await fetch(R2_WORKER_URL, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ key })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || '이미지 삭제 실패');
+        }
+
+        console.log('Image deleted from R2:', key);
+        return true;
+      } catch (error) {
+        console.error('R2 delete error:', error);
+        return false;
+      }
+    }
 
     // =========================================
     // 스텝 분할 설정
@@ -927,24 +1043,86 @@ ${rawText}
         }
       }, [rawInput]);
 
+      // 이미지 업로드 상태
+      const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+      // Quill 커스텀 이미지 핸들러
+      const handleQuillImageUpload = async () => {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp');
+        input.click();
+
+        input.onchange = async () => {
+          const file = input.files[0];
+          if (!file) return;
+
+          setIsUploadingImage(true);
+          try {
+            const imageUrl = await uploadImageToR2(file);
+
+            // Quill에 이미지 삽입
+            const quill = quillInstanceRef.current;
+            if (quill) {
+              const range = quill.getSelection(true);
+              quill.insertEmbed(range.index, 'image', imageUrl);
+              quill.setSelection(range.index + 1);
+            }
+          } catch (error) {
+            alert(`이미지 업로드 실패: ${error.message}`);
+          } finally {
+            setIsUploadingImage(false);
+          }
+        };
+      };
+
+      // Quill 드래그&드롭/붙여넣기 이미지 처리
+      const handleQuillImageDrop = async (file) => {
+        if (!R2_ALLOWED_TYPES.includes(file.type)) {
+          alert('허용되지 않는 파일 형식입니다. (JPG, PNG, GIF, WebP만 지원)');
+          return;
+        }
+
+        setIsUploadingImage(true);
+        try {
+          const imageUrl = await uploadImageToR2(file);
+
+          const quill = quillInstanceRef.current;
+          if (quill) {
+            const range = quill.getSelection(true);
+            quill.insertEmbed(range.index, 'image', imageUrl);
+            quill.setSelection(range.index + 1);
+          }
+        } catch (error) {
+          alert(`이미지 업로드 실패: ${error.message}`);
+        } finally {
+          setIsUploadingImage(false);
+        }
+      };
+
       // Quill 에디터 초기화
       useEffect(() => {
         if (inputType === 'text' && quillRef.current && !quillInstanceRef.current) {
           // Quill 인스턴스 생성
           quillInstanceRef.current = new Quill(quillRef.current, {
             theme: 'snow',
-            placeholder: '교육 내용을 자유롭게 입력하세요...\n\n• 서식 도구를 사용하여 제목, 목록, 강조 등을 추가할 수 있습니다\n• Ctrl+B: 굵게, Ctrl+I: 기울임, Ctrl+U: 밑줄',
+            placeholder: '교육 내용을 자유롭게 입력하세요...\n\n• 서식 도구를 사용하여 제목, 목록, 강조 등을 추가할 수 있습니다\n• Ctrl+B: 굵게, Ctrl+I: 기울임, Ctrl+U: 밑줄\n• 이미지: 툴바 버튼 또는 드래그&드롭/붙여넣기',
             modules: {
-              toolbar: [
-                [{ 'header': [1, 2, 3, false] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                [{ 'indent': '-1'}, { 'indent': '+1' }],
-                ['blockquote', 'code-block'],
-                ['link'],
-                ['clean']
-              ]
+              toolbar: {
+                container: [
+                  [{ 'header': [1, 2, 3, false] }],
+                  ['bold', 'italic', 'underline', 'strike'],
+                  [{ 'color': [] }, { 'background': [] }],
+                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                  [{ 'indent': '-1'}, { 'indent': '+1' }],
+                  ['blockquote', 'code-block'],
+                  ['link', 'image'],
+                  ['clean']
+                ],
+                handlers: {
+                  image: handleQuillImageUpload
+                }
+              }
             }
           });
 
@@ -953,6 +1131,49 @@ ${rawText}
             const text = quillInstanceRef.current.getText().trim();
             setRawInput(text);
           });
+
+          // 드래그&드롭 이미지 처리
+          const editorContainer = quillRef.current.querySelector('.ql-editor');
+          if (editorContainer) {
+            editorContainer.addEventListener('drop', async (e) => {
+              e.preventDefault();
+              editorContainer.classList.remove('drag-over');
+              const files = e.dataTransfer?.files;
+              if (files && files.length > 0) {
+                const file = files[0];
+                if (file.type.startsWith('image/')) {
+                  await handleQuillImageDrop(file);
+                }
+              }
+            });
+
+            editorContainer.addEventListener('dragover', (e) => {
+              e.preventDefault();
+              editorContainer.classList.add('drag-over');
+            });
+
+            editorContainer.addEventListener('dragleave', (e) => {
+              e.preventDefault();
+              editorContainer.classList.remove('drag-over');
+            });
+
+            // 붙여넣기 이미지 처리
+            editorContainer.addEventListener('paste', async (e) => {
+              const items = e.clipboardData?.items;
+              if (items) {
+                for (let i = 0; i < items.length; i++) {
+                  if (items[i].type.startsWith('image/')) {
+                    e.preventDefault();
+                    const file = items[i].getAsFile();
+                    if (file) {
+                      await handleQuillImageDrop(file);
+                    }
+                    break;
+                  }
+                }
+              }
+            });
+          }
 
           // 편집 모드인 경우 기존 내용 로드 (Quill 마운트 후)
           if (editingDoc && editingDoc.sections && editingDoc.sections.length > 0) {
@@ -1525,8 +1746,8 @@ ${rawText}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.1.0 (68a5e30) | Supabase + Gemini AI</p>
-                <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat: MentorDashboard 탭 기반 레이아웃으로 개선">feat: MentorDashboard 탭 기반 레이아웃으로 개선</p>
+                <p className="text-xs text-slate-400 mt-1">v2.2.0 | R2 이미지 업로드 + Gemini AI</p>
+                <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat: R2 이미지 업로드 기능 추가 (#26)">feat: R2 이미지 업로드 기능 추가</p>
               </div>
 
               <div className="mb-6">
@@ -1582,7 +1803,7 @@ ${rawText}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.1.0</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.2.0</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
@@ -2353,8 +2574,17 @@ ${rawText}
 
               {/* 입력 타입별 UI */}
               {inputType === 'text' && (
-                <div className="border border-slate-300 rounded-lg overflow-hidden">
+                <div className="border border-slate-300 rounded-lg overflow-hidden relative">
                   <div ref={quillRef} />
+                  {/* 이미지 업로드 로딩 오버레이 */}
+                  {isUploadingImage && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        <span className="text-sm text-slate-600">이미지 업로드 중...</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

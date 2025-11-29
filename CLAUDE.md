@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.1.0)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.2.0)
 
 ### 버전 히스토리
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|----------|
+| v2.2.0 | 2025-11-30 | Cloudflare R2 이미지 업로드, 드래그&드롭/붙여넣기 지원 (#26) |
 | v2.1.0 | 2025-11-30 | MentorDashboard 탭 기반 레이아웃, edit/eye 아이콘 추가 |
 | v2.0.5 | 2025-11 | 콘텐츠 편집 시 Quill 에디터 로드 수정 |
 | v2.0.0 | 2025-11 | Supabase + Gemini API 전환 |
@@ -24,7 +25,8 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 | **Local Cache** | Dexie.js (IndexedDB) |
 | **AI** | Google Gemini API (gemini-2.0-flash-exp) |
 | **Styling** | Tailwind CSS (CDN) |
-| **Editor** | Quill 2.0 (Rich Text) |
+| **Editor** | Quill 2.0 (Rich Text + 이미지 업로드) |
+| **Image Storage** | Cloudflare R2 (Worker 프록시) |
 | **Charts** | Chart.js 4.4.1 (Admin Dashboard) |
 | **PDF Parsing** | PDF.js 3.11.174 |
 | **JSX Transform** | Babel Standalone (CDN) |
@@ -106,6 +108,15 @@ index.html
 | `checkCacheVersion()` | 캐시 버전 마이그레이션 |
 | `processSyncQueue()` | 오프라인 큐 동기화 처리 |
 
+### 이미지 업로드 (R2)
+
+| 함수 | 파라미터 | 반환값 | 설명 |
+|------|----------|--------|------|
+| `uploadImageToR2(file)` | File | string (URL) | Cloudflare R2에 이미지 업로드 |
+| `deleteImageFromR2(imageUrl)` | string | boolean | R2에서 이미지 삭제 |
+| `handleQuillImageUpload()` | - | void | Quill 툴바 이미지 버튼 핸들러 |
+| `handleQuillImageDrop(file)` | File | void | 드래그&드롭/붙여넣기 이미지 처리 |
+
 ## Constants
 
 ### 스텝 분할 설정
@@ -128,6 +139,14 @@ index.html
 | 상수 | 값 | 설명 |
 |------|-----|------|
 | `QUIZ_PASS_THRESHOLD` | 3 | 통과 기준 (4문제 중) |
+
+### 이미지 업로드 (R2)
+
+| 상수 | 값 | 설명 |
+|------|-----|------|
+| `R2_WORKER_URL` | Worker URL | Cloudflare Worker 엔드포인트 |
+| `R2_MAX_FILE_SIZE` | 10MB | 최대 파일 크기 |
+| `R2_ALLOWED_TYPES` | JPG, PNG, GIF, WebP | 허용 파일 형식 |
 
 ## Data Structure
 
