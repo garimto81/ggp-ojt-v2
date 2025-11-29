@@ -1,0 +1,24 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "ojt-r2-upload",
+	"main": "src/index.js",
+	"compatibility_date": "2025-11-28",
+	"observability": {
+		"enabled": true
+	},
+
+	// R2 버킷 바인딩
+	// ⚠️ bucket_name은 실제 R2 버킷 이름으로 변경 필요
+	"r2_buckets": [
+		{
+			"binding": "R2_BUCKET",
+			"bucket_name": "ojt-media"
+		}
+	],
+
+	// 환경 변수
+	// ⚠️ R2_PUBLIC_URL은 r2.dev URL 또는 Custom Domain으로 변경 필요
+	"vars": {
+		"R2_PUBLIC_URL": "https://pub-xxxxxxxx.r2.dev"
+	}
+}
