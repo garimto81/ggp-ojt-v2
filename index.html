@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.0.5 (ebeb5e5) - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.1.0 (68a5e30) - AI 기반 온보딩 교육 플랫폼</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -75,6 +75,8 @@
         split: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>,
         clock: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
         layers: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>,
+        edit: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+        eye: <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
       };
       return icons[name] || null;
     };
@@ -862,6 +864,7 @@ ${rawText}
       const [autoSplit, setAutoSplit] = useState(true); // 자동 스텝 분할 옵션
       const [estimatedTime, setEstimatedTime] = useState(0); // 예상 학습 시간
       const [requiredSteps, setRequiredSteps] = useState(1); // 필요 스텝 수
+      const [editorTab, setEditorTab] = useState('edit'); // 'edit' | 'preview' - 탭 기반 레이아웃
 
       // Mentee State
       const [publicDocs, setPublicDocs] = useState([]);
@@ -1312,6 +1315,7 @@ ${rawText}
             setGeneratedDocs(results);
             setGeneratedDoc(results[0]); // 첫 번째 문서를 미리보기에 표시
             setProcessingStatus("");
+            setEditorTab('preview'); // 미리보기 탭으로 자동 전환
           } else {
             // 단일 스텝 생성
             setProcessingStatus("AI 생성 시작...");
@@ -1322,6 +1326,7 @@ ${rawText}
             setGeneratedDoc(finalDoc);
             setGeneratedDocs([finalDoc]);
             setProcessingStatus("");
+            setEditorTab('preview'); // 미리보기 탭으로 자동 전환
           }
         } catch (error) {
           alert(`오류: ${error.message}`);
@@ -1520,7 +1525,8 @@ ${rawText}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.0.5 (ebeb5e5) | Supabase + Gemini AI</p>
+                <p className="text-xs text-slate-400 mt-1">v2.1.0 (68a5e30) | Supabase + Gemini AI</p>
+                <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat: MentorDashboard 탭 기반 레이아웃으로 개선">feat: MentorDashboard 탭 기반 레이아웃으로 개선</p>
               </div>
 
               <div className="mb-6">
@@ -1576,14 +1582,15 @@ ${rawText}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.0.5</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.1.0</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
                       ? `${sessionMode.toUpperCase()} MODE (임시)`
                       : `${user.role?.toUpperCase()} MODE`
-                  ) : 'Welcome'} | ebeb5e5
+                  ) : 'Welcome'} | 68a5e30
                 </p>
+                <p className="text-xs text-indigo-300 opacity-70 truncate max-w-[200px]" title="feat: MentorDashboard 탭 기반 레이아웃으로 개선">탭 기반 레이아웃</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -2210,8 +2217,37 @@ ${rawText}
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 입력 폼 */}
+          {/* 탭 UI - 편집/미리보기 전환 */}
+          <div className="flex gap-2 mb-4 border-b border-slate-200 pb-3">
+            <button
+              onClick={() => setEditorTab('edit')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                editorTab === 'edit'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <Icon name="edit" className="w-4 h-4" />
+              편집
+            </button>
+            <button
+              onClick={() => setEditorTab('preview')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                editorTab === 'preview'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <Icon name="eye" className="w-4 h-4" />
+              미리보기
+              {(generatedDoc || generatedDocs.length > 0) && (
+                <span className="ml-1 w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+              )}
+            </button>
+          </div>
+
+          {/* 편집 탭 */}
+          {editorTab === 'edit' && (
             <div className="flex flex-col gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -2400,19 +2436,30 @@ ${rawText}
                 {isProcessing ? processingStatus || "생성 중..." : `AI 자료 생성 (${GEMINI_MODEL})`}
               </button>
             </div>
+          )}
 
-            {/* 미리보기 */}
-            <div className="bg-slate-50 p-6 rounded-xl shadow-inner border border-slate-200 overflow-y-auto max-h-[600px]">
-              <div className="sticky top-0 bg-slate-50 pb-4 border-b border-slate-200 z-10">
+          {/* 미리보기 탭 */}
+          {editorTab === 'preview' && (
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <div className="sticky top-0 bg-white pb-4 border-b border-slate-200 z-10">
                 <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-slate-700">
-                    미리보기
-                    {generatedDocs.length > 1 && (
-                      <span className="ml-2 text-xs font-normal text-indigo-600">
-                        ({generatedDocs.length}개 스텝 생성됨)
-                      </span>
-                    )}
-                  </h3>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setEditorTab('edit')}
+                      className="flex items-center gap-1 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
+                    >
+                      <Icon name="edit" className="w-4 h-4" />
+                      편집으로
+                    </button>
+                    <h3 className="font-semibold text-slate-700">
+                      미리보기
+                      {generatedDocs.length > 1 && (
+                        <span className="ml-2 text-xs font-normal text-indigo-600">
+                          ({generatedDocs.length}개 스텝 생성됨)
+                        </span>
+                      )}
+                    </h3>
+                  </div>
                   {(generatedDoc || generatedDocs.length > 0) && (
                     <button onClick={handleSaveToDB} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700">
                       <Icon name="save" className="w-4 h-4" />
@@ -2474,7 +2521,7 @@ ${rawText}
                 )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* 내가 만든 자료 목록 */}
           {myDocs.length > 0 && (
