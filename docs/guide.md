@@ -1,3 +1,10 @@
+# 배포 가이드 (v1.x Firebase)
+
+> ⚠️ **레거시 문서**: 이 가이드는 Firebase 기반 v1.x 버전용입니다.
+>
+> 현재 v2.0.0은 **Supabase + Vercel** 아키텍처를 사용합니다.
+> 최신 가이드는 [CLAUDE.md](../CLAUDE.md)를 참조하세요.
+
 웹 배포와 계정별 권한(Role-Based Access Control) 설정을 위해서는 크게 세 가지 단계가 필요합니다.
 
 1.  **인증(Authentication) 강화:** 익명 로그인 대신 **Google 로그인**이나 이메일 로그인을 사용하여 사용자를 식별해야 합니다.

@@ -54,10 +54,14 @@ CREATE POLICY "Users can insert own profile"
   ON users FOR INSERT
   WITH CHECK (auth.uid() = id);
 
--- 누구나 자신의 프로필 수정 가능
-CREATE POLICY "Users can update own profile"
+-- 누구나 자신의 프로필 수정 가능 (role 필드는 변경 불가)
+CREATE POLICY "Users can update own profile (except role)"
   ON users FOR UPDATE
-  USING (auth.uid() = id);
+  USING (auth.uid() = id)
+  WITH CHECK (
+    auth.uid() = id AND
+    role = (SELECT role FROM users WHERE id = auth.uid())
+  );
 
 -- 관리자는 모든 사용자 조회 가능
 CREATE POLICY "Admins can view all users"

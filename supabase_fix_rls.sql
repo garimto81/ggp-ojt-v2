@@ -24,7 +24,7 @@ DROP POLICY IF EXISTS "Users can view learning records" ON learning_records;
 -- 2. SECURITY DEFINER 함수 생성 (RLS 우회)
 -- =============================================
 
--- 현재 사용자의 역할 조회 (RLS 우회)
+-- 현재 사용자의 역할 조회 (RLS 우회, NULL 체크 포함)
 CREATE OR REPLACE FUNCTION get_my_role()
 RETURNS TEXT
 LANGUAGE SQL
@@ -32,10 +32,13 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT role FROM users WHERE id = auth.uid();
+  SELECT COALESCE(
+    (SELECT role FROM users WHERE id = auth.uid()),
+    'anonymous'
+  );
 $$;
 
--- 현재 사용자가 관리자인지 확인
+-- 현재 사용자가 관리자인지 확인 (NULL 체크 포함)
 CREATE OR REPLACE FUNCTION is_admin()
 RETURNS BOOLEAN
 LANGUAGE SQL
@@ -43,12 +46,13 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'
+  SELECT COALESCE(
+    (SELECT role = 'admin' FROM users WHERE id = auth.uid()),
+    false
   );
 $$;
 
--- 현재 사용자가 멘토 또는 관리자인지 확인
+-- 현재 사용자가 멘토 또는 관리자인지 확인 (NULL 체크 포함)
 CREATE OR REPLACE FUNCTION is_mentor_or_admin()
 RETURNS BOOLEAN
 LANGUAGE SQL
@@ -56,8 +60,9 @@ SECURITY DEFINER
 STABLE
 SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('mentor', 'admin')
+  SELECT COALESCE(
+    (SELECT role IN ('mentor', 'admin') FROM users WHERE id = auth.uid()),
+    false
   );
 $$;
 
