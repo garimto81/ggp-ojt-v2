@@ -13,7 +13,7 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 | **Frontend** | React 18 (CDN, 단일 파일 SPA) |
 | **Backend/DB** | Supabase (PostgreSQL + Auth) |
 | **Local Cache** | Dexie.js (IndexedDB) |
-| **AI** | Ollama (로컬 전용, qwen3:8b) |
+| **AI** | Google Gemini API (gemini-2.0-flash-exp) |
 | **Styling** | Tailwind CSS (CDN) |
 | **Editor** | Quill 2.0 (Rich Text) |
 | **Hosting** | Vercel |
@@ -45,7 +45,7 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 index.html
 ├── Supabase 초기화 (Auth + PostgreSQL)
 ├── Dexie.js 초기화 (로컬 캐시 + 오프라인 큐)
-├── Ollama AI 콘텐츠 생성 함수
+├── Gemini AI 콘텐츠 생성 함수
 ├── App 컴포넌트
 │   ├── Google OAuth 인증
 │   ├── 역할 기반 뷰 분기 (Mentor/Mentee)
@@ -90,9 +90,10 @@ localDb.version(1).stores({
 const SUPABASE_URL = "https://cbvansmxutnogntbyswi.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_...";
 
-// Ollama (로컬 전용 - 웹 배포 시 사용 불가)
-const OLLAMA_URL = "http://localhost:11434";
-const OLLAMA_MODEL = "qwen3:8b";
+// Google Gemini API (클라우드 - 로컬/웹 모두 사용 가능)
+const GEMINI_API_KEY = "AIzaSy..."; // Google AI Studio에서 발급
+const GEMINI_MODEL = "gemini-2.0-flash-exp";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 ```
 
 ## Commands
@@ -100,12 +101,6 @@ const OLLAMA_MODEL = "qwen3:8b";
 ```bash
 # 로컬 개발 서버
 npx serve . -p 3000
-
-# Ollama 서버 실행 (CORS 허용)
-set OLLAMA_ORIGINS=* && ollama serve
-
-# 모델 다운로드
-ollama pull qwen3:8b
 
 # E2E 테스트 실행
 npm test
@@ -133,22 +128,25 @@ npm run test:report    # HTML 리포트 보기
 
 ## AI Content Generation
 
+Google Gemini API를 사용한 클라우드 기반 AI 콘텐츠 생성:
+
 프롬프트: 10년 경력 기업 교육 설계 전문가 역할
 - 섹션 구조: 학습 목표 → 핵심 내용 → 실무 예시 → 주의사항
 - 퀴즈: 기억형 40% / 이해형 35% / 적용형 25%
-- 파라미터: temperature=0.3, num_predict=8192
+- 파라미터: temperature=0.3, maxOutputTokens=8192
 
-**주의**: 웹 배포(HTTPS) 환경에서는 localhost Ollama 연결 불가 (혼합 콘텐츠 차단)
+**장점**: 클라우드 API로 로컬/웹 배포 환경 모두에서 AI 기능 사용 가능
 
 ## Deployment
 
 | 환경 | URL | AI 기능 |
 |------|-----|---------|
-| **Production** | https://ggp-ojt-v2.vercel.app | 사용 불가 |
-| **Local** | http://localhost:3000 | Ollama 사용 가능 |
+| **Production** | https://ggp-ojt-v2.vercel.app | Gemini API 사용 가능 |
+| **Local** | http://localhost:3000 | Gemini API 사용 가능 |
 
 - **Branch**: main (Vercel 자동 배포)
 - **Supabase Auth**: Google OAuth
+- **AI**: Google Gemini API (무료 티어)
 
 ## Project Structure
 

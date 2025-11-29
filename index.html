@@ -99,16 +99,11 @@
     const isOnline = () => navigator.onLine;
 
     // =========================================
-    // 설정 (AI - Gemini API 또는 Ollama 폴백)
+    // 설정 (AI - Google Gemini API)
     // =========================================
-    // Gemini API (클라우드 - 웹 배포 환경에서 사용)
     const GEMINI_API_KEY = "AIzaSyCvH1uc1OJ7EHmiWfsjbKVFH-X8KuvXH2I"; // Google AI Studio에서 발급
-    const GEMINI_MODEL = "gemini-2.0-flash"; // 무료 티어: gemini-2.0-flash (권장)
+    const GEMINI_MODEL = "gemini-2.0-flash-exp"; // 무료 티어: gemini-2.0-flash-exp (권장)
     const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-
-    // Ollama (로컬 - 폴백용)
-    const OLLAMA_URL = "http://localhost:11434";
-    const OLLAMA_MODEL = "qwen3:8b"; // 권장: qwen3:8b (고품질), 대안: llama3.2:8b, mistral, gemma2
 
     // =========================================
     // 스텝 분할 설정
@@ -522,94 +517,29 @@
     }
 
     // =========================================
-    // AI Logic (Gemini API + Ollama 폴백)
+    // AI Logic (Google Gemini API)
     // =========================================
 
-    // 웹 배포 환경 감지 (HTTPS에서는 localhost 연결 불가)
-    const isWebDeployed = window.location.protocol === 'https:';
-
-    // 저장된 Gemini API 키 로드
-    function getStoredGeminiKey() {
-      return localStorage.getItem('gemini_api_key') || GEMINI_API_KEY || '';
-    }
-
-    // Gemini API 키 저장
-    function setStoredGeminiKey(key) {
-      if (key) {
-        localStorage.setItem('gemini_api_key', key);
-      } else {
-        localStorage.removeItem('gemini_api_key');
-      }
-    }
-
-    // AI 상태 체크 (Gemini 우선, Ollama 폴백)
+    // Gemini API 상태 체크
     async function checkAIStatus() {
-      const geminiKey = getStoredGeminiKey();
-
-      // 1. Gemini API 키가 있으면 Gemini 사용
-      if (geminiKey) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-          const response = await fetch(
-            `${GEMINI_API_URL}/${GEMINI_MODEL}?key=${geminiKey}`,
-            { method: "GET", signal: controller.signal }
-          );
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            return {
-              online: true,
-              provider: 'gemini',
-              model: GEMINI_MODEL,
-              webDeployed: isWebDeployed
-            };
-          }
-        } catch (error) {
-          console.warn("Gemini API check failed:", error.message);
-        }
+      // API 키가 설정되어 있으면 온라인으로 간주 (실제 호출 시 검증됨)
+      if (GEMINI_API_KEY) {
+        return {
+          online: true,
+          provider: 'gemini',
+          model: GEMINI_MODEL
+        };
       }
 
-      // 2. 로컬 환경에서 Ollama 체크 (웹 배포 환경에서는 스킵)
-      if (!isWebDeployed) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-          const response = await fetch(`${OLLAMA_URL}/api/tags`, {
-            method: "GET",
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const data = await response.json();
-            return {
-              online: true,
-              provider: 'ollama',
-              model: OLLAMA_MODEL,
-              models: data.models || [],
-              webDeployed: false
-            };
-          }
-        } catch (error) {
-          // Ollama 오프라인
-        }
-      }
-
-      // 3. 모두 실패
       return {
         online: false,
         provider: null,
-        model: null,
-        webDeployed: isWebDeployed,
-        needsApiKey: isWebDeployed && !geminiKey
+        model: null
       };
     }
 
-    // 기존 함수명 호환성 유지
-    const checkOllamaStatus = checkAIStatus;
+    // Gemini AI 상태 체크 함수 별칭 (기존 코드 호환성)
+    const checkGeminiStatus = checkAIStatus;
 
     async function generateOJTContent(rawText, team, step, setProgress, totalSteps = 1) {
       const stepInfo = totalSteps > 1 ? ` (총 ${totalSteps}개 스텝 중 ${step}번째 스텝)` : '';
@@ -679,84 +609,39 @@ ${rawText}
 - [ ] JSON 문법 오류 없음`;
 
       try {
-        // AI 상태 확인하여 provider 결정
-        const aiStatus = await checkAIStatus();
-        let responseText = '';
+        // Gemini API 호출
+        setProgress && setProgress("Gemini AI 연결 중...");
 
-        if (aiStatus.provider === 'gemini') {
-          // Gemini API 호출
-          setProgress && setProgress("Gemini AI 연결 중...");
+        const geminiPrompt = prompt.replace('/no_think\n', ''); // Gemini는 /no_think 불필요
 
-          const geminiKey = getStoredGeminiKey();
-          const geminiPrompt = prompt.replace('/no_think\n', ''); // Gemini는 /no_think 불필요
-
-          const response = await fetch(
-            `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                contents: [{
-                  parts: [{ text: geminiPrompt }]
-                }],
-                generationConfig: {
-                  temperature: 0.3,
-                  maxOutputTokens: 8192,
-                  responseMimeType: "application/json"
-                }
-              })
-            }
-          );
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Gemini API 오류: ${response.status} - ${errorData.error?.message || ''}`);
-          }
-
-          setProgress && setProgress("Gemini AI 응답 처리 중...");
-          const data = await response.json();
-
-          // Gemini 응답 구조에서 텍스트 추출
-          responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          console.log("Gemini raw response:", responseText.substring(0, 500));
-
-        } else if (aiStatus.provider === 'ollama') {
-          // Ollama API 호출 (기존 로직)
-          setProgress && setProgress("Ollama 연결 중...");
-
-          const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+        const response = await fetch(
+          `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+          {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: OLLAMA_MODEL,
-              prompt: prompt,
-              stream: false,
-              options: {
+              contents: [{
+                parts: [{ text: geminiPrompt }]
+              }],
+              generationConfig: {
                 temperature: 0.3,
-                num_predict: 8192
+                maxOutputTokens: 8192
               }
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(`Ollama 오류: ${response.status}`);
+            })
           }
+        );
 
-          setProgress && setProgress("AI 응답 처리 중...");
-          const data = await response.json();
-          responseText = data.response;
-          console.log("Ollama raw response:", responseText.substring(0, 500));
-
-        } else {
-          // AI 사용 불가
-          if (aiStatus.needsApiKey) {
-            throw new Error("Gemini API 키가 필요합니다. 설정에서 API 키를 입력해주세요.");
-          }
-          throw new Error("AI 서비스를 사용할 수 없습니다. Gemini API 키를 설정하거나 로컬에서 Ollama를 실행해주세요.");
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Gemini API 오류: ${response.status} - ${errorData.error?.message || ''}`);
         }
 
-        // 디버깅: 원본 응답 로깅
-        console.log("AI raw response:", responseText.substring(0, 500));
+        setProgress && setProgress("Gemini AI 응답 처리 중...");
+        const data = await response.json();
+
+        // Gemini 응답 구조에서 텍스트 추출
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log("Gemini raw response:", responseText.substring(0, 500));
 
         // 마크다운 코드블록 제거 (```json ... ``` 또는 ``` ... ```)
         let cleanedResponse = responseText
@@ -881,8 +766,8 @@ ${rawText}
       const [user, setUser] = useState(null);
       const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
-      // Ollama Status
-      const [ollamaStatus, setOllamaStatus] = useState({ online: false, models: [], webDeployed: isWebDeployed });
+      // AI Status (Gemini)
+      const [aiStatus, setAiStatus] = useState({ online: false, provider: null, model: null });
       const [showSettings, setShowSettings] = useState(false);
 
       // App State
@@ -928,11 +813,11 @@ ${rawText}
       // Effects
       // =========================================
 
-      // Ollama 상태 체크
+      // AI 상태 체크 (Gemini)
       useEffect(() => {
         const checkStatus = async () => {
-          const status = await checkOllamaStatus();
-          setOllamaStatus(status);
+          const status = await checkGeminiStatus();
+          setAiStatus(status);
         };
         checkStatus();
         const interval = setInterval(checkStatus, 30000); // 30초마다 체크
@@ -1153,8 +1038,8 @@ ${rawText}
           alert("PDF 파일을 선택해주세요.");
           return;
         }
-        if (!ollamaStatus.online) {
-          alert("AI 서비스에 연결할 수 없습니다.\n\n잠시 후 다시 시도해주세요.");
+        if (!aiStatus.online) {
+          alert("Gemini AI 서비스에 연결할 수 없습니다.\n\nAPI 키를 확인해주세요.");
           return;
         }
 
@@ -1350,12 +1235,11 @@ ${rawText}
 
       const AIStatusBadge = () => {
         // AI 온라인 상태
-        if (ollamaStatus.online) {
-          const isGemini = ollamaStatus.provider === 'gemini';
+        if (aiStatus.online) {
           return (
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${isGemini ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
               <Icon name="server" className="w-3 h-3" />
-              {isGemini ? `Gemini: ${GEMINI_MODEL}` : `Ollama: ${OLLAMA_MODEL}`}
+              Gemini: {GEMINI_MODEL}
             </div>
           );
         }
@@ -1368,9 +1252,6 @@ ${rawText}
           </div>
         );
       };
-
-      // 기존 컴포넌트명 호환성 유지
-      const OllamaStatusBadge = AIStatusBadge;
 
       const LoginPage = () => {
         return (
@@ -1386,8 +1267,8 @@ ${rawText}
               </div>
 
               <div className="mb-6">
-                <OllamaStatusBadge />
-                {ollamaStatus.online && ollamaStatus.provider === 'gemini' && (
+                <AIStatusBadge />
+                {aiStatus.online && (
                   <p className="text-xs text-blue-600 mt-2">Google Gemini AI로 자료를 생성합니다</p>
                 )}
               </div>
@@ -1429,7 +1310,7 @@ ${rawText}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <OllamaStatusBadge />
+            <AIStatusBadge />
             {user && (
               <>
                 <span className="text-sm hidden sm:block">{user.name}</span>
@@ -1486,14 +1367,14 @@ ${rawText}
             자료 생성 스튜디오
           </h2>
 
-          {!ollamaStatus.online && (
+          {!aiStatus.online && (
             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
               <Icon name="alert" className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-yellow-800">AI 서비스 연결 중...</p>
+                <p className="font-bold text-yellow-800">Gemini AI 연결 확인 중...</p>
                 <p className="text-sm text-yellow-700 mt-1">
-                  Gemini AI 또는 로컬 Ollama에 연결을 시도하고 있습니다.<br />
-                  잠시 후 다시 시도해주세요.
+                  Google Gemini AI에 연결을 시도하고 있습니다.<br />
+                  API 키가 올바른지 확인해주세요.
                 </p>
               </div>
             </div>
@@ -1679,14 +1560,14 @@ ${rawText}
 
               <button
                 onClick={handleGenerate}
-                disabled={isProcessing || !ollamaStatus.online ||
+                disabled={isProcessing || !aiStatus.online ||
                   (inputType === 'text' && !rawInput) ||
                   (inputType === 'url' && !urlInput) ||
                   (inputType === 'pdf' && !pdfFile)
                 }
                 className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold disabled:bg-slate-400 hover:bg-indigo-700 transition-colors"
               >
-                {isProcessing ? processingStatus || "생성 중..." : `AI 자료 생성 (${ollamaStatus.provider === 'gemini' ? GEMINI_MODEL : OLLAMA_MODEL})`}
+                {isProcessing ? processingStatus || "생성 중..." : `AI 자료 생성 (${GEMINI_MODEL})`}
               </button>
             </div>
 
