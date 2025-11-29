@@ -264,6 +264,7 @@
     const dbGet = async (storeName, key) => {
       // 1. 로컬 캐시 먼저 확인
       let cached = await localDb[storeName].get(key);
+      console.log(`dbGet(${storeName}, ${key}): cached =`, cached);
 
       // 2. 온라인이면 Supabase에서 최신 데이터 가져오기
       if (isOnline()) {
@@ -274,6 +275,14 @@
             .eq("id", key)
             .maybeSingle();
 
+          console.log(`dbGet(${storeName}, ${key}): supabase response`, { data, error });
+
+          if (error) {
+            console.error(`dbGet Supabase error for ${storeName}:`, error.message, error.code);
+            // Supabase 에러 발생 시 캐시 데이터 반환 (캐시 있으면 사용)
+            return cached;
+          }
+
           if (data) {
             // 캐시 업데이트
             await localDb[storeName].put(data);
@@ -281,6 +290,7 @@
           }
         } catch (e) {
           console.error("dbGet sync error:", e);
+          // 에러 발생 시에도 캐시 데이터 반환
         }
       }
 
@@ -978,31 +988,52 @@ ${rawText}
       // 초기 로드: Supabase Auth 세션 확인
       useEffect(() => {
         let isMounted = true;
-        let authHandled = false;
 
-        // 안전장치: 10초 후에도 로딩 중이면 로그인 화면으로 (타임아웃)
-        const timeoutId = setTimeout(() => {
-          if (isMounted && !authHandled) {
-            console.warn("Auth timeout - falling back to login");
-            setIsLoadingAuth(false);
-            setViewState('login');
+        // 초기 세션 확인 (getSession 직접 호출)
+        const initAuth = async () => {
+          console.log("initAuth: checking session...");
+          try {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            console.log("initAuth: session result", session?.user?.email, error);
+
+            if (!isMounted) return;
+
+            if (error) {
+              console.error("getSession error:", error);
+              setViewState('login');
+              setIsLoadingAuth(false);
+              return;
+            }
+
+            if (session?.user) {
+              await loadUserProfile(session);
+            } else {
+              setViewState('login');
+              setIsLoadingAuth(false);
+            }
+          } catch (e) {
+            console.error("initAuth error:", e);
+            if (isMounted) {
+              setViewState('login');
+              setIsLoadingAuth(false);
+            }
           }
-        }, 10000);
+        };
 
-        // onAuthStateChange가 모든 세션 이벤트를 처리
-        // INITIAL_SESSION: 페이지 로드 시 기존 세션 복원
-        // SIGNED_IN: 새 로그인
-        // SIGNED_OUT: 로그아웃
-        // TOKEN_REFRESHED: 토큰 갱신 (무시)
+        // 세션 직접 확인
+        initAuth();
+
+        // 이후 인증 상태 변경 구독 (로그인/로그아웃)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
           console.log('Auth event:', event, session?.user?.email);
 
           if (!isMounted) return;
-          authHandled = true;
-          clearTimeout(timeoutId);
 
           // 토큰 갱신은 UI 변경 불필요
           if (event === 'TOKEN_REFRESHED') return;
+
+          // INITIAL_SESSION은 getSession으로 이미 처리됨
+          if (event === 'INITIAL_SESSION') return;
 
           if (event === 'SIGNED_OUT') {
             setUser(null);
@@ -1011,21 +1042,16 @@ ${rawText}
             return;
           }
 
-          // INITIAL_SESSION 또는 SIGNED_IN: 프로필 로드
-          if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          // SIGNED_IN: 새 로그인 (OAuth 팝업 후)
+          if (event === 'SIGNED_IN') {
             if (session?.user) {
               await loadUserProfile(session);
-              // loadUserProfile에서 setIsLoadingAuth(false) 호출됨
-            } else {
-              setViewState('login');
-              setIsLoadingAuth(false);
             }
           }
         });
 
         return () => {
           isMounted = false;
-          clearTimeout(timeoutId);
           subscription.unsubscribe();
         };
       }, []);
