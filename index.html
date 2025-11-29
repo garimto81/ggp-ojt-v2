@@ -87,6 +87,9 @@
     // =========================================
     // 설정 (Dexie.js - 로컬 캐시)
     // =========================================
+    const CACHE_VERSION = 2; // 캐시 스키마 버전 (변경 시 증가)
+    const CACHE_VERSION_KEY = 'ojt_cache_version';
+
     const localDb = new Dexie('OJTMasterCache');
     localDb.version(1).stores({
       users: 'id, name, role',
@@ -98,7 +101,7 @@
     // 온라인 상태 확인
     const isOnline = () => navigator.onLine;
 
-    // 캐시 전체 클리어 (로그아웃 시 사용)
+    // 캐시 전체 클리어 (로그아웃 또는 버전 업그레이드 시 사용)
     const clearAllCache = async () => {
       try {
         await localDb.users.clear();
@@ -110,6 +113,21 @@
         console.error('Cache clear error:', e);
       }
     };
+
+    // 캐시 버전 체크 및 마이그레이션 (앱 시작 시 실행)
+    const checkCacheVersion = async () => {
+      const storedVersion = parseInt(localStorage.getItem(CACHE_VERSION_KEY) || '0', 10);
+
+      if (storedVersion < CACHE_VERSION) {
+        console.log(`Cache version upgrade: ${storedVersion} → ${CACHE_VERSION}`);
+        await clearAllCache();
+        localStorage.setItem(CACHE_VERSION_KEY, String(CACHE_VERSION));
+        console.log('Cache migration completed');
+      }
+    };
+
+    // 앱 시작 시 캐시 버전 체크 실행
+    checkCacheVersion();
 
     // =========================================
     // 설정 (AI - Google Gemini API)
