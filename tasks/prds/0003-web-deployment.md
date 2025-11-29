@@ -2,7 +2,7 @@
 
 > ✅ **현재 활성 문서**: 이 PRD는 v2.0.0 웹 배포 버전의 설계 문서입니다.
 >
-> 최종 업데이트: 2025-11-29 (Gemini API 전환 반영)
+> 최종 업데이트: 2025-11-29 (Admin Dashboard 구현 완료)
 
 ## 1. 목표
 
@@ -82,6 +82,7 @@
 | **Local DB** | Dexie.js | 4.x | IndexedDB 래퍼, 로컬 캐시 |
 | **Cloud DB** | Supabase | - | PostgreSQL + Auth |
 | **AI** | Google Gemini API | gemini-2.0-flash-exp | 클라우드 LLM (자료 생성) |
+| **Charts** | Chart.js | 4.4.1 | 통계 시각화 (Admin Dashboard) |
 | **PDF** | PDF.js | 3.11.174 | PDF 텍스트 추출 |
 | **JSX** | Babel Standalone | CDN | JSX 트랜스파일 |
 | **Hosting** | Vercel | - | 정적 배포 |
@@ -108,6 +109,9 @@
 <!-- Quill 2.0 -->
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+
+<!-- Chart.js (Admin Dashboard) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 ```
 
 ---
@@ -613,22 +617,24 @@ https://ggp-ojt-v2.vercel.app
 | 5 | PDF 텍스트 추출 | ✅ 완료 |
 | 6 | URL 콘텐츠 추출 | ✅ 완료 |
 
-### Phase 2.2 (중기) - 진행 중
+### Phase 2.2 (중기) - ✅ 완료
 
 | 우선순위 | 기능 | 상태 |
 |:--------:|------|------|
-| 1 | 관리자 페이지 | Issue #9 (리서치 완료) |
-| 2 | Email/Password 인증 | 계획 |
-| 3 | 오답 노트 | 계획 |
-| 4 | 알림 시스템 | 계획 |
+| 1 | 관리자 페이지 (Admin Dashboard) | ✅ 완료 (Issue #9) |
+| 2 | 통계 차트 (Chart.js) | ✅ 완료 |
+| 3 | 사용자 역할 관리 | ✅ 완료 |
+| 4 | 콘텐츠 관리 (삭제) | ✅ 완료 |
 
-### Phase 2.3 (장기)
+### Phase 2.3 (장기) - 계획
 
 | 우선순위 | 기능 | 상태 |
 |:--------:|------|------|
-| 1 | 학습 진도 대시보드 | 계획 |
-| 2 | 통계 차트 (Chart.js) | 계획 |
-| 3 | 데이터 내보내기/가져오기 | 계획 |
+| 1 | Email/Password 인증 | 계획 |
+| 2 | 오답 노트 | 계획 |
+| 3 | 알림 시스템 | 계획 |
+| 4 | 학습 진도 대시보드 (멘티용) | 계획 |
+| 5 | 데이터 내보내기/가져오기 | 계획 |
 
 ---
 

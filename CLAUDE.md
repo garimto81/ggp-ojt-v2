@@ -16,6 +16,7 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 | **AI** | Google Gemini API (gemini-2.0-flash-exp) |
 | **Styling** | Tailwind CSS (CDN) |
 | **Editor** | Quill 2.0 (Rich Text) |
+| **Charts** | Chart.js 4.4.1 (Admin Dashboard) |
 | **PDF Parsing** | PDF.js 3.11.174 |
 | **JSX Transform** | Babel Standalone (CDN) |
 | **Hosting** | Vercel |
@@ -178,9 +179,37 @@ npm run test:report    # HTML 리포트 보기
 
 | 역할 | 권한 |
 |------|------|
+| **Admin** | 전체 사용자/콘텐츠 관리, 역할 변경, 통계 대시보드 |
 | **Mentor** | 비정형 텍스트 → AI 변환 → Supabase 저장, 자료 CRUD |
 | **Mentee** | 팀별 로드맵 탐색 → 문서 학습 → 퀴즈 평가 (읽기 전용) |
-| **Admin** | (향후) 사용자 관리, 통계 대시보드 |
+
+## Admin Dashboard
+
+관리자 전용 대시보드 (`viewState: 'admin_dashboard'`)
+
+### 탭 구성
+
+| 탭 | 기능 | 컴포넌트 |
+|-----|------|----------|
+| **사용자 관리** | 전체 사용자 목록, 역할 변경 (admin/mentor/mentee) | 테이블 + 모달 |
+| **콘텐츠 관리** | 전체 OJT 문서 목록, 삭제 기능 | 테이블 + 삭제 버튼 |
+| **통계** | 역할별 분포, 팀별 문서 수, 학습 통과율 | Chart.js 차트 |
+
+### 통계 카드
+
+| 지표 | 설명 |
+|------|------|
+| 총 사용자 | 전체 등록 사용자 수 |
+| 총 문서 | 전체 OJT 문서 수 |
+| 총 학습 기록 | 전체 퀴즈 응시 기록 수 |
+| 통과율 | (통과 기록 / 전체 기록) × 100% |
+
+### Chart.js 차트
+
+| 차트 | 유형 | 데이터 |
+|------|------|--------|
+| 역할별 사용자 분포 | Doughnut | admin/mentor/mentee 비율 |
+| 팀별 문서 수 | Bar | 팀별 OJT 문서 개수 |
 
 ## Sync Strategy (Online-First, Offline-Ready)
 
@@ -278,5 +307,5 @@ ggp_ojt_v2/
 | #15 | CLOSED | Feature: Ollama → Google Gemini API 전환 |
 | #13 | CLOSED | Bug: 로그인 후 역할 변경 불가 |
 | #12 | CLOSED | Bug: Supabase RLS 재귀적 자기 참조 |
-| #9 | OPEN | Feature: 관리자 페이지 및 인증 시스템 (리서치 완료) |
+| #9 | CLOSED | Feature: 관리자 페이지 및 인증 시스템 |
 | #7 | CLOSED | Research: 유사 솔루션 벤치마킹 |
