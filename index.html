@@ -98,6 +98,19 @@
     // 온라인 상태 확인
     const isOnline = () => navigator.onLine;
 
+    // 캐시 전체 클리어 (로그아웃 시 사용)
+    const clearAllCache = async () => {
+      try {
+        await localDb.users.clear();
+        await localDb.ojt_docs.clear();
+        await localDb.learning_records.clear();
+        await localDb.sync_queue.clear();
+        console.log('All cache cleared successfully');
+      } catch (e) {
+        console.error('Cache clear error:', e);
+      }
+    };
+
     // =========================================
     // 설정 (AI - Google Gemini API)
     // =========================================
@@ -174,12 +187,16 @@
     // DB 헬퍼 (Dexie 캐시 + Supabase 동기화)
     // =========================================
 
+    // Sync Queue 최대 재시도 횟수
+    const MAX_SYNC_RETRIES = 3;
+
     // 오프라인 큐에 작업 추가
     const addToSyncQueue = async (table, action, data) => {
       await localDb.sync_queue.add({
         table,
         action,
         data,
+        retryCount: 0,
         created_at: new Date().toISOString()
       });
     };
@@ -201,6 +218,16 @@
           await localDb.sync_queue.delete(item.id);
         } catch (e) {
           console.error('Sync queue processing failed:', e);
+          // 재시도 횟수 증가
+          const retryCount = (item.retryCount || 0) + 1;
+          if (retryCount >= MAX_SYNC_RETRIES) {
+            // 최대 재시도 초과 시 큐에서 제거 (데이터 손실 방지 로그)
+            console.error(`Sync item permanently failed after ${MAX_SYNC_RETRIES} retries:`, item);
+            await localDb.sync_queue.delete(item.id);
+          } else {
+            // 재시도 횟수 업데이트
+            await localDb.sync_queue.update(item.id, { retryCount });
+          }
         }
       }
     };
@@ -284,7 +311,11 @@
             const { data, error } = await query;
 
             if (data && !error) {
-              // 캐시 일괄 업데이트
+              // 캐시 완전 교체 (삭제된 데이터 정리)
+              // 필터가 없는 전체 조회일 때만 clear 수행
+              if (!filters.team && !filters.authorId && !filters.userId) {
+                await localDb[storeName].clear();
+              }
               await localDb[storeName].bulkPut(data);
             }
           } catch (e) {
@@ -1013,6 +1044,8 @@ ${rawText}
 
       const handleLogout = async () => {
         try {
+          // 캐시 먼저 클리어 (다른 사용자 데이터 노출 방지)
+          await clearAllCache();
           await supabase.auth.signOut();
           setUser(null);
           setViewState('login');
