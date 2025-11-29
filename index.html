@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.0.4 (9bd7920) - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.0.5 (ebeb5e5) - AI 기반 온보딩 교육 플랫폼</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -950,6 +950,19 @@ ${rawText}
             const text = quillInstanceRef.current.getText().trim();
             setRawInput(text);
           });
+
+          // 편집 모드인 경우 기존 내용 로드 (Quill 마운트 후)
+          if (editingDoc && editingDoc.sections && editingDoc.sections.length > 0) {
+            const contentText = editingDoc.sections.map(section => {
+              let text = `## ${section.title}\n\n`;
+              if (section.content) {
+                text += section.content + '\n\n';
+              }
+              return text;
+            }).join('');
+            quillInstanceRef.current.setText(contentText);
+            console.log('Quill: loaded editingDoc content on mount');
+          }
         }
 
         // inputType이 변경되면 Quill 인스턴스 정리
@@ -958,7 +971,7 @@ ${rawText}
             quillInstanceRef.current = null;
           }
         };
-      }, [inputType, viewState]);
+      }, [inputType, viewState, editingDoc]);
 
       // 사용자 프로필 로드 및 뷰 상태 설정 (공통 함수)
       const loadUserProfile = async (session) => {
@@ -1507,7 +1520,7 @@ ${rawText}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.0.4 (9bd7920) | Supabase + Gemini AI</p>
+                <p className="text-xs text-slate-400 mt-1">v2.0.5 (ebeb5e5) | Supabase + Gemini AI</p>
               </div>
 
               <div className="mb-6">
@@ -1563,13 +1576,13 @@ ${rawText}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.0.4</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.0.5</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
                       ? `${sessionMode.toUpperCase()} MODE (임시)`
                       : `${user.role?.toUpperCase()} MODE`
-                  ) : 'Welcome'} | 9bd7920
+                  ) : 'Welcome'} | ebeb5e5
                 </p>
               </div>
             </div>
