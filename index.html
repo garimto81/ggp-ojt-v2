@@ -858,6 +858,7 @@ ${rawText}
       const [generatedDoc, setGeneratedDoc] = useState(null);
       const [generatedDocs, setGeneratedDocs] = useState([]); // 분할된 여러 문서
       const [myDocs, setMyDocs] = useState([]);
+      const [editingDoc, setEditingDoc] = useState(null); // 편집 중인 문서
       const [autoSplit, setAutoSplit] = useState(true); // 자동 스텝 분할 옵션
       const [estimatedTime, setEstimatedTime] = useState(0); // 예상 학습 시간
       const [requiredSteps, setRequiredSteps] = useState(1); // 필요 스텝 수
@@ -1339,15 +1340,31 @@ ${rawText}
               title: doc.title || inputTitle || "제목 없음",
               team: inputTeam,
               step: doc.step || parseInt(inputStep),
-              createdAt: Date.now() + savedCount, // 순서 유지를 위해 약간의 차이
               author: user.name,
               authorId: user.id
             };
-            await dbAdd("ojt_docs", docToSave);
+
+            // 편집 모드: 기존 문서 업데이트
+            if (editingDoc && savedCount === 0) {
+              docToSave.id = editingDoc.id;
+              docToSave.createdAt = editingDoc.createdAt;
+              docToSave.updatedAt = Date.now();
+              await dbPut("ojt_docs", docToSave);
+            } else {
+              // 신규 모드: 새 문서 추가
+              docToSave.createdAt = Date.now() + savedCount;
+              await dbAdd("ojt_docs", docToSave);
+            }
             savedCount++;
           }
 
-          alert(`${savedCount}개 문서가 저장되었습니다.`);
+          const message = editingDoc
+            ? `문서가 수정되었습니다.`
+            : `${savedCount}개 문서가 저장되었습니다.`;
+          alert(message);
+
+          // 상태 초기화
+          setEditingDoc(null);
           setGeneratedDoc(null);
           setGeneratedDocs([]);
           setRawInput("");
@@ -1376,6 +1393,51 @@ ${rawText}
           setMyDocs(prev => prev.filter(d => d.id !== docId));
         } catch (e) {
           console.error("Delete error:", e);
+        }
+      };
+
+      // 문서 편집 핸들러 - 기존 문서를 편집창에 로드
+      const handleEditDoc = (doc) => {
+        setEditingDoc(doc);
+        setInputTitle(doc.title || '');
+        setInputTeam(doc.team || TEAMS[0]);
+        setInputStep(doc.step || 1);
+
+        // 섹션 내용을 텍스트로 변환하여 에디터에 로드
+        if (doc.sections && doc.sections.length > 0) {
+          const contentText = doc.sections.map(section => {
+            let text = `## ${section.title}\n\n`;
+            if (section.content) {
+              text += section.content + '\n\n';
+            }
+            return text;
+          }).join('');
+
+          setRawInput(contentText);
+
+          // Quill 에디터에 내용 설정
+          if (quillInstanceRef.current) {
+            quillInstanceRef.current.setText(contentText);
+          }
+        }
+
+        // 기존 생성 결과 초기화
+        setGeneratedDoc(null);
+        setGeneratedDocs([]);
+
+        // 스크롤 맨 위로
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      // 편집 취소 핸들러
+      const handleCancelEdit = () => {
+        setEditingDoc(null);
+        setInputTitle('');
+        setRawInput('');
+        setGeneratedDoc(null);
+        setGeneratedDocs([]);
+        if (quillInstanceRef.current) {
+          quillInstanceRef.current.setText('');
         }
       };
 
@@ -1998,8 +2060,27 @@ ${rawText}
         <div className="max-w-6xl mx-auto p-6">
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2 mb-4">
             <Icon name="upload" className="w-6 h-6 text-indigo-600" />
-            자료 생성 스튜디오
+            {editingDoc ? '문서 수정' : '자료 생성 스튜디오'}
           </h2>
+
+          {/* 편집 모드 배너 */}
+          {editingDoc && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Icon name="edit" className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="font-semibold text-blue-800">편집 모드: {editingDoc.title}</p>
+                  <p className="text-sm text-blue-600">{editingDoc.team} - Step {editingDoc.step}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCancelEdit}
+                className="text-blue-600 hover:text-blue-800 text-sm font-semibold px-3 py-1 rounded hover:bg-blue-100"
+              >
+                편집 취소
+              </button>
+            </div>
+          )}
 
           {!aiStatus.online && (
             <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
@@ -2220,7 +2301,7 @@ ${rawText}
                   {(generatedDoc || generatedDocs.length > 0) && (
                     <button onClick={handleSaveToDB} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-bold text-sm hover:bg-green-700">
                       <Icon name="save" className="w-4 h-4" />
-                      {generatedDocs.length > 1 ? `${generatedDocs.length}개 모두 저장` : '저장'}
+                      {editingDoc ? '수정 저장' : (generatedDocs.length > 1 ? `${generatedDocs.length}개 모두 저장` : '저장')}
                     </button>
                   )}
                 </div>
@@ -2287,13 +2368,29 @@ ${rawText}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {myDocs.map(doc => (
                   <div key={doc.id} className="bg-white p-4 rounded-xl shadow border flex justify-between items-start">
-                    <div>
+                    <div className="flex-1">
                       <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">{doc.team} - Step {doc.step}</span>
                       <h4 className="font-bold mt-2">{doc.title}</h4>
+                      {doc.updatedAt && (
+                        <p className="text-xs text-slate-400 mt-1">수정됨: {new Date(doc.updatedAt).toLocaleDateString()}</p>
+                      )}
                     </div>
-                    <button onClick={() => handleDeleteDoc(doc.id)} className="text-red-500 hover:text-red-700">
-                      <Icon name="trash" className="w-4 h-4" />
-                    </button>
+                    <div className="flex gap-2 ml-2">
+                      <button
+                        onClick={() => handleEditDoc(doc)}
+                        className="text-indigo-500 hover:text-indigo-700 p-1"
+                        title="편집"
+                      >
+                        <Icon name="edit" className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDoc(doc.id)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                        title="삭제"
+                      >
+                        <Icon name="trash" className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
