@@ -266,9 +266,17 @@ ggp_ojt_v2/
 
 | # | Status | Title |
 |---|--------|-------|
+| #24 | CLOSED | Security: SECURITY DEFINER 함수 NULL 체크 부재 |
+| #23 | CLOSED | Security: RLS 정책 - users.role UPDATE 검증 부재 |
+| #22 | CLOSED | Security: Gemini API 키 클라이언트 사이드 노출 |
+| #21 | CLOSED | Docs: 0002-mvp-optimized.md Ollama 레거시 표기 |
+| #20 | CLOSED | Docs: PRD 문서 섹션 구조 통일 |
+| #19 | CLOSED | Docs: PRD 문서 기술 스택 현황 업데이트 |
+| #18 | CLOSED | Test: E2E 테스트 Ollama → Gemini 업데이트 |
+| #17 | CLOSED | Docs: guide.md Firebase 구버전 설명 정리 |
 | #16 | CLOSED | Bug: 캐시(IndexedDB) 정리 로직 부재 |
 | #15 | CLOSED | Feature: Ollama → Google Gemini API 전환 |
 | #13 | CLOSED | Bug: 로그인 후 역할 변경 불가 |
 | #12 | CLOSED | Bug: Supabase RLS 재귀적 자기 참조 |
-| #9 | OPEN | Feature: 관리자 페이지 및 인증 시스템 |
+| #9 | OPEN | Feature: 관리자 페이지 및 인증 시스템 (리서치 완료) |
 | #7 | CLOSED | Research: 유사 솔루션 벤치마킹 |

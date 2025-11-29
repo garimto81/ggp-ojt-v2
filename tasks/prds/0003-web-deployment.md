@@ -1,5 +1,9 @@
 # PRD-0003: OJT Master 웹 배포 버전 (Supabase + Dexie.js)
 
+> ✅ **현재 활성 문서**: 이 PRD는 v2.0.0 웹 배포 버전의 설계 문서입니다.
+>
+> 최종 업데이트: 2025-11-29 (Gemini API 전환 반영)
+
 ## 1. 목표
 
 ### 핵심 목표
@@ -77,7 +81,9 @@
 | **Editor** | Quill 2.0 | CDN | 리치 텍스트 에디터 |
 | **Local DB** | Dexie.js | 4.x | IndexedDB 래퍼, 로컬 캐시 |
 | **Cloud DB** | Supabase | - | PostgreSQL + Auth |
-| **AI** | Ollama | qwen3:8b | 로컬 LLM (자료 생성) |
+| **AI** | Google Gemini API | gemini-2.0-flash-exp | 클라우드 LLM (자료 생성) |
+| **PDF** | PDF.js | 3.11.174 | PDF 텍스트 추출 |
+| **JSX** | Babel Standalone | CDN | JSX 트랜스파일 |
 | **Hosting** | Vercel | - | 정적 배포 |
 
 ### 3.2 CDN 의존성
@@ -92,6 +98,12 @@
 <!-- React 18 -->
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+<!-- Babel (JSX Transform) -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- PDF.js (PDF 텍스트 추출) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <!-- Quill 2.0 -->
 <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
@@ -531,10 +543,14 @@ useEffect(() => {
 
 ```javascript
 // 하드코딩 (단일 파일 SPA)
+// ⚠️ 보안 주의: 프로덕션에서는 Supabase Edge Function 프록시 권장
 const SUPABASE_URL = "https://cbvansmxutnogntbyswi.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_...";
-const OLLAMA_URL = "http://localhost:11434";
-const OLLAMA_MODEL = "qwen3:8b";
+
+// Google Gemini API (HTTP Referer 제한 설정됨)
+const GEMINI_API_KEY = "AIza...";  // Google AI Studio에서 발급
+const GEMINI_MODEL = "gemini-2.0-flash-exp";
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 ```
 
 ### 7.3 Vercel 배포
@@ -553,30 +569,31 @@ https://ggp-ojt-v2.vercel.app
 
 ### 8.1 현재 제한사항
 
-| 제한사항 | 영향 | 해결방안 |
-|----------|------|----------|
-| Ollama 로컬 전용 | 웹에서 AI 기능 사용 불가 | 사용자 로컬에서 Ollama 실행 필요 |
-| 오프라인 큐 미구현 | 오프라인 시 데이터 손실 가능 | Phase 2에서 구현 예정 |
-| 충돌 해결 단순화 | 동시 수정 시 데이터 덮어쓰기 | LWW 전략으로 대응 |
+| 제한사항 | 영향 | 해결방안 | 상태 |
+|----------|------|----------|------|
+| ~~Ollama 로컬 전용~~ | ~~웹에서 AI 기능 사용 불가~~ | Google Gemini API로 전환 | ✅ **해결됨** |
+| 오프라인 큐 | 오프라인 시 데이터 손실 가능 | Dexie.js sync_queue 구현 | ✅ **해결됨** |
+| 충돌 해결 단순화 | 동시 수정 시 데이터 덮어쓰기 | LWW 전략으로 대응 | ⚠️ 유지 |
+| API 키 클라이언트 노출 | 보안 위험 | HTTP Referer 제한 + Edge Function 권장 | ⚠️ 부분 해결 |
 
-### 8.2 Ollama 웹 사용 가이드
+### 8.2 Google Gemini API 사용
 
 ```
 ┌────────────────────────────────────────────────────────────┐
-│                 웹 + Ollama 사용 방법                        │
+│                 Google Gemini API 구성                       │
 ├────────────────────────────────────────────────────────────┤
 │                                                             │
-│  1. 사용자 PC에서 Ollama 실행                               │
-│     $ set OLLAMA_ORIGINS=*                                 │
-│     $ ollama serve                                          │
+│  1. Google AI Studio에서 API 키 발급                        │
+│     https://aistudio.google.com/app/apikey                 │
 │                                                             │
-│  2. https://ggp-ojt-v2.vercel.app 접속                     │
+│  2. API 키 제한 설정 (권장)                                 │
+│     - HTTP Referer 제한: ggp-ojt-v2.vercel.app/*           │
 │                                                             │
-│  3. 브라우저가 localhost:11434에 요청                       │
-│     (CORS 허용 필요)                                        │
+│  3. 무료 티어 제한                                          │
+│     - 분당 15 요청                                          │
+│     - 일일 1,500 요청                                       │
 │                                                             │
-│  ⚠️ 주의: HTTPS → HTTP 혼합 콘텐츠 차단 가능               │
-│     해결: 브라우저 설정에서 혼합 콘텐츠 허용                 │
+│  ✅ 장점: 로컬/웹 환경 모두에서 AI 기능 사용 가능           │
 │                                                             │
 └────────────────────────────────────────────────────────────┘
 ```
@@ -585,23 +602,33 @@ https://ggp-ojt-v2.vercel.app
 
 ## 9. 로드맵
 
-### Phase 2.1 (단기)
+### Phase 2.1 (단기) - ✅ 완료
 
 | 우선순위 | 기능 | 상태 |
 |:--------:|------|------|
-| 1 | Dexie.js 캐시 레이어 구현 | 계획 |
-| 2 | 오프라인 큐 처리 | 계획 |
-| 3 | 온라인 상태 UI 표시 | 계획 |
-| 4 | 학습 진도 대시보드 | 계획 |
+| 1 | Dexie.js 캐시 레이어 구현 | ✅ 완료 (Issue #11) |
+| 2 | 오프라인 큐 처리 | ✅ 완료 |
+| 3 | 캐시 버전 관리 및 마이그레이션 | ✅ 완료 (Issue #16) |
+| 4 | Google Gemini API 전환 | ✅ 완료 (Issue #15) |
+| 5 | PDF 텍스트 추출 | ✅ 완료 |
+| 6 | URL 콘텐츠 추출 | ✅ 완료 |
 
-### Phase 2.2 (중기)
+### Phase 2.2 (중기) - 진행 중
 
 | 우선순위 | 기능 | 상태 |
 |:--------:|------|------|
-| 1 | 관리자 페이지 | Issue #9 |
-| 2 | PDF 업로드 | 계획 |
+| 1 | 관리자 페이지 | Issue #9 (리서치 완료) |
+| 2 | Email/Password 인증 | 계획 |
 | 3 | 오답 노트 | 계획 |
 | 4 | 알림 시스템 | 계획 |
+
+### Phase 2.3 (장기)
+
+| 우선순위 | 기능 | 상태 |
+|:--------:|------|------|
+| 1 | 학습 진도 대시보드 | 계획 |
+| 2 | 통계 차트 (Chart.js) | 계획 |
+| 3 | 데이터 내보내기/가져오기 | 계획 |
 
 ---
 

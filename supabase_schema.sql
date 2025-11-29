@@ -43,6 +43,30 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ojt_docs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE learning_records ENABLE ROW LEVEL SECURITY;
 
+-- 4.1 Admin 체크 함수 (SECURITY DEFINER로 RLS 무한 재귀 방지)
+-- 주의: 이 함수는 supabase_fix_rls.sql에도 정의되어 있습니다.
+-- 새 프로젝트에서는 이 스키마 파일만 실행하면 됩니다.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN COALESCE(
+    (SELECT role = 'admin' FROM public.users WHERE id = auth.uid()),
+    false
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- 4.2 Mentor/Admin 체크 함수
+CREATE OR REPLACE FUNCTION public.is_mentor_or_admin()
+RETURNS boolean AS $$
+BEGIN
+  RETURN COALESCE(
+    (SELECT role IN ('mentor', 'admin') FROM public.users WHERE id = auth.uid()),
+    false
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
 -- 5. users 테이블 정책
 -- 누구나 자신의 프로필 조회 가능
 CREATE POLICY "Users can view own profile"
@@ -63,14 +87,16 @@ CREATE POLICY "Users can update own profile (except role)"
     role = (SELECT role FROM users WHERE id = auth.uid())
   );
 
--- 관리자는 모든 사용자 조회 가능
+-- 관리자는 모든 사용자 조회 가능 (SECURITY DEFINER 함수 사용)
 CREATE POLICY "Admins can view all users"
   ON users FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (public.is_admin());
+
+-- 관리자는 다른 사용자 역할 변경 가능
+CREATE POLICY "Admins can update user roles"
+  ON users FOR UPDATE
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 
 -- 6. ojt_docs 테이블 정책
 -- 로그인한 사용자는 모든 자료 조회 가능
@@ -79,30 +105,21 @@ CREATE POLICY "Authenticated users can view all docs"
   TO authenticated
   USING (true);
 
--- 멘토와 관리자만 자료 생성 가능
+-- 멘토와 관리자만 자료 생성 가능 (SECURITY DEFINER 함수 사용)
 CREATE POLICY "Mentors can create docs"
   ON ojt_docs FOR INSERT
   TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('mentor', 'admin')
-    )
-  );
+  WITH CHECK (public.is_mentor_or_admin());
 
 -- 작성자만 자료 수정 가능
 CREATE POLICY "Authors can update own docs"
   ON ojt_docs FOR UPDATE
   USING (author_id = auth.uid());
 
--- 작성자와 관리자만 자료 삭제 가능
+-- 작성자와 관리자만 자료 삭제 가능 (SECURITY DEFINER 함수 사용)
 CREATE POLICY "Authors and admins can delete docs"
   ON ojt_docs FOR DELETE
-  USING (
-    author_id = auth.uid() OR
-    EXISTS (
-      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (author_id = auth.uid() OR public.is_admin());
 
 -- 7. learning_records 테이블 정책
 -- 자신의 학습 기록만 조회 가능
@@ -120,14 +137,10 @@ CREATE POLICY "Users can update own learning records"
   ON learning_records FOR UPDATE
   USING (user_id = auth.uid());
 
--- 관리자는 모든 학습 기록 조회 가능
+-- 관리자는 모든 학습 기록 조회 가능 (SECURITY DEFINER 함수 사용)
 CREATE POLICY "Admins can view all learning records"
   ON learning_records FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
 -- 8. 인덱스 생성 (성능 최적화)
 CREATE INDEX IF NOT EXISTS idx_ojt_docs_team ON ojt_docs(team);
