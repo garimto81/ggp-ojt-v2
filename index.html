@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.3.4 - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.3.5 - AI 기반 온보딩 교육 플랫폼</title>
   <!--
     CDN Script Loading Strategy:
     - Critical (sync): Tailwind, React, ReactDOM, Babel, Supabase, Dexie
@@ -2303,7 +2303,7 @@ ${rawText}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.3.4 | R2 이미지 업로드 + Gemini AI</p>
+                <p className="text-xs text-slate-400 mt-1">v2.3.5 | R2 이미지 업로드 + Gemini AI</p>
                 <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat: R2 이미지 업로드 기능 추가 (#26)">feat: R2 이미지 업로드 기능 추가</p>
               </div>
 
@@ -2360,7 +2360,7 @@ ${rawText}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.3.4</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.3.5</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
@@ -2550,12 +2550,18 @@ ${rawText}
         // 역할 변경 핸들러
         const handleRoleChange = async (userId, newRole) => {
           try {
-            const { error } = await supabase
+            const { data, error } = await supabase
               .from('users')
               .update({ role: newRole })
-              .eq('id', userId);
+              .eq('id', userId)
+              .select();
 
             if (error) throw error;
+
+            // RLS가 업데이트를 차단한 경우 (0행 반환)
+            if (!data || data.length === 0) {
+              throw new Error('권한이 없거나 RLS 정책에 의해 차단되었습니다. Supabase 대시보드에서 RLS 정책을 확인하세요.');
+            }
 
             // 로컬 상태 업데이트
             setAllUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
