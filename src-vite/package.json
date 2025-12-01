@@ -1,7 +1,7 @@
 {
   "name": "src-vite",
   "private": true,
-  "version": "2.3.4",
+  "version": "3.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,10 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@blocknote/core": "^0.42.3",
+    "@blocknote/mantine": "^0.42.3",
+    "@blocknote/react": "^0.42.3",
+    "@mantine/core": "^8.3.9",
     "@supabase/supabase-js": "^2.86.0",
     "chart.js": "^4.5.1",
     "dexie": "^4.2.1",
