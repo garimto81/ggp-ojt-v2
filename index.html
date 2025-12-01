@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.3.3 - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.3.4 - AI 기반 온보딩 교육 플랫폼</title>
   <!--
     CDN Script Loading Strategy:
     - Critical (sync): Tailwind, React, ReactDOM, Babel, Supabase, Dexie
@@ -2070,28 +2070,33 @@ ${rawText}
         }
       };
 
-      // 퀴즈 수정 핸들러들
+      // 퀴즈 수정 핸들러들 (generatedDoc 또는 editingDoc 지원)
       const handleQuizQuestionChange = (quizIndex, newQuestion) => {
-        if (!generatedDoc?.quiz) return;
-        const updatedQuiz = [...generatedDoc.quiz];
-        updatedQuiz[quizIndex] = { ...updatedQuiz[quizIndex], question: newQuestion };
-        setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
-        // generatedDocs 배열도 업데이트
-        if (generatedDocs.length > 0) {
-          const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
-          if (docIndex !== -1) {
-            const updatedDocs = [...generatedDocs];
-            updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
-            setGeneratedDocs(updatedDocs);
+        // editingDoc 우선, 없으면 generatedDoc
+        if (editingDoc?.quiz) {
+          const updatedQuiz = [...editingDoc.quiz];
+          updatedQuiz[quizIndex] = { ...updatedQuiz[quizIndex], question: newQuestion };
+          setEditingDoc({ ...editingDoc, quiz: updatedQuiz });
+        } else if (generatedDoc?.quiz) {
+          const updatedQuiz = [...generatedDoc.quiz];
+          updatedQuiz[quizIndex] = { ...updatedQuiz[quizIndex], question: newQuestion };
+          setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
+          if (generatedDocs.length > 0) {
+            const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
+            if (docIndex !== -1) {
+              const updatedDocs = [...generatedDocs];
+              updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
+              setGeneratedDocs(updatedDocs);
+            }
           }
         }
       };
 
       const handleQuizOptionChange = (quizIndex, optionIndex, newOption) => {
-        if (!generatedDoc?.quiz) return;
-        const updatedQuiz = [...generatedDoc.quiz];
+        const targetDoc = editingDoc?.quiz ? editingDoc : generatedDoc;
+        if (!targetDoc?.quiz) return;
+        const updatedQuiz = [...targetDoc.quiz];
         const updatedOptions = [...updatedQuiz[quizIndex].options];
-        // 정답이 변경된 옵션과 같으면 answer도 업데이트
         const wasAnswer = updatedQuiz[quizIndex].answer === updatedOptions[optionIndex];
         updatedOptions[optionIndex] = newOption;
         updatedQuiz[quizIndex] = { 
@@ -2099,49 +2104,63 @@ ${rawText}
           options: updatedOptions,
           answer: wasAnswer ? newOption : updatedQuiz[quizIndex].answer
         };
-        setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
-        if (generatedDocs.length > 0) {
-          const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
-          if (docIndex !== -1) {
-            const updatedDocs = [...generatedDocs];
-            updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
-            setGeneratedDocs(updatedDocs);
+        if (editingDoc?.quiz) {
+          setEditingDoc({ ...editingDoc, quiz: updatedQuiz });
+        } else {
+          setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
+          if (generatedDocs.length > 0) {
+            const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
+            if (docIndex !== -1) {
+              const updatedDocs = [...generatedDocs];
+              updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
+              setGeneratedDocs(updatedDocs);
+            }
           }
         }
       };
 
       const handleQuizCorrectChange = (quizIndex, optionIndex) => {
-        if (!generatedDoc?.quiz) return;
-        const updatedQuiz = [...generatedDoc.quiz];
+        const targetDoc = editingDoc?.quiz ? editingDoc : generatedDoc;
+        if (!targetDoc?.quiz) return;
+        const updatedQuiz = [...targetDoc.quiz];
         updatedQuiz[quizIndex] = { 
           ...updatedQuiz[quizIndex], 
           correct: optionIndex,
           answer: updatedQuiz[quizIndex].options[optionIndex]
         };
-        setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
-        if (generatedDocs.length > 0) {
-          const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
-          if (docIndex !== -1) {
-            const updatedDocs = [...generatedDocs];
-            updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
-            setGeneratedDocs(updatedDocs);
+        if (editingDoc?.quiz) {
+          setEditingDoc({ ...editingDoc, quiz: updatedQuiz });
+        } else {
+          setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
+          if (generatedDocs.length > 0) {
+            const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
+            if (docIndex !== -1) {
+              const updatedDocs = [...generatedDocs];
+              updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
+              setGeneratedDocs(updatedDocs);
+            }
           }
         }
       };
 
       const handleQuizDelete = (quizIndex) => {
-        if (!generatedDoc?.quiz || generatedDoc.quiz.length <= 4) {
+        const targetDoc = editingDoc?.quiz ? editingDoc : generatedDoc;
+        if (!targetDoc?.quiz || targetDoc.quiz.length <= 4) {
           Toast.warning('최소 4개 이상의 퀴즈가 필요합니다.');
           return;
         }
-        const updatedQuiz = generatedDoc.quiz.filter((_, idx) => idx !== quizIndex);
-        setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
-        if (generatedDocs.length > 0) {
-          const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
-          if (docIndex !== -1) {
-            const updatedDocs = [...generatedDocs];
-            updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
-            setGeneratedDocs(updatedDocs);
+        const updatedQuiz = targetDoc.quiz.filter((_, idx) => idx !== quizIndex);
+        if (editingDoc?.quiz) {
+          setEditingDoc({ ...editingDoc, quiz: updatedQuiz });
+        } else {
+          setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
+          if (generatedDocs.length > 0) {
+            const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
+            if (docIndex !== -1) {
+              const updatedDocs = [...generatedDocs];
+              updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
+              setGeneratedDocs(updatedDocs);
+            }
           }
         }
         Toast.success('퀴즈가 삭제되었습니다.');
@@ -2284,7 +2303,7 @@ ${rawText}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.3.3 | R2 이미지 업로드 + Gemini AI</p>
+                <p className="text-xs text-slate-400 mt-1">v2.3.4 | R2 이미지 업로드 + Gemini AI</p>
                 <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat: R2 이미지 업로드 기능 추가 (#26)">feat: R2 이미지 업로드 기능 추가</p>
               </div>
 
@@ -2341,7 +2360,7 @@ ${rawText}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.3.3</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.3.4</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
@@ -2987,12 +3006,22 @@ ${rawText}
                   <p className="text-sm text-blue-600">{editingDoc.team} - Step {editingDoc.step}</p>
                 </div>
               </div>
-              <button
-                onClick={handleCancelEdit}
-                className="text-blue-600 hover:text-blue-800 text-sm font-semibold px-3 py-1 rounded hover:bg-blue-100"
-              >
-                편집 취소
-              </button>
+              <div className="flex items-center gap-2">
+                {editingDoc.quiz?.length > 0 && (
+                  <button
+                    onClick={() => setShowQuizPreview(true)}
+                    className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full hover:bg-indigo-200 transition"
+                  >
+                    퀴즈 미리보기/수정 ({editingDoc.quiz.length}문제)
+                  </button>
+                )}
+                <button
+                  onClick={handleCancelEdit}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-semibold px-3 py-1 rounded hover:bg-blue-100"
+                >
+                  편집 취소
+                </button>
+              </div>
             </div>
           )}
 
@@ -3345,13 +3374,13 @@ ${rawText}
           )}
 
           {/* 퀴즈 미리보기/수정 모달 */}
-          {showQuizPreview && generatedDoc?.quiz && (
+          {showQuizPreview && (generatedDoc?.quiz || editingDoc?.quiz) && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden">
                 <div className="p-4 border-b border-slate-200 flex justify-between items-center">
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-bold text-slate-800">
-                      퀴즈 {quizEditMode ? '수정' : '미리보기'} ({generatedDoc.quiz.length}문제)
+                      퀴즈 {quizEditMode ? '수정' : '미리보기'} ({(generatedDoc?.quiz || editingDoc?.quiz).length}문제)
                     </h3>
                     <button
                       onClick={() => setQuizEditMode(!quizEditMode)}
@@ -3366,7 +3395,7 @@ ${rawText}
                   >&times;</button>
                 </div>
                 <div className="p-4 overflow-y-auto max-h-[calc(85vh-120px)]">
-                  {generatedDoc.quiz.map((q, idx) => (
+                  {(generatedDoc?.quiz || editingDoc?.quiz).map((q, idx) => (
                     <div key={idx} className="mb-4 p-4 bg-slate-50 rounded-lg">
                       <div className="flex items-start gap-2">
                         <span className="bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded">{idx + 1}</span>
