@@ -2593,18 +2593,16 @@ ${rawText}
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <input
-                              type="text"
-                              defaultValue={u.department || ''}
-                              onBlur={(e) => {
-                                if (e.target.value !== (u.department || '')) {
-                                  handleDepartmentChange(u.id, e.target.value);
-                                }
-                              }}
-                              onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                              placeholder="부서 입력"
-                              className="px-2 py-1 text-sm border border-slate-200 rounded w-24 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            />
+                            <select
+                              value={u.department || ''}
+                              onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
+                              className="px-2 py-1 text-sm border border-slate-200 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="">부서 선택</option>
+                              {[...new Set(allDocs.map(d => d.team).filter(Boolean))].sort().map(team => (
+                                <option key={team} value={team}>{team}</option>
+                              ))}
+                            </select>
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-500">
                             {new Date(u.created_at).toLocaleDateString('ko-KR')}
