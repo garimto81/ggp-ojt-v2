@@ -2,8 +2,8 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('BlockNote Editor - E2E Tests', () => {
-  // Override base URL for src-vite app
-  test.use({ baseURL: 'http://localhost:5175' });
+  // Override base URL for src-vite app (Vite default port)
+  test.use({ baseURL: 'http://localhost:5173' });
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
