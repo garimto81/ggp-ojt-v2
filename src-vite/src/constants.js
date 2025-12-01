@@ -31,20 +31,20 @@ export const CONFIG = {
 
 // Supabase configuration
 export const SUPABASE_CONFIG = {
-  URL: import.meta.env.VITE_SUPABASE_URL || '',
-  ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+  URL: import.meta.env.VITE_SUPABASE_URL || 'https://cbvansmxutnogntbyswi.supabase.co',
+  ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNidmFuc214dXRub2dudGJ5c3dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzI2NzYyMTMsImV4cCI6MjA0ODI1MjIxM30.cPiRemnriBwn8rCT1JL9Qg_mjCeCBaI-hPnLwCJ2r0k',
 };
 
 // Gemini API configuration
 export const GEMINI_CONFIG = {
-  API_KEY: import.meta.env.VITE_GEMINI_API_KEY || '',
+  API_KEY: import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyCvH1uc1OJ7EHmiWfsjbKVFH-X8KuvXH2I',
   MODEL: 'gemini-2.0-flash-exp',
   API_URL: 'https://generativelanguage.googleapis.com/v1beta/models',
 };
 
 // R2 Upload configuration
 export const R2_CONFIG = {
-  WORKER_URL: import.meta.env.VITE_R2_WORKER_URL || 'https://ojt-r2-upload.your-worker.workers.dev',
+  WORKER_URL: import.meta.env.VITE_R2_WORKER_URL || 'https://ojt-r2-upload.garimto81.workers.dev',
   ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
 };
