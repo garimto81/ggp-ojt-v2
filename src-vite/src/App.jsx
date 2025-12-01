@@ -1,4 +1,4 @@
-// OJT Master v3.0.0 - Main Application Component
+// OJT Master v2.3.0 - Main Application Component
 
 import { useEffect, useState } from 'react';
 import { useAuth } from './contexts/AuthContext';

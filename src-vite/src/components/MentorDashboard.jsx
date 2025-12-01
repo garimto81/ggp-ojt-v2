@@ -1,6 +1,6 @@
-// OJT Master v3.0 - Mentor Dashboard Component with BlockNote Editor
+// OJT Master v2.3.0 - Mentor Dashboard Component
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useDocs } from '../contexts/DocsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../contexts/ToastContext';
@@ -12,7 +12,6 @@ import {
   confirmDeleteWithCSRF,
   formatDate,
 } from '../utils/helpers';
-import BlockNoteEditor from './BlockNoteEditor';
 
 export default function MentorDashboard({ aiStatus }) {
   const { myDocs, saveDocument, deleteDocument, loadMyDocs } = useDocs();
@@ -244,13 +243,12 @@ export default function MentorDashboard({ aiStatus }) {
 
           {/* Content Input */}
           {inputType === 'text' && (
-            <div className="min-h-[300px]">
-              <BlockNoteEditor
-                initialContent={rawInput}
-                onChange={setRawInput}
-                placeholder="교육 콘텐츠를 입력하세요... (이미지를 드래그하여 업로드할 수 있습니다)"
-              />
-            </div>
+            <textarea
+              value={rawInput}
+              onChange={(e) => setRawInput(e.target.value)}
+              placeholder="교육 콘텐츠를 입력하세요..."
+              className="w-full h-64 px-4 py-3 border rounded-lg resize-none"
+            />
           )}
 
           {inputType === 'url' && (

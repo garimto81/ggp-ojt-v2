@@ -1,8 +1,0 @@
-{
-  "buildCommand": "export VITE_SUPABASE_URL=$SUPABASE_URL && export VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY && export VITE_GEMINI_API_KEY=$GEMINI_API_KEY && export VITE_R2_WORKER_URL=$R2_WORKER_URL && cd src-vite && npm install && npm run build",
-  "outputDirectory": "src-vite/dist",
-  "framework": "vite",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
-  ]
-}
