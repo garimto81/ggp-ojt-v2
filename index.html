@@ -1704,10 +1704,12 @@ ${rawText}
           // INITIAL_SESSION: 앱 시작 시 기존 세션 확인
           if (event === 'INITIAL_SESSION') {
             clearTimeout(fallbackTimer);
-            if (session?.user) {
+            if (session?.user && !profileLoaded) {
               console.log('Auth: INITIAL_SESSION with user');
               profileLoaded = true;
               await loadUserProfile(session);
+            } else if (session?.user && profileLoaded) {
+              console.log('Auth: INITIAL_SESSION skipped (already loaded)');
             } else {
               console.log('Auth: INITIAL_SESSION no user, showing login');
               setViewState('login');
