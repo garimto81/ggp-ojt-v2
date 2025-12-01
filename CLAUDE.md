@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.2.0)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.3.1)
 
 ## Tech Stack
 
@@ -174,7 +174,29 @@ URL 콘텐츠 추출 시 사용하는 프록시 목록 (순차 시도):
 - **AI**: Google Gemini API (무료 티어)
 
 > **중요**: 이 프로젝트는 Vercel에 연동되어 있어 main 브랜치 push 시 자동 배포됩니다.
-> **코드 수정 또는 이슈 해결 후 반드시 커밋 & 푸시하세요.**
+
+### 코드 수정 후 필수 작업
+
+1. **버전 업데이트** (모든 수정 후 필수)
+   ```bash
+   # 버전 번호 업데이트 (예: v2.3.1 → v2.3.2)
+   # index.html, package.json, src-vite/package.json 모두 수정
+   sed -i 's/v2.3.1/v2.3.2/g' index.html
+   sed -i 's/"version": "2.3.1"/"version": "2.3.2"/g' package.json src-vite/package.json
+   ```
+
+2. **커밋 & 푸시**
+   ```bash
+   git add .
+   git commit -m "chore: 버전 vX.Y.Z로 업데이트"
+   git push origin main
+   ```
+
+**버전 규칙**:
+- `MAJOR.MINOR.PATCH` (예: 2.3.1)
+- 버그 수정: PATCH 증가 (2.3.1 → 2.3.2)
+- 기능 추가: MINOR 증가 (2.3.1 → 2.4.0)
+- 큰 변경: MAJOR 증가 (2.3.1 → 3.0.0)
 
 ## Project Structure
 
