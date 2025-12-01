@@ -1406,15 +1406,13 @@ ${rawText}
       // Effects
       // =========================================
 
-      // AI 상태 체크 (Gemini)
+      // AI 상태 체크 (Gemini) - 앱 시작 시 1회만
       useEffect(() => {
         const checkStatus = async () => {
           const status = await checkGeminiStatus();
           setAiStatus(status);
         };
         checkStatus();
-        const interval = setInterval(checkStatus, 30000); // 30초마다 체크
-        return () => clearInterval(interval);
       }, []);
 
       // Admin 모드 전환 상태 복원 (sessionStorage)
