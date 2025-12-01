@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.3.2 - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.3.3 - AI 기반 온보딩 교육 플랫폼</title>
   <!--
     CDN Script Loading Strategy:
     - Critical (sync): Tailwind, React, ReactDOM, Babel, Supabase, Dexie
@@ -1385,6 +1385,8 @@ ${rawText}
       const requiredSteps = useMemo(() => rawInput ? calculateRequiredSteps(rawInput) : 1, [rawInput]);
       const [editorTab, setEditorTab] = useState('edit'); // 'edit' | 'preview' - 탭 기반 레이아웃
       const [showQuizPreview, setShowQuizPreview] = useState(false); // 퀴즈 미리보기 모달
+      const [quizEditMode, setQuizEditMode] = useState(false); // 퀴즈 편집 모드
+      const [editingQuizIndex, setEditingQuizIndex] = useState(null); // 편집 중인 퀴즈 인덱스
 
       // Mentee State
       const [publicDocs, setPublicDocs] = useState([]);
@@ -2068,6 +2070,83 @@ ${rawText}
         }
       };
 
+      // 퀴즈 수정 핸들러들
+      const handleQuizQuestionChange = (quizIndex, newQuestion) => {
+        if (!generatedDoc?.quiz) return;
+        const updatedQuiz = [...generatedDoc.quiz];
+        updatedQuiz[quizIndex] = { ...updatedQuiz[quizIndex], question: newQuestion };
+        setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
+        // generatedDocs 배열도 업데이트
+        if (generatedDocs.length > 0) {
+          const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
+          if (docIndex !== -1) {
+            const updatedDocs = [...generatedDocs];
+            updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
+            setGeneratedDocs(updatedDocs);
+          }
+        }
+      };
+
+      const handleQuizOptionChange = (quizIndex, optionIndex, newOption) => {
+        if (!generatedDoc?.quiz) return;
+        const updatedQuiz = [...generatedDoc.quiz];
+        const updatedOptions = [...updatedQuiz[quizIndex].options];
+        // 정답이 변경된 옵션과 같으면 answer도 업데이트
+        const wasAnswer = updatedQuiz[quizIndex].answer === updatedOptions[optionIndex];
+        updatedOptions[optionIndex] = newOption;
+        updatedQuiz[quizIndex] = { 
+          ...updatedQuiz[quizIndex], 
+          options: updatedOptions,
+          answer: wasAnswer ? newOption : updatedQuiz[quizIndex].answer
+        };
+        setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
+        if (generatedDocs.length > 0) {
+          const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
+          if (docIndex !== -1) {
+            const updatedDocs = [...generatedDocs];
+            updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
+            setGeneratedDocs(updatedDocs);
+          }
+        }
+      };
+
+      const handleQuizCorrectChange = (quizIndex, optionIndex) => {
+        if (!generatedDoc?.quiz) return;
+        const updatedQuiz = [...generatedDoc.quiz];
+        updatedQuiz[quizIndex] = { 
+          ...updatedQuiz[quizIndex], 
+          correct: optionIndex,
+          answer: updatedQuiz[quizIndex].options[optionIndex]
+        };
+        setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
+        if (generatedDocs.length > 0) {
+          const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
+          if (docIndex !== -1) {
+            const updatedDocs = [...generatedDocs];
+            updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
+            setGeneratedDocs(updatedDocs);
+          }
+        }
+      };
+
+      const handleQuizDelete = (quizIndex) => {
+        if (!generatedDoc?.quiz || generatedDoc.quiz.length <= 4) {
+          Toast.warning('최소 4개 이상의 퀴즈가 필요합니다.');
+          return;
+        }
+        const updatedQuiz = generatedDoc.quiz.filter((_, idx) => idx !== quizIndex);
+        setGeneratedDoc({ ...generatedDoc, quiz: updatedQuiz });
+        if (generatedDocs.length > 0) {
+          const docIndex = generatedDocs.findIndex(d => d === generatedDoc);
+          if (docIndex !== -1) {
+            const updatedDocs = [...generatedDocs];
+            updatedDocs[docIndex] = { ...generatedDoc, quiz: updatedQuiz };
+            setGeneratedDocs(updatedDocs);
+          }
+        }
+        Toast.success('퀴즈가 삭제되었습니다.');
+      };
+
       // 문서 편집 핸들러 - 기존 문서를 편집창에 로드
       const handleEditDoc = (doc) => {
         setEditingDoc(doc);
@@ -2205,7 +2284,7 @@ ${rawText}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.3.2 | R2 이미지 업로드 + Gemini AI</p>
+                <p className="text-xs text-slate-400 mt-1">v2.3.3 | R2 이미지 업로드 + Gemini AI</p>
                 <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat: R2 이미지 업로드 기능 추가 (#26)">feat: R2 이미지 업로드 기능 추가</p>
               </div>
 
@@ -2262,7 +2341,7 @@ ${rawText}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.3.2</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.3.3</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
@@ -3265,14 +3344,24 @@ ${rawText}
             </div>
           )}
 
-          {/* 퀴즈 미리보기 모달 */}
+          {/* 퀴즈 미리보기/수정 모달 */}
           {showQuizPreview && generatedDoc?.quiz && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden">
                 <div className="p-4 border-b border-slate-200 flex justify-between items-center">
-                  <h3 className="text-lg font-bold text-slate-800">퀴즈 미리보기 ({generatedDoc.quiz.length}문제)</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-bold text-slate-800">
+                      퀴즈 {quizEditMode ? '수정' : '미리보기'} ({generatedDoc.quiz.length}문제)
+                    </h3>
+                    <button
+                      onClick={() => setQuizEditMode(!quizEditMode)}
+                      className={`px-3 py-1 text-xs font-medium rounded-full transition ${quizEditMode ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'}`}
+                    >
+                      {quizEditMode ? '✓ 수정 모드' : '수정하기'}
+                    </button>
+                  </div>
                   <button
-                    onClick={() => setShowQuizPreview(false)}
+                    onClick={() => { setShowQuizPreview(false); setQuizEditMode(false); }}
                     className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
                   >&times;</button>
                 </div>
@@ -3281,21 +3370,60 @@ ${rawText}
                     <div key={idx} className="mb-4 p-4 bg-slate-50 rounded-lg">
                       <div className="flex items-start gap-2">
                         <span className="bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded">{idx + 1}</span>
-                        <p className="font-medium text-slate-800 flex-1">{q.question}</p>
+                        {quizEditMode ? (
+                          <input
+                            type="text"
+                            value={q.question}
+                            onChange={(e) => handleQuizQuestionChange(idx, e.target.value)}
+                            className="flex-1 px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        ) : (
+                          <p className="font-medium text-slate-800 flex-1">{q.question}</p>
+                        )}
+                        {quizEditMode && (
+                          <button
+                            onClick={() => handleQuizDelete(idx)}
+                            className="text-red-500 hover:text-red-700 text-sm px-2"
+                            title="삭제"
+                          >✕</button>
+                        )}
                       </div>
                       <div className="mt-3 space-y-2 ml-7">
                         {q.options?.map((opt, optIdx) => (
-                          <div key={optIdx} className={`p-2 rounded text-sm ${(q.answer === opt || q.correct === optIdx) ? 'bg-green-100 text-green-800 font-medium border border-green-300' : 'bg-white border border-slate-200'}`}>
-                            {opt} {(q.answer === opt || q.correct === optIdx) && '✓'}
+                          <div key={optIdx} className={`p-2 rounded text-sm flex items-center gap-2 ${(q.answer === opt || q.correct === optIdx) ? 'bg-green-100 text-green-800 font-medium border border-green-300' : 'bg-white border border-slate-200'}`}>
+                            {quizEditMode && (
+                              <input
+                                type="radio"
+                                name={`quiz-${idx}-correct`}
+                                checked={q.correct === optIdx || q.answer === opt}
+                                onChange={() => handleQuizCorrectChange(idx, optIdx)}
+                                className="w-4 h-4 text-green-600"
+                                title="정답으로 설정"
+                              />
+                            )}
+                            {quizEditMode ? (
+                              <input
+                                type="text"
+                                value={opt}
+                                onChange={(e) => handleQuizOptionChange(idx, optIdx, e.target.value)}
+                                className="flex-1 px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                            ) : (
+                              <span className="flex-1">{opt}</span>
+                            )}
+                            {!quizEditMode && (q.answer === opt || q.correct === optIdx) && <span>✓</span>}
                           </div>
                         ))}
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="p-4 border-t border-slate-200 flex justify-end">
+                <div className="p-4 border-t border-slate-200 flex justify-between">
+                  <span className="text-xs text-slate-500">
+                    {quizEditMode ? '라디오 버튼으로 정답 선택' : '녹색 = 정답'}
+                  </span>
                   <button
-                    onClick={() => setShowQuizPreview(false)}
+                    onClick={() => { setShowQuizPreview(false); setQuizEditMode(false); }}
                     className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
                   >닫기</button>
                 </div>
