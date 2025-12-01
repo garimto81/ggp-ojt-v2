@@ -146,9 +146,11 @@ function parseAIResponse(responseText) {
   }
 
   // Clean JSON string (remove control characters)
-  // eslint-disable-next-line no-control-regex
+  /* eslint-disable no-control-regex */
+  const controlCharRegex = /[\x00-\x1F\x7F]/g;
+  /* eslint-enable no-control-regex */
   const jsonStr = jsonMatch[0]
-    .replace(/[\x00-\x1F\x7F]/g, ' ')
+    .replace(controlCharRegex, ' ')
     .replace(/,\s*}/g, '}')
     .replace(/,\s*]/g, ']')
     .replace(/"\s*\n\s*"/g, '" "');
@@ -170,16 +172,223 @@ function validateAndFillResult(result, title) {
     result.quiz = [];
   }
 
+  // Normalize and validate each quiz question
+  result.quiz = result.quiz.map((q, idx) => normalizeQuizQuestion(q, idx, title));
+
   // Fill quiz if less than required
   while (result.quiz.length < CONFIG.QUIZ_TOTAL_POOL) {
-    result.quiz.push({
-      question: `[자동 생성] ${title} 관련 문제 ${result.quiz.length + 1}`,
-      options: ['정답', '오답 1', '오답 2', '오답 3'],
-      correct: 0,
-    });
+    result.quiz.push(createPlaceholderQuiz(title, result.quiz.length + 1));
   }
 
   return result;
+}
+
+/**
+ * Normalize a quiz question to ensure consistent format
+ * @param {Object} question - Quiz question object
+ * @param {number} index - Question index
+ * @param {string} title - Document title for fallback
+ * @returns {Object} - Normalized quiz question
+ */
+function normalizeQuizQuestion(question, index, title) {
+  const normalized = { ...question };
+
+  // Ensure options array exists and has 4 items
+  if (!Array.isArray(normalized.options) || normalized.options.length < 2) {
+    normalized.options = ['정답', '오답 1', '오답 2', '오답 3'];
+    normalized.correct = 0;
+  }
+
+  // Ensure correct index is valid
+  if (
+    typeof normalized.correct !== 'number' ||
+    normalized.correct < 0 ||
+    normalized.correct >= normalized.options.length
+  ) {
+    normalized.correct = 0;
+  }
+
+  // Add answer field for compatibility
+  normalized.answer = normalized.options[normalized.correct];
+
+  // Ensure question text exists
+  if (!normalized.question || normalized.question.trim() === '') {
+    normalized.question = `${title} 관련 문제 ${index + 1}`;
+  }
+
+  return normalized;
+}
+
+/**
+ * Create a placeholder quiz question
+ */
+function createPlaceholderQuiz(title, number) {
+  return {
+    question: `[자동 생성] ${title} 관련 문제 ${number}`,
+    options: ['정답', '오답 1', '오답 2', '오답 3'],
+    correct: 0,
+    answer: '정답',
+    isPlaceholder: true,
+  };
+}
+
+/**
+ * Validate quiz quality
+ * @param {Array} quiz - Array of quiz questions
+ * @returns {Object} - Validation result with issues
+ */
+export function validateQuizQuality(quiz) {
+  const issues = [];
+  let placeholderCount = 0;
+  let shortQuestionCount = 0;
+  let duplicateCount = 0;
+  const seenQuestions = new Set();
+
+  if (!Array.isArray(quiz)) {
+    return { valid: false, issues: ['퀴즈 데이터가 없습니다.'], stats: {} };
+  }
+
+  quiz.forEach((q, idx) => {
+    // Check for placeholder questions
+    if (q.isPlaceholder || q.question?.includes('[자동 생성]')) {
+      placeholderCount++;
+      issues.push(`문제 ${idx + 1}: 자동 생성된 더미 문제입니다.`);
+    }
+
+    // Check for too short questions
+    if (q.question && q.question.length < 10) {
+      shortQuestionCount++;
+      issues.push(`문제 ${idx + 1}: 질문이 너무 짧습니다 (${q.question.length}자).`);
+    }
+
+    // Check for duplicate questions
+    const questionKey = q.question?.toLowerCase().trim();
+    if (seenQuestions.has(questionKey)) {
+      duplicateCount++;
+      issues.push(`문제 ${idx + 1}: 중복된 문제입니다.`);
+    }
+    seenQuestions.add(questionKey);
+
+    // Check for invalid correct index
+    if (q.correct < 0 || q.correct >= q.options?.length) {
+      issues.push(`문제 ${idx + 1}: 정답 인덱스가 잘못되었습니다.`);
+    }
+
+    // Check for duplicate options
+    const uniqueOptions = new Set(q.options?.map((o) => o?.toLowerCase().trim()));
+    if (uniqueOptions.size < (q.options?.length || 0)) {
+      issues.push(`문제 ${idx + 1}: 중복된 선택지가 있습니다.`);
+    }
+  });
+
+  const stats = {
+    total: quiz.length,
+    placeholders: placeholderCount,
+    shortQuestions: shortQuestionCount,
+    duplicates: duplicateCount,
+    validCount: quiz.length - placeholderCount - duplicateCount,
+  };
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    stats,
+  };
+}
+
+/**
+ * Regenerate specific quiz questions using AI
+ * @param {string} contentText - Original content text
+ * @param {Array} indices - Indices of questions to regenerate
+ * @param {Array} existingQuiz - Existing quiz array
+ * @param {Function} onProgress - Progress callback
+ * @returns {Promise<Array>} - Updated quiz array
+ */
+export async function regenerateQuizQuestions(contentText, indices, existingQuiz, onProgress) {
+  const count = indices.length;
+
+  const prompt = `당신은 10년 경력의 기업 교육 설계 전문가입니다.
+
+다음 텍스트를 기반으로 새로운 퀴즈 문제 ${count}개를 생성하세요.
+
+## 출력 형식 (반드시 JSON 배열만)
+[
+  {
+    "question": "문제 내용",
+    "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
+    "correct": 0
+  }
+]
+
+## 퀴즈 작성 규칙
+- 기억형 40%: 핵심 용어, 정의 관련
+- 이해형 35%: 개념 관계, 비교 관련
+- 적용형 25%: 실무 상황 판단 관련
+- 각 문제는 4개의 명확히 다른 선택지를 가져야 함
+- 정답은 반드시 선택지 중 하나여야 함
+- 문제는 20자 이상의 구체적인 질문이어야 함
+
+## 기존 문제 (중복 방지)
+${existingQuiz
+  .filter((_, i) => !indices.includes(i))
+  .map((q) => q.question)
+  .join('\n')}
+
+## 입력 텍스트
+${contentText.substring(0, 8000)}`;
+
+  try {
+    if (onProgress) onProgress('퀴즈 재생성 중...');
+
+    const response = await fetch(
+      `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.5,
+            maxOutputTokens: 4096,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`AI 응답 오류: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!responseText) {
+      throw new Error('AI 응답이 비어있습니다.');
+    }
+
+    // Parse new questions
+    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      throw new Error('JSON 배열을 찾을 수 없습니다.');
+    }
+
+    // eslint-disable-next-line no-control-regex
+    const jsonStr = jsonMatch[0].replace(/[\x00-\x1F\x7F]/g, ' ');
+    const newQuestions = JSON.parse(jsonStr);
+
+    // Replace specified indices with new questions
+    const updatedQuiz = [...existingQuiz];
+    indices.forEach((targetIdx, i) => {
+      if (newQuestions[i] && targetIdx < updatedQuiz.length) {
+        updatedQuiz[targetIdx] = normalizeQuizQuestion(newQuestions[i], targetIdx, '');
+      }
+    });
+
+    return updatedQuiz;
+  } catch (error) {
+    console.error('Quiz regeneration failed:', error);
+    throw error;
+  }
 }
 
 /**

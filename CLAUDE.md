@@ -173,6 +173,9 @@ URL 콘텐츠 추출 시 사용하는 프록시 목록 (순차 시도):
 - **Supabase Auth**: Google OAuth
 - **AI**: Google Gemini API (무료 티어)
 
+> **중요**: 이 프로젝트는 Vercel에 연동되어 있어 main 브랜치 push 시 자동 배포됩니다.
+> **코드 수정 또는 이슈 해결 후 반드시 커밋 & 푸시하세요.**
+
 ## Project Structure
 
 ```text

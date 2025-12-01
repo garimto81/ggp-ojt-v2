@@ -16,6 +16,19 @@ localDb.version(2).stores({
 // Sync queue processing flag
 let isSyncQueueProcessing = false;
 
+// Default timeout for Supabase queries
+const SUPABASE_QUERY_TIMEOUT = 10000; // 10 seconds
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout(promise, ms) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Query timeout after ${ms}ms`)), ms)
+  );
+  return Promise.race([promise, timeout]);
+}
+
 /**
  * Get all records from a table with optional filter
  * @param {string} table - Table name
@@ -42,7 +55,8 @@ export async function dbGetAll(table, filter = null) {
       });
     }
 
-    const { data: remoteData, error } = await query;
+    // Execute with timeout to prevent infinite loading
+    const { data: remoteData, error } = await withTimeout(query, SUPABASE_QUERY_TIMEOUT);
 
     if (error) {
       console.warn(`Supabase error for ${table}:`, error);

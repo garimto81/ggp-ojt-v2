@@ -36,11 +36,17 @@ export default function MenteeStudy() {
     const shuffled = shuffleArray([...selectedDoc.quiz]);
     const selected = shuffled.slice(0, CONFIG.QUIZ_QUESTIONS_PER_TEST);
 
-    // Shuffle answers for each question
-    const prepared = selected.map((q) => ({
-      ...q,
-      shuffledOptions: shuffleArray([...q.options]),
-    }));
+    // Normalize quiz format and shuffle answers
+    const prepared = selected.map((q) => {
+      // AI generates "correct" index, convert to "answer" string
+      const correctAnswer = q.answer || q.options[q.correct] || q.options[0];
+
+      return {
+        ...q,
+        answer: correctAnswer,
+        shuffledOptions: shuffleArray([...q.options]),
+      };
+    });
 
     setQuizQuestions(prepared);
     setCurrentQuiz(0);

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useDocs } from '../contexts/DocsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../contexts/ToastContext';
-import { dbGetAll } from '../utils/db';
 import { supabase } from '../utils/api';
 import { confirmDeleteWithCSRF, formatDate } from '../utils/helpers';
 
@@ -63,6 +62,26 @@ export default function AdminDashboard() {
     } catch (e) {
       console.error('Role change error:', e);
       Toast.error('역할 변경에 실패했습니다: ' + e.message);
+    }
+  };
+
+  // Change user department
+  const handleDepartmentChange = async (userId, newDepartment) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ department: newDepartment || null, updated_at: Date.now() })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setAllUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, department: newDepartment || null } : u))
+      );
+      Toast.success('부서가 변경되었습니다.');
+    } catch (e) {
+      console.error('Department change error:', e);
+      Toast.error('부서 변경에 실패했습니다: ' + e.message);
     }
   };
 
@@ -154,6 +173,7 @@ export default function AdminDashboard() {
                   <tr className="text-left text-sm text-gray-500 border-b">
                     <th className="pb-3 font-medium">이름</th>
                     <th className="pb-3 font-medium">역할</th>
+                    <th className="pb-3 font-medium">부서</th>
                     <th className="pb-3 font-medium">가입일</th>
                     <th className="pb-3 font-medium">액션</th>
                   </tr>
@@ -164,7 +184,7 @@ export default function AdminDashboard() {
                       <td className="py-3">{u.name}</td>
                       <td className="py-3">
                         <select
-                          value={u.role}
+                          value={u.role || ''}
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
                           className="px-2 py-1 border rounded text-sm"
                           disabled={u.id === user?.id}
@@ -173,6 +193,34 @@ export default function AdminDashboard() {
                           <option value="mentor">Mentor</option>
                           <option value="mentee">Mentee</option>
                         </select>
+                      </td>
+                      <td className="py-3">
+                        <input
+                          type="text"
+                          value={u.department || ''}
+                          onChange={(e) => {
+                            // Update local state immediately for responsive UI
+                            setAllUsers((prev) =>
+                              prev.map((usr) =>
+                                usr.id === u.id ? { ...usr, department: e.target.value } : usr
+                              )
+                            );
+                          }}
+                          onBlur={(e) => {
+                            // Save to database on blur
+                            const originalUser = allUsers.find((usr) => usr.id === u.id);
+                            if (originalUser?.department !== e.target.value) {
+                              handleDepartmentChange(u.id, e.target.value);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.target.blur();
+                            }
+                          }}
+                          placeholder="부서 입력"
+                          className="px-2 py-1 border rounded text-sm w-32"
+                        />
                       </td>
                       <td className="py-3 text-sm text-gray-500">{formatDate(u.created_at)}</td>
                       <td className="py-3">

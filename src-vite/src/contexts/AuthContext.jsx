@@ -41,7 +41,8 @@ export function AuthProvider({ children }) {
         profile = data;
       }
 
-      if (profile) {
+      if (profile && profile.role) {
+        // Valid profile with role
         setUser({
           id: profile.id,
           name: profile.name || session.user.user_metadata?.full_name,
@@ -57,6 +58,16 @@ export function AuthProvider({ children }) {
         }
 
         setViewState(getViewStateByRole(profile.role, tempMode));
+      } else if (profile && !profile.role) {
+        // Corrupted cache: profile exists but no role - treat as new user
+        console.warn('Corrupted user cache detected (no role), clearing...');
+        setUser({
+          id: session.user.id,
+          name: profile.name || session.user.user_metadata?.full_name,
+          email: session.user.email,
+          role: null,
+        });
+        setViewState(VIEW_STATES.ROLE_SELECT);
       } else {
         // New user - needs role selection
         setUser({
@@ -77,6 +88,15 @@ export function AuthProvider({ children }) {
 
   // Initialize auth state
   useEffect(() => {
+    // Safety timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.warn('Auth loading timeout - forcing role select view');
+        setIsLoading(false);
+        setViewState(VIEW_STATES.ROLE_SELECT);
+      }
+    }, 15000); // 15 second max loading time
+
     // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       loadUserProfile(session);
@@ -89,8 +109,11 @@ export function AuthProvider({ children }) {
       loadUserProfile(session);
     });
 
-    return () => subscription.unsubscribe();
-  }, [loadUserProfile]);
+    return () => {
+      clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
+  }, [loadUserProfile, isLoading]);
 
   // Google login
   const handleGoogleLogin = async () => {
