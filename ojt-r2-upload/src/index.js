@@ -30,18 +30,19 @@ function getAllowedOrigins(env) {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
-// 이미지 매직 넘버 (파일 헤더 시그니처)
+// 파일 매직 넘버 (파일 헤더 시그니처)
 const MAGIC_NUMBERS = {
   'image/jpeg': [0xFF, 0xD8, 0xFF],
   'image/png': [0x89, 0x50, 0x4E, 0x47],
   'image/gif': [0x47, 0x49, 0x46, 0x38],
-  'image/webp': [0x52, 0x49, 0x46, 0x46] // RIFF
+  'image/webp': [0x52, 0x49, 0x46, 0x46], // RIFF
+  'application/pdf': [0x25, 0x50, 0x44, 0x46] // %PDF
 };
 
-// 매직 넘버로 실제 이미지 타입 검증
-function validateImageMagicNumber(bytes) {
+// 매직 넘버로 실제 파일 타입 검증
+function validateFileMagicNumber(bytes) {
   for (const [type, signature] of Object.entries(MAGIC_NUMBERS)) {
     if (signature.every((byte, i) => bytes[i] === byte)) {
       // WebP 추가 검증: RIFF 후 WEBP 마커 확인
@@ -97,7 +98,7 @@ export default {
 
         if (!ALLOWED_TYPES.includes(contentType)) {
           return Response.json(
-            { error: '허용되지 않는 파일 형식입니다 (JPG, PNG, GIF, WebP만 지원)' },
+            { error: '허용되지 않는 파일 형식입니다 (JPG, PNG, GIF, WebP, PDF만 지원)' },
             { status: 400, headers: corsHeaders }
           );
         }
@@ -170,13 +171,13 @@ export default {
           );
         }
 
-        // 매직 넘버 검증 (파일 헤더로 실제 이미지 타입 확인)
+        // 매직 넘버 검증 (파일 헤더로 실제 파일 타입 확인)
         const bytes = new Uint8Array(arrayBuffer.slice(0, 12));
-        const actualType = validateImageMagicNumber(bytes);
+        const actualType = validateFileMagicNumber(bytes);
 
         if (!actualType) {
           return Response.json(
-            { error: '유효하지 않은 이미지 파일입니다. 파일 헤더가 올바르지 않습니다.' },
+            { error: '유효하지 않은 파일입니다. 파일 헤더가 올바르지 않습니다.' },
             { status: 400, headers: corsHeaders }
           );
         }
@@ -238,7 +239,7 @@ export default {
       }
     }
 
-    // GET: 이미지 직접 서빙 (r2.dev 대신 사용 가능)
+    // GET: 파일 직접 서빙 (r2.dev 대신 사용 가능)
     if (request.method === 'GET' && url.pathname.startsWith('/uploads/')) {
       try {
         const key = url.pathname.slice(1); // 앞의 / 제거

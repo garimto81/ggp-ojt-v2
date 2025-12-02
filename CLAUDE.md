@@ -4,62 +4,87 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.3.1)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.3.5)
 
 ## Tech Stack
 
 | 영역 | 기술 |
 |------|------|
-| **Frontend** | React 18 (CDN, 단일 파일 SPA) |
-| **Backend/DB** | Supabase (PostgreSQL + Auth) |
+| **Frontend** | React 19 + Vite 7 (권장) / React 18 CDN (레거시) |
+| **Backend/DB** | Supabase (PostgreSQL + Auth + RLS) |
 | **Local Cache** | Dexie.js (IndexedDB) |
 | **AI** | Google Gemini API (gemini-2.0-flash-exp) |
 | **Image Storage** | Cloudflare R2 (Worker 프록시) |
 | **Editor** | Quill 2.0 (Rich Text) |
-| **Hosting** | Vercel |
+| **Hosting** | Vercel (자동 배포) |
 
 ## Commands
 
 ```bash
-# 메인 앱 - 로컬 개발 서버
-npx serve . -p 3000
+# === Vite 앱 (src-vite/) - 권장 ===
+cd src-vite
+npm run dev                     # 개발 서버 (http://localhost:5173)
+npm run build                   # 프로덕션 빌드
+npm run lint                    # ESLint 검사
+npm run lint:fix                # ESLint 자동 수정
+npm run format                  # Prettier 포맷팅
+npm run test                    # Vitest 단위 테스트 (watch)
+npm run test:run                # 단위 테스트 1회 실행
+npm run test:coverage           # 커버리지 리포트
 
-# E2E 테스트 (Playwright)
-npm test                                    # 전체 테스트 실행
-npm run test:headed                         # 브라우저 화면 보면서 실행
-npm run test:ui                             # Playwright UI 모드
-npx playwright test tests/e2e-homepage.spec.js  # 단일 테스트 파일
-npm run test:report                         # HTML 리포트 보기
+# === 레거시 앱 (루트 index.html) ===
+npx serve . -p 3000             # 로컬 개발 서버
 
-# R2 Worker (ojt-r2-upload/ 디렉토리에서)
-cd ojt-r2-upload && npm run dev             # 로컬 개발 (wrangler)
-cd ojt-r2-upload && npm run deploy          # Cloudflare 배포
-cd ojt-r2-upload && npm test                # Vitest 테스트
+# === E2E 테스트 (Playwright) ===
+npm test                        # 전체 테스트
+npm run test:headed             # 브라우저 화면 표시
+npm run test:ui                 # Playwright UI 모드
+npx playwright test tests/e2e-homepage.spec.js  # 단일 파일
+
+# === R2 Worker (ojt-r2-upload/) ===
+cd ojt-r2-upload
+npm run dev                     # 로컬 개발 (wrangler)
+npm run deploy                  # Cloudflare 배포
+npm test                        # Vitest 테스트
 ```
 
-> **주의**: `playwright.config.js`의 `baseURL`을 로컬 서버 포트에 맞게 수정 필요
+## Environment Variables
+
+```bash
+# src-vite/.env (복사: .env.example → .env)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_GEMINI_API_KEY=your-gemini-api-key
+VITE_R2_WORKER_URL=https://ojt-r2-upload.your-worker.workers.dev
+```
 
 ## Architecture
 
-단일 `index.html` 파일에 모든 React 코드가 포함된 SPA 구조:
+두 가지 프론트엔드 구조 공존:
 
 ```text
-index.html (전체 앱)
-├── Supabase 초기화 (Auth + PostgreSQL)
-├── Dexie.js 초기화 (로컬 캐시 + 오프라인 큐)
-├── 콘텐츠 추출: extractPdfText(), extractUrlText()
-├── AI 생성: generateOJTContent(), checkAIStatus()
-├── 자동 분할: splitContentForSteps(), calculateRequiredSteps()
-├── R2 업로드: uploadImageToR2(), handleQuillImageDrop()
-├── 캐시 관리: clearAllCache(), processSyncQueue()
-└── App 컴포넌트
-    ├── Google OAuth 인증
-    ├── 역할 기반 뷰 분기 (Admin/Mentor/Mentee)
-    ├── AdminDashboard (사용자/콘텐츠 관리, 통계)
-    ├── MentorDashboard (자료 생성 + Quill 에디터)
-    ├── MenteeList (팀별 로드맵 탐색)
-    └── MenteeStudy (학습 + 퀴즈)
+ggp_ojt_v2/
+├── index.html              # 레거시 단일 파일 SPA (CDN React)
+├── src-vite/               # 모던 Vite 앱 (권장)
+│   ├── src/
+│   │   ├── components/     # React 컴포넌트
+│   │   ├── hooks/          # 커스텀 훅 (useAuth, useDocuments 등)
+│   │   ├── services/       # Supabase, Gemini API 래퍼
+│   │   └── utils/          # 유틸리티 함수
+│   └── .env                # 환경 변수
+├── ojt-r2-upload/          # Cloudflare R2 Worker
+└── tests/                  # Playwright E2E 테스트
 ```
+
+### 핵심 기능 모듈
+
+| 모듈 | 설명 |
+|------|------|
+| **Auth** | Supabase Google OAuth + 역할 기반 접근 제어 |
+| **AI Generation** | Gemini API로 OJT 콘텐츠 + 퀴즈 자동 생성 |
+| **Content Extract** | PDF/URL에서 텍스트 추출 (CORS 프록시 사용) |
+| **Offline Sync** | Dexie.js 캐시 + 오프라인 큐 자동 동기화 |
+| **Image Upload** | Cloudflare R2 Worker 통한 이미지 저장 |
 
 ## Data Structure
 
@@ -177,26 +202,9 @@ URL 콘텐츠 추출 시 사용하는 프록시 목록 (순차 시도):
 
 ### 코드 수정 후 필수 작업
 
-1. **버전 업데이트** (모든 수정 후 필수)
-   ```bash
-   # 버전 번호 업데이트 (예: v2.3.1 → v2.3.2)
-   # index.html, package.json, src-vite/package.json 모두 수정
-   sed -i 's/v2.3.1/v2.3.2/g' index.html
-   sed -i 's/"version": "2.3.1"/"version": "2.3.2"/g' package.json src-vite/package.json
-   ```
-
-2. **커밋 & 푸시**
-   ```bash
-   git add .
-   git commit -m "chore: 버전 vX.Y.Z로 업데이트"
-   git push origin main
-   ```
-
-**버전 규칙**:
-- `MAJOR.MINOR.PATCH` (예: 2.3.1)
-- 버그 수정: PATCH 증가 (2.3.1 → 2.3.2)
-- 기능 추가: MINOR 증가 (2.3.1 → 2.4.0)
-- 큰 변경: MAJOR 증가 (2.3.1 → 3.0.0)
+1. **버전 업데이트**: `index.html`, `package.json`, `src-vite/package.json` 동시 수정
+2. **버전 규칙**: MAJOR.MINOR.PATCH (버그=PATCH↑, 기능=MINOR↑, 큰변경=MAJOR↑)
+3. **main 브랜치 push 시 Vercel 자동 배포**
 
 ## Project Structure
 
@@ -216,40 +224,13 @@ ggp_ojt_v2/
     └── wrangler.jsonc            # Cloudflare 설정
 ```
 
-## Known Issues (2025-12-01 코드 리뷰)
+## Known Issues
 
 > 상세 내용: `TODO.md`, `CODE_REVIEW_*.md`, `PERFORMANCE_ANALYSIS.md` 참조
 
-### Critical (즉시 수정 필요)
-
-| 이슈 | 위치 | 설명 |
-|------|------|------|
-| API 키 노출 | `index.html:106-108, 160` | Gemini API 키 하드코딩 → Edge Function 프록시 필요 |
-| XSS 취약점 | `index.html:1478` | Quill HTML 미검증 → DOMPurify 필요 |
-| 퀴즈 점수 버그 | 퀴즈 로직 | 정답 인덱스 0일 때 오답 처리 |
-| 무한 루프 위험 | 퀴즈 더미 | `result.quiz` 배열 검증 부재 |
-
-### High (1주 내 수정)
-
-- **보안**: 파일 업로드 매직 넘버 미검증, URL SSRF, 역할 변경 감사 로그 없음
-- **로직**: 스텝 분할 불일치, AI 파싱 실패 처리, 동기화 큐 중복
-- **성능**: Quill 메모리 누수, 불필요한 리렌더링, 중복 API 호출
-- **구조**: 2,710줄 단일 파일, alert() 남용, 매직 넘버
-
-### 코드 품질 점수: 62/100
-
-| 분류 | Critical | High | Medium | Low |
-|------|----------|------|--------|-----|
-| Security | 1 | 5 | 6 | 2 |
-| Logic | 2 | 5 | 4 | 2 |
-| Style | 0 | 4 | 6 | 2 |
-| Performance | 0 | 8 | 12 | 8 |
-
-## Development Notes
-
 ### 작업 시 주의사항
 
-1. **API 키**: 현재 클라이언트에 노출됨. 새 기능 추가 시 Edge Function 사용 권장
-2. **XSS**: 사용자 입력 HTML 사용 시 반드시 DOMPurify 적용
-3. **퀴즈 로직**: 인덱스 0 처리 주의 (`hasOwnProperty` 사용)
-4. **단일 파일**: 수정 시 함수 위치 파악 어려움. 향후 파일 분리 예정
+1. **API 키**: 레거시 `index.html`에 노출됨. Vite 앱에서는 `.env` 사용
+2. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수 (Vite 앱에 포함됨)
+3. **퀴즈 로직**: 정답 인덱스 0 처리 주의 (`=== 0` 대신 `hasOwnProperty` 사용)
+4. **버전 동기화**: 수정 후 `index.html`, `package.json`, `src-vite/package.json` 버전 일치 필수
