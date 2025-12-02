@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.4.0 - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.5.0 - AI 기반 온보딩 교육 플랫폼</title>
   <!--
     CDN Script Loading Strategy:
     - Critical (sync): Tailwind, React, ReactDOM, Babel, Supabase, Dexie
@@ -2523,7 +2523,7 @@ URL: ${sourceUrl}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.4.0 | 원문 뷰어 + Gemini URL Context</p>
+                <p className="text-xs text-slate-400 mt-1">v2.5.0 | Admin 부서 관리 기능 추가</p>
                 <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat: R2 이미지 업로드 기능 추가 (#26)">feat: R2 이미지 업로드 기능 추가</p>
               </div>
 
@@ -2580,7 +2580,7 @@ URL: ${sourceUrl}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.4.0</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.5.0</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
@@ -2655,15 +2655,21 @@ URL: ${sourceUrl}
       // Admin Dashboard Component
       // =========================================
       const AdminDashboard = () => {
-        const [adminTab, setAdminTab] = useState('users'); // 'users', 'content', 'stats'
+        const [adminTab, setAdminTab] = useState('users'); // 'users', 'content', 'departments', 'stats'
         const [allUsers, setAllUsers] = useState([]);
         const [allDocs, setAllDocs] = useState([]);
         const [allRecords, setAllRecords] = useState([]);
+        const [allTeams, setAllTeams] = useState([]); // 부서 목록
         const [isLoading, setIsLoading] = useState(true);
         const [selectedUser, setSelectedUser] = useState(null);
         const [showRoleModal, setShowRoleModal] = useState(false);
         const [selectedDoc, setSelectedDoc] = useState(null); // 상세보기용 문서
         const [showDocModal, setShowDocModal] = useState(false); // 문서 상세 모달
+        const [showTeamModal, setShowTeamModal] = useState(false); // 부서 추가/수정 모달
+        const [editingTeam, setEditingTeam] = useState(null); // 수정 중인 부서
+        const [newTeamName, setNewTeamName] = useState(''); // 새 부서명
+        const [newTeamSlug, setNewTeamSlug] = useState(''); // 새 부서 slug
+        const [newTeamDesc, setNewTeamDesc] = useState(''); // 새 부서 설명
         const chartRef = useRef(null);
         const chartInstance = useRef(null);
 
@@ -2697,6 +2703,14 @@ URL: ${sourceUrl}
                 .order('completed_at', { ascending: false });
 
               if (!recordsError) setAllRecords(records || []);
+
+              // 부서(teams) 목록 조회
+              const { data: teams, error: teamsError } = await supabase
+                .from('teams')
+                .select('*')
+                .order('display_order', { ascending: true });
+
+              if (!teamsError) setAllTeams(teams || []);
             } catch (e) {
               console.error('Admin data load error:', e);
               Toast.error('관리자 데이터를 불러오는 중 오류가 발생했습니다.');
@@ -2818,6 +2832,142 @@ URL: ${sourceUrl}
           }
         };
 
+        // 부서 추가/수정 모달 열기
+        const openTeamModal = (team = null) => {
+          if (team) {
+            setEditingTeam(team);
+            setNewTeamName(team.name);
+            setNewTeamSlug(team.slug || '');
+            setNewTeamDesc(team.description || '');
+          } else {
+            setEditingTeam(null);
+            setNewTeamName('');
+            setNewTeamSlug('');
+            setNewTeamDesc('');
+          }
+          setShowTeamModal(true);
+        };
+
+        // 부서명에서 slug 자동 생성
+        const generateSlug = (name) => {
+          return name
+            .toLowerCase()
+            .replace(/[^a-z0-9가-힣\s]/g, '')
+            .replace(/\s+/g, '_')
+            .substring(0, 50);
+        };
+
+        // 부서 저장 (추가/수정)
+        const handleSaveTeam = async () => {
+          if (!newTeamName.trim()) {
+            Toast.error('부서명을 입력해주세요.');
+            return;
+          }
+
+          const slug = newTeamSlug.trim() || generateSlug(newTeamName);
+
+          try {
+            if (editingTeam) {
+              // 수정
+              const { error } = await supabase
+                .from('teams')
+                .update({
+                  name: newTeamName.trim(),
+                  slug: slug,
+                  description: newTeamDesc.trim() || null
+                })
+                .eq('id', editingTeam.id);
+
+              if (error) throw error;
+
+              setAllTeams(prev => prev.map(t =>
+                t.id === editingTeam.id
+                  ? { ...t, name: newTeamName.trim(), slug, description: newTeamDesc.trim() || null }
+                  : t
+              ));
+              Toast.success('부서가 수정되었습니다.');
+            } else {
+              // 추가
+              const maxOrder = allTeams.length > 0 ? Math.max(...allTeams.map(t => t.display_order || 0)) : 0;
+              const { data, error } = await supabase
+                .from('teams')
+                .insert({
+                  name: newTeamName.trim(),
+                  slug: slug,
+                  description: newTeamDesc.trim() || null,
+                  display_order: maxOrder + 1,
+                  is_active: true
+                })
+                .select()
+                .single();
+
+              if (error) throw error;
+
+              setAllTeams(prev => [...prev, data]);
+              Toast.success('부서가 추가되었습니다.');
+            }
+
+            setShowTeamModal(false);
+            setEditingTeam(null);
+            setNewTeamName('');
+            setNewTeamSlug('');
+            setNewTeamDesc('');
+          } catch (e) {
+            console.error('Save team error:', e);
+            Toast.error('부서 저장에 실패했습니다: ' + e.message);
+          }
+        };
+
+        // 부서 삭제
+        const handleDeleteTeam = async (teamId) => {
+          const team = allTeams.find(t => t.id === teamId);
+          if (!team) return;
+
+          // 해당 부서에 속한 문서 수 확인
+          const docsInTeam = allDocs.filter(d => d.team === team.name || d.team_id === teamId).length;
+          if (docsInTeam > 0) {
+            Toast.error(`이 부서에 ${docsInTeam}개의 문서가 있어 삭제할 수 없습니다.`);
+            return;
+          }
+
+          if (!confirmDeleteWithCSRF(team.name)) return;
+
+          try {
+            const { error } = await supabase
+              .from('teams')
+              .delete()
+              .eq('id', teamId);
+
+            if (error) throw error;
+
+            setAllTeams(prev => prev.filter(t => t.id !== teamId));
+            Toast.success('부서가 삭제되었습니다.');
+          } catch (e) {
+            console.error('Delete team error:', e);
+            Toast.error('부서 삭제에 실패했습니다: ' + e.message);
+          }
+        };
+
+        // 부서 활성화/비활성화 토글
+        const handleToggleTeamActive = async (teamId, currentStatus) => {
+          try {
+            const { error } = await supabase
+              .from('teams')
+              .update({ is_active: !currentStatus })
+              .eq('id', teamId);
+
+            if (error) throw error;
+
+            setAllTeams(prev => prev.map(t =>
+              t.id === teamId ? { ...t, is_active: !currentStatus } : t
+            ));
+            Toast.success(currentStatus ? '부서가 비활성화되었습니다.' : '부서가 활성화되었습니다.');
+          } catch (e) {
+            console.error('Toggle team active error:', e);
+            Toast.error('상태 변경에 실패했습니다: ' + e.message);
+          }
+        };
+
         // 통계 계산
         const stats = useMemo(() => {
           const totalUsers = allUsers.length;
@@ -2868,22 +3018,28 @@ URL: ${sourceUrl}
             </div>
 
             {/* 탭 네비게이션 */}
-            <div className="flex gap-2 mb-6 border-b border-slate-200">
+            <div className="flex gap-2 mb-6 border-b border-slate-200 overflow-x-auto">
               <button
                 onClick={() => setAdminTab('users')}
-                className={`px-4 py-2 font-medium transition-colors ${adminTab === 'users' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${adminTab === 'users' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <Icon name="user" className="w-4 h-4 inline mr-1" /> 사용자 관리
               </button>
               <button
                 onClick={() => setAdminTab('content')}
-                className={`px-4 py-2 font-medium transition-colors ${adminTab === 'content' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${adminTab === 'content' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <Icon name="book" className="w-4 h-4 inline mr-1" /> 콘텐츠 관리
               </button>
               <button
+                onClick={() => setAdminTab('departments')}
+                className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${adminTab === 'departments' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <Icon name="box" className="w-4 h-4 inline mr-1" /> 부서 관리
+              </button>
+              <button
                 onClick={() => setAdminTab('stats')}
-                className={`px-4 py-2 font-medium transition-colors ${adminTab === 'stats' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-2 font-medium transition-colors whitespace-nowrap ${adminTab === 'stats' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 <Icon name="server" className="w-4 h-4 inline mr-1" /> 통계
               </button>
@@ -3098,6 +3254,152 @@ URL: ${sourceUrl}
                       className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200"
                     >
                       닫기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 부서 관리 탭 */}
+            {adminTab === 'departments' && (
+              <div className="bg-white rounded-xl shadow overflow-hidden">
+                <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-slate-800">부서 목록</h3>
+                  <button
+                    onClick={() => openTeamModal()}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-1"
+                  >
+                    <Icon name="plus" className="w-4 h-4" /> 부서 추가
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">부서명</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Slug</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">설명</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">문서 수</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">상태</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">작업</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {allTeams.map(team => {
+                        const docCount = allDocs.filter(d => d.team === team.name || d.team_id === team.id).length;
+                        return (
+                          <tr key={team.id} className="hover:bg-slate-50">
+                            <td className="px-4 py-3 text-sm font-medium text-slate-800">{team.name}</td>
+                            <td className="px-4 py-3 text-sm text-slate-500 font-mono">{team.slug}</td>
+                            <td className="px-4 py-3 text-sm text-slate-600">{team.description || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-slate-600">{docCount}개</td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => handleToggleTeamActive(team.id, team.is_active)}
+                                className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                  team.is_active
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                }`}
+                              >
+                                {team.is_active ? '활성' : '비활성'}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => openTeamModal(team)}
+                                  className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                                >
+                                  수정
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTeam(team.id)}
+                                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                  disabled={docCount > 0}
+                                  title={docCount > 0 ? '문서가 있는 부서는 삭제할 수 없습니다' : ''}
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {allTeams.length === 0 && (
+                  <div className="text-center py-8 text-slate-500">
+                    부서가 없습니다. 상단의 "부서 추가" 버튼을 클릭하여 부서를 생성하세요.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 부서 추가/수정 모달 */}
+            {showTeamModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+                  <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                    {editingTeam ? '부서 수정' : '부서 추가'}
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">부서명 *</label>
+                      <input
+                        type="text"
+                        value={newTeamName}
+                        onChange={(e) => {
+                          setNewTeamName(e.target.value);
+                          if (!editingTeam && !newTeamSlug) {
+                            // 신규 생성 시 slug 자동 생성 (직접 입력 전까지만)
+                          }
+                        }}
+                        placeholder="예: 개발팀"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Slug (URL용)</label>
+                      <input
+                        type="text"
+                        value={newTeamSlug}
+                        onChange={(e) => setNewTeamSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                        placeholder="예: dev (자동 생성됨)"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">비워두면 부서명에서 자동 생성됩니다.</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">설명</label>
+                      <textarea
+                        value={newTeamDesc}
+                        onChange={(e) => setNewTeamDesc(e.target.value)}
+                        placeholder="부서에 대한 간단한 설명"
+                        rows={2}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-6">
+                    <button
+                      onClick={handleSaveTeam}
+                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700"
+                    >
+                      {editingTeam ? '수정' : '추가'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowTeamModal(false);
+                        setEditingTeam(null);
+                        setNewTeamName('');
+                        setNewTeamSlug('');
+                        setNewTeamDesc('');
+                      }}
+                      className="flex-1 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300"
+                    >
+                      취소
                     </button>
                   </div>
                 </div>
