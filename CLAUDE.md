@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.3.5)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.4.0)
 
 ## Tech Stack
 
@@ -82,9 +82,10 @@ ggp_ojt_v2/
 |------|------|
 | **Auth** | Supabase Google OAuth + 역할 기반 접근 제어 |
 | **AI Generation** | Gemini API로 OJT 콘텐츠 + 퀴즈 자동 생성 |
-| **Content Extract** | PDF/URL에서 텍스트 추출 (CORS 프록시 사용) |
+| **URL Context** | Gemini URL Context Tool로 URL/PDF 직접 분석 (v2.4.0) |
+| **Original Viewer** | URL/PDF 원문 뷰어 - PDF.js 기반 (v2.4.0) |
 | **Offline Sync** | Dexie.js 캐시 + 오프라인 큐 자동 동기화 |
-| **Image Upload** | Cloudflare R2 Worker 통한 이미지 저장 |
+| **File Upload** | Cloudflare R2 Worker 통한 이미지/PDF 저장 |
 
 ## Data Structure
 
@@ -95,7 +96,7 @@ ggp_ojt_v2/
 users (id UUID PK, name, role, department, created_at, updated_at)
 
 -- ojt_docs: OJT 문서
-ojt_docs (id UUID PK, title, team, step, sections JSONB, quiz JSONB, author_id, author_name, estimated_minutes, created_at, updated_at)
+ojt_docs (id UUID PK, title, team, step, sections JSONB, quiz JSONB, author_id, author_name, estimated_minutes, source_type, source_url, source_file, created_at, updated_at)
 
 -- learning_records: 학습 기록
 learning_records (id UUID PK, user_id, doc_id, score, total_questions, passed, completed_at)
@@ -103,7 +104,7 @@ learning_records (id UUID PK, user_id, doc_id, score, total_questions, passed, c
 
 RLS 정책: `supabase_schema.sql`, `supabase_fix_rls.sql` 참조
 
-### 확장 스키마 (v2.1.0)
+### 확장 스키마
 
 ```sql
 -- learning_progress: 학습 진행률 추적 ✅ Phase 2 완료
@@ -113,8 +114,8 @@ learning_progress (id UUID PK, user_id FK, doc_id FK, status, current_section, t
 teams (id UUID PK, name, slug, display_order, is_active)
 -- ojt_docs.team_id FK 추가됨
 
--- notifications: 알림 - Phase 4 예정
-notifications (id UUID PK, user_id FK, type, title, message, is_read)
+-- v2.4.0: 원문 소스 컬럼 (source_type, source_url, source_file)
+-- 마이그레이션: supabase_source_columns.sql 참조
 ```
 
 자세한 마이그레이션 가이드: [docs/DB_MIGRATION_GUIDE.md](docs/DB_MIGRATION_GUIDE.md)
@@ -170,12 +171,17 @@ localDb.version(1).stores({
 
 Google Gemini API를 사용한 클라우드 기반 AI 콘텐츠 생성:
 
-프롬프트: 10년 경력 기업 교육 설계 전문가 역할
+### 기존 방식 (직접 작성/텍스트 입력)
+- 프롬프트: 10년 경력 기업 교육 설계 전문가 역할
 - 섹션 구조: 학습 목표 → 핵심 내용 → 실무 예시 → 주의사항
 - 퀴즈: 기억형 40% / 이해형 35% / 적용형 25%
 - 파라미터: temperature=0.3, maxOutputTokens=8192
 
-**장점**: 클라우드 API로 로컬/웹 배포 환경 모두에서 AI 기능 사용 가능
+### v2.4.0: URL Context Tool (URL/PDF 입력)
+- Gemini URL Context Tool로 URL/PDF 직접 분석
+- 원문 보존 + 퀴즈만 자동 생성
+- CORS 프록시 불필요 (Gemini가 직접 접근)
+- `tools: [{ urlContext: {} }]` 옵션 사용
 
 ## CORS Proxies
 
