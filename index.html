@@ -1340,6 +1340,165 @@ ${rawText}
     }
 
     // =========================================
+    // AI 퀴즈 생성 (URL Context Tool 사용)
+    // URL 또는 PDF에서 직접 퀴즈만 생성
+    // =========================================
+    async function generateQuizWithUrlContext(sourceUrl, sourceType, setProgress) {
+      const contentTypeLabel = sourceType === 'pdf' ? 'PDF 문서' : '웹페이지';
+
+      const prompt = `당신은 10년 경력의 기업 교육 설계 전문가입니다.
+
+## 작업 요청
+다음 ${contentTypeLabel}를 분석하고 신입사원 학습용 퀴즈를 생성하세요.
+
+URL: ${sourceUrl}
+
+## 퀴즈 설계 원칙 (정확히 20문제)
+문제 유형 배분:
+- 기억형 (40%): 용어, 절차, 규칙을 정확히 기억하는지 확인
+- 이해형 (35%): 왜 그렇게 하는지 이유를 이해했는지 확인
+- 적용형 (25%): 실제 상황에서 어떻게 적용할지 판단
+
+퀴즈 품질 기준:
+- 질문은 명확하고 구체적으로 (무엇을, 언제, 어떻게)
+- 정답은 문서 내용에 근거해야 함
+- 오답 선지는 그럴듯하지만 명확히 틀린 내용 (흔한 오해 반영)
+- 모든 선지 길이는 비슷하게 유지
+
+## 출력 형식
+반드시 아래 JSON 형식으로만 응답하세요. JSON 외 다른 텍스트 없이 출력하세요:
+
+{
+  "title": "문서 제목 (자동 추출)",
+  "estimatedMinutes": 15,
+  "quiz": [
+    {
+      "id": 1,
+      "question": "구체적인 질문 내용?",
+      "options": ["선지A (20자 내외)", "선지B (20자 내외)", "선지C (20자 내외)", "선지D (20자 내외)"],
+      "answer": 0
+    }
+  ]
+}
+
+## 체크리스트
+- [ ] 퀴즈 정확히 20개
+- [ ] answer는 정답 인덱스 (0, 1, 2, 3 중 하나)
+- [ ] estimatedMinutes는 40 이하
+- [ ] JSON 문법 오류 없음`;
+
+      try {
+        setProgress && setProgress("Gemini AI가 원문을 분석 중...");
+
+        const response = await fetch(
+          `${GEMINI_API_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: prompt }]
+              }],
+              tools: [{ urlContext: {} }],  // URL Context Tool 활성화
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 8192
+              }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Gemini API 오류: ${response.status} - ${errorData.error?.message || ''}`);
+        }
+
+        setProgress && setProgress("퀴즈 응답 처리 중...");
+        const data = await response.json();
+
+        // Gemini 응답 구조에서 텍스트 추출
+        const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log("Gemini URL Context response:", responseText.substring(0, 500));
+
+        // AI 응답 파싱 (헬퍼 함수 사용)
+        let result = parseAIResponseToJSON(responseText);
+
+        // 결과 검증 및 퀴즈 보충 (헬퍼 함수 사용)
+        result = validateAndFillOJTResult(result, result.title);
+
+        return result;
+
+      } catch (error) {
+        console.error("URL Context AI Error:", error);
+        throw error;
+      }
+    }
+
+    // =========================================
+    // PDF R2 업로드 함수
+    // =========================================
+    async function uploadPdfToR2(file) {
+      // 파일 유효성 검사
+      if (!file) {
+        throw new Error('파일이 선택되지 않았습니다');
+      }
+
+      if (file.type !== 'application/pdf') {
+        throw new Error('PDF 파일만 업로드 가능합니다');
+      }
+
+      if (file.size > R2_MAX_FILE_SIZE) {
+        throw new Error('파일 크기는 10MB를 초과할 수 없습니다');
+      }
+
+      try {
+        // 1. Worker에 업로드 URL 요청
+        const prepareRes = await fetch(R2_WORKER_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: 'application/pdf',
+            fileSize: file.size
+          })
+        });
+
+        if (!prepareRes.ok) {
+          const error = await prepareRes.json();
+          throw new Error(error.error || 'PDF 업로드 준비 실패');
+        }
+
+        const { key, publicUrl } = await prepareRes.json();
+
+        // 2. 실제 파일 업로드
+        const uploadRes = await fetch(`${R2_WORKER_URL}/upload`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/pdf',
+            'X-Upload-Key': key
+          },
+          body: file
+        });
+
+        if (!uploadRes.ok) {
+          const error = await uploadRes.json();
+          throw new Error(error.error || 'PDF 업로드 실패');
+        }
+
+        const result = await uploadRes.json();
+        console.log('PDF uploaded to R2:', result.url);
+
+        return result.url;
+
+      } catch (error) {
+        console.error('PDF R2 upload error:', error);
+        throw error;
+      }
+    }
+
+    // =========================================
     // Main App
     // =========================================
     function App() {
@@ -1888,44 +2047,98 @@ ${rawText}
         setIsProcessing(true);
         setGeneratedDoc(null);
         setGeneratedDocs([]);
-        setProcessingStatus("콘텐츠 추출 중...");
 
         try {
-          // 입력 타입에 따라 텍스트 추출
+          // =========================================
+          // URL/PDF: URL Context Tool로 퀴즈만 생성 (원문 보존)
+          // =========================================
+          if (inputType === 'url') {
+            setProcessingStatus("URL 유효성 검사 중...");
+
+            // URL 유효성 검증
+            try {
+              new URL(urlInput);
+            } catch {
+              throw new Error("올바른 URL 형식이 아닙니다.");
+            }
+
+            setProcessingStatus("Gemini AI가 URL을 분석 중...");
+            const aiResult = await generateQuizWithUrlContext(urlInput, 'url', setProcessingStatus);
+            const finalTitle = inputTitle.trim() || aiResult.title || "URL 학습 자료";
+
+            const finalDoc = {
+              ...aiResult,
+              title: finalTitle,
+              team: inputTeam,
+              step: parseInt(inputStep),
+              source_type: 'url',
+              source_url: urlInput,
+              sections: [] // URL 원문은 sections 없음 (원문 보기로 대체)
+            };
+
+            setInputTitle(finalTitle);
+            setGeneratedDoc(finalDoc);
+            setGeneratedDocs([finalDoc]);
+            setProcessingStatus("");
+            setEditorTab('preview');
+            Toast.success("URL 분석 완료! 퀴즈가 생성되었습니다.");
+            return;
+          }
+
+          if (inputType === 'pdf') {
+            setProcessingStatus("PDF 파일 업로드 중...");
+
+            // PDF를 R2에 업로드
+            const pdfUrl = await uploadPdfToR2(pdfFile);
+
+            setProcessingStatus("Gemini AI가 PDF를 분석 중...");
+            const aiResult = await generateQuizWithUrlContext(pdfUrl, 'pdf', setProcessingStatus);
+            const finalTitle = inputTitle.trim() || aiResult.title || pdfFile.name.replace('.pdf', '');
+
+            const finalDoc = {
+              ...aiResult,
+              title: finalTitle,
+              team: inputTeam,
+              step: parseInt(inputStep),
+              source_type: 'pdf',
+              source_file: pdfUrl,
+              sections: [] // PDF 원문은 sections 없음 (PDF 뷰어로 대체)
+            };
+
+            setInputTitle(finalTitle);
+            setGeneratedDoc(finalDoc);
+            setGeneratedDocs([finalDoc]);
+            setProcessingStatus("");
+            setEditorTab('preview');
+            Toast.success("PDF 분석 완료! 퀴즈가 생성되었습니다.");
+            return;
+          }
+
+          // =========================================
+          // 텍스트: 기존 방식 (섹션 + 퀴즈 생성)
+          // =========================================
+          setProcessingStatus("콘텐츠 추출 중...");
           let contentText = '';
 
-          if (inputType === 'text') {
-            // Quill에서 서식 있는 HTML과 플레인 텍스트 모두 가져오기
-            if (quillInstanceRef.current) {
-              const rawHtml = quillInstanceRef.current.root.innerHTML;
-              const plainText = quillInstanceRef.current.getText().trim();
-              // XSS 방어: DOMPurify로 HTML sanitize
-              const html = DOMPurify.sanitize(rawHtml, {
-                ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'blockquote', 'pre', 'code', 'a', 'img', 'span', 's'],
-                ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
-                ALLOW_DATA_ATTR: false
-              });
-              // HTML이 의미 있는 서식을 포함하면 HTML 사용, 아니면 플레인 텍스트 사용
-              const hasFormatting = /<(h[1-6]|strong|em|u|ol|ul|li|blockquote|pre)/.test(html);
-              contentText = hasFormatting ? html : plainText;
-            } else {
-              contentText = rawInput;
-            }
-          } else if (inputType === 'url') {
-            const urlResult = await extractUrlText(urlInput, setProcessingStatus);
-            contentText = urlResult.text;
-            setRawInput(contentText); // 추출된 텍스트를 rawInput에도 저장
-            // 텍스트 절단 경고 표시
-            if (urlResult.wasTruncated) {
-              Toast.warning(`URL 텍스트가 ${urlResult.originalLength.toLocaleString()}자 → ${CONFIG.MAX_URL_EXTRACT_CHARS.toLocaleString()}자로 절단됨 (${Math.round(urlResult.extractedLength / urlResult.originalLength * 100)}%)`);
-            }
-          } else if (inputType === 'pdf') {
-            contentText = await extractPdfText(pdfFile, setProcessingStatus);
-            setRawInput(contentText); // 추출된 텍스트를 rawInput에도 저장
+          // Quill에서 서식 있는 HTML과 플레인 텍스트 모두 가져오기
+          if (quillInstanceRef.current) {
+            const rawHtml = quillInstanceRef.current.root.innerHTML;
+            const plainText = quillInstanceRef.current.getText().trim();
+            // XSS 방어: DOMPurify로 HTML sanitize
+            const html = DOMPurify.sanitize(rawHtml, {
+              ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'blockquote', 'pre', 'code', 'a', 'img', 'span', 's'],
+              ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
+              ALLOW_DATA_ATTR: false
+            });
+            // HTML이 의미 있는 서식을 포함하면 HTML 사용, 아니면 플레인 텍스트 사용
+            const hasFormatting = /<(h[1-6]|strong|em|u|ol|ul|li|blockquote|pre)/.test(html);
+            contentText = hasFormatting ? html : plainText;
+          } else {
+            contentText = rawInput;
           }
 
           if (!contentText.trim()) {
-            throw new Error("추출된 텍스트가 없습니다.");
+            throw new Error("텍스트를 입력해주세요.");
           }
 
           // 자동 분할 여부 확인
@@ -1959,7 +2172,8 @@ ${rawText}
                   team: inputTeam,
                   step: stepNum,
                   totalSteps: segments.length,
-                  stepIndex: i + 1
+                  stepIndex: i + 1,
+                  source_type: 'manual'
                 };
               });
             });
@@ -1980,7 +2194,13 @@ ${rawText}
             const aiResult = await generateOJTContent(contentText, inputTeam, inputStep, setProcessingStatus);
             const finalTitle = inputTitle.trim() || aiResult.title;
             setInputTitle(finalTitle);
-            const finalDoc = { ...aiResult, title: finalTitle, team: inputTeam, step: parseInt(inputStep) };
+            const finalDoc = {
+              ...aiResult,
+              title: finalTitle,
+              team: inputTeam,
+              step: parseInt(inputStep),
+              source_type: 'manual'
+            };
             setGeneratedDoc(finalDoc);
             setGeneratedDocs([finalDoc]);
             setProcessingStatus("");
@@ -3219,14 +3439,8 @@ ${rawText}
                     </div>
                   </div>
                   <p className="text-xs text-slate-500">
-                    웹페이지의 텍스트 콘텐츠를 추출합니다. 구글 드라이브 공개 문서, 블로그, 뉴스 기사 등을 지원합니다.
+                    🚀 Gemini URL Context Tool로 원문을 직접 분석하여 퀴즈를 생성합니다. 원문은 그대로 보존됩니다.
                   </p>
-                  {rawInput && inputType === 'url' && (
-                    <div className="bg-slate-50 p-3 rounded-lg max-h-[150px] overflow-y-auto">
-                      <p className="text-xs font-bold text-slate-500 mb-1">추출된 텍스트 미리보기:</p>
-                      <p className="text-sm text-slate-600 whitespace-pre-wrap">{rawInput.substring(0, 500)}...</p>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -3254,18 +3468,17 @@ ${rawText}
                     />
                   </label>
                   {pdfFile && (
-                    <button
-                      onClick={() => setPdfFile(null)}
-                      className="text-sm text-red-500 hover:text-red-700"
-                    >
-                      파일 제거
-                    </button>
-                  )}
-                  {rawInput && inputType === 'pdf' && (
-                    <div className="bg-slate-50 p-3 rounded-lg max-h-[150px] overflow-y-auto">
-                      <p className="text-xs font-bold text-slate-500 mb-1">추출된 텍스트 미리보기:</p>
-                      <p className="text-sm text-slate-600 whitespace-pre-wrap">{rawInput.substring(0, 500)}...</p>
-                    </div>
+                    <>
+                      <button
+                        onClick={() => setPdfFile(null)}
+                        className="text-sm text-red-500 hover:text-red-700"
+                      >
+                        파일 제거
+                      </button>
+                      <p className="text-xs text-slate-500">
+                        🚀 PDF가 R2에 업로드되고, Gemini URL Context Tool로 분석하여 퀴즈를 생성합니다.
+                      </p>
+                    </>
                   )}
                 </div>
               )}
@@ -3354,7 +3567,46 @@ ${rawText}
                         📚 전체 {generatedDoc.totalSteps}개 스텝 중 {generatedDoc.stepIndex}번째
                       </p>
                     )}
-                    {generatedDoc.sections?.map((s, i) => (
+
+                    {/* URL/PDF 원문 보기 */}
+                    {generatedDoc.source_type === 'url' && generatedDoc.source_url && (
+                      <div className="my-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Icon name="globe" className="w-6 h-6 text-blue-600" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-blue-800">URL 원문 자료</p>
+                            <p className="text-xs text-blue-600 truncate">{generatedDoc.source_url}</p>
+                          </div>
+                          <button
+                            onClick={() => window.open(generatedDoc.source_url, '_blank')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                          >
+                            원문 보기 ↗
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {generatedDoc.source_type === 'pdf' && generatedDoc.source_file && (
+                      <div className="my-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Icon name="file" className="w-6 h-6 text-red-600" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-red-800">PDF 원문 자료</p>
+                            <p className="text-xs text-red-600 truncate">R2 저장됨</p>
+                          </div>
+                          <button
+                            onClick={() => window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(generatedDoc.source_file)}`, '_blank')}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition"
+                          >
+                            PDF 보기 ↗
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 기존 섹션 기반 콘텐츠 (manual 타입) */}
+                    {generatedDoc.sections?.length > 0 && generatedDoc.sections.map((s, i) => (
                       <div key={i} className="my-4 bg-white p-4 rounded shadow-sm">
                         <h3 className="font-bold text-indigo-700">{s.title}</h3>
                         <p className="text-sm text-slate-600 whitespace-pre-line mt-2">{s.content}</p>
@@ -3581,7 +3833,56 @@ ${rawText}
                 </div>
               </div>
 
-              {selectedDoc.sections?.map((s, i) => (
+              {/* URL 원문 보기 */}
+              {selectedDoc.source_type === 'url' && selectedDoc.source_url && (
+                <div className="mb-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Icon name="globe" className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-blue-800">웹페이지 학습 자료</p>
+                        <p className="text-sm text-blue-600">원문을 먼저 읽은 후 퀴즈에 도전하세요</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => window.open(selectedDoc.source_url, '_blank')}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition flex items-center gap-2"
+                    >
+                      <Icon name="eye" className="w-5 h-5" />
+                      원문 보기
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* PDF 원문 보기 */}
+              {selectedDoc.source_type === 'pdf' && selectedDoc.source_file && (
+                <div className="mb-6 p-6 bg-red-50 border-2 border-red-200 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <Icon name="file" className="w-6 h-6 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-red-800">PDF 학습 자료</p>
+                        <p className="text-sm text-red-600">PDF를 먼저 읽은 후 퀴즈에 도전하세요</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => window.open(`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(selectedDoc.source_file)}`, '_blank')}
+                      className="px-6 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition flex items-center gap-2"
+                    >
+                      <Icon name="eye" className="w-5 h-5" />
+                      PDF 보기
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 기존 섹션 기반 콘텐츠 (manual 타입) */}
+              {selectedDoc.sections?.length > 0 && selectedDoc.sections.map((s, i) => (
                 <div key={i} className="mb-6">
                   <h3 className="font-bold text-indigo-700 mb-2">{s.title}</h3>
                   <p className="whitespace-pre-line text-slate-700">{s.content}</p>
