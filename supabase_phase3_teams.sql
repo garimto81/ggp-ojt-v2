@@ -24,36 +24,56 @@ COMMENT ON COLUMN teams.slug IS 'URL 친화적 식별자 (영문 소문자)';
 COMMENT ON COLUMN teams.display_order IS '멘티 화면 표시 순서';
 
 -- ============================================
--- 2. RLS 설정
+-- 2. 테이블 권한 부여 (GRANT)
+-- ============================================
+-- 중요: RLS 정책 전에 기본 테이블 권한이 필요함
+
+GRANT ALL ON teams TO authenticated;
+GRANT ALL ON teams TO anon;
+
+-- ============================================
+-- 3. RLS 설정
 -- ============================================
 
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 
--- 인증된 사용자는 팀 목록 조회 가능
-CREATE POLICY "Authenticated users can view teams"
+-- 기존 정책 삭제 (재실행 시 충돌 방지)
+DROP POLICY IF EXISTS "teams_select_policy" ON teams;
+DROP POLICY IF EXISTS "teams_insert_policy" ON teams;
+DROP POLICY IF EXISTS "teams_update_policy" ON teams;
+DROP POLICY IF EXISTS "teams_delete_policy" ON teams;
+DROP POLICY IF EXISTS "Authenticated users can view teams" ON teams;
+DROP POLICY IF EXISTS "Admins can manage teams" ON teams;
+
+-- SELECT 정책: 인증된 모든 사용자 조회 가능
+CREATE POLICY "teams_select_policy"
   ON teams FOR SELECT
   TO authenticated
   USING (true);
 
--- 관리자만 팀 생성/수정/삭제 가능
-CREATE POLICY "Admins can manage teams"
-  ON teams FOR ALL
+-- INSERT 정책: Admin만 가능
+CREATE POLICY "teams_insert_policy"
+  ON teams FOR INSERT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+    (SELECT role FROM users WHERE id = auth.uid()) = 'admin'
   );
 
+-- UPDATE 정책: Admin만 가능
+CREATE POLICY "teams_update_policy"
+  ON teams FOR UPDATE
+  TO authenticated
+  USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin')
+  WITH CHECK ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+
+-- DELETE 정책: Admin만 가능
+CREATE POLICY "teams_delete_policy"
+  ON teams FOR DELETE
+  TO authenticated
+  USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+
 -- ============================================
--- 3. 기존 team 데이터에서 teams 테이블 생성
+-- 4. 기존 team 데이터에서 teams 테이블 생성
 -- ============================================
 
 -- ojt_docs.team에서 고유 팀 추출하여 teams 테이블에 삽입
@@ -73,7 +93,7 @@ WHERE team IS NOT NULL AND team != ''
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================
--- 4. ojt_docs에 team_id FK 컬럼 추가
+-- 5. ojt_docs에 team_id FK 컬럼 추가
 -- ============================================
 
 -- team_id 컬럼 추가 (기존 team 컬럼 유지)
@@ -81,7 +101,7 @@ ALTER TABLE ojt_docs
 ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
 
 -- ============================================
--- 5. 데이터 마이그레이션 (team → team_id)
+-- 6. 데이터 마이그레이션 (team → team_id)
 -- ============================================
 
 UPDATE ojt_docs o
@@ -91,7 +111,7 @@ WHERE o.team = t.name
   AND o.team_id IS NULL;
 
 -- ============================================
--- 6. 인덱스 추가
+-- 7. 인덱스 추가
 -- ============================================
 
 -- teams 테이블 인덱스
@@ -103,7 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_teams_display_order ON teams(display_order);
 CREATE INDEX IF NOT EXISTS idx_ojt_docs_team_id ON ojt_docs(team_id);
 
 -- ============================================
--- 7. 마이그레이션 검증 쿼리
+-- 8. 마이그레이션 검증 쿼리
 -- ============================================
 
 -- 마이그레이션 상태 확인
@@ -130,7 +150,7 @@ BEGIN
 END $$;
 
 -- ============================================
--- 8. 확인 쿼리 (수동 실행)
+-- 9. 확인 쿼리 (수동 실행)
 -- ============================================
 
 -- 생성된 팀 목록 확인
@@ -151,7 +171,7 @@ END $$;
 -- ORDER BY doc_count DESC;
 
 -- ============================================
--- 9. (선택) 레거시 team 컬럼 제거
+-- 10. (선택) 레거시 team 컬럼 제거
 -- ============================================
 -- 주의: 모든 데이터 마이그레이션 확인 후 실행!
 -- 클라이언트 코드 수정 완료 후 실행!
