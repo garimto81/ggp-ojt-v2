@@ -102,7 +102,7 @@ ojt_docs (id UUID PK, title, team, step, sections JSONB, quiz JSONB, author_id, 
 learning_records (id UUID PK, user_id, doc_id, score, total_questions, passed, completed_at)
 ```
 
-RLS 정책: `supabase_schema.sql`, `supabase_fix_rls.sql` 참조
+RLS 정책: `database/migrations/supabase_schema.sql`, `database/fixes/supabase_fix_rls.sql` 참조
 
 ### 확장 스키마
 
@@ -115,10 +115,10 @@ teams (id UUID PK, name, slug, display_order, is_active)
 -- ojt_docs.team_id FK 추가됨
 
 -- v2.4.0: 원문 소스 컬럼 (source_type, source_url, source_file)
--- 마이그레이션: supabase_source_columns.sql 참조
+-- 마이그레이션: database/migrations/supabase_source_columns.sql 참조
 ```
 
-자세한 마이그레이션 가이드: [docs/DB_MIGRATION_GUIDE.md](docs/DB_MIGRATION_GUIDE.md)
+자세한 마이그레이션 가이드: [docs/guides/DB_MIGRATION_GUIDE.md](docs/guides/DB_MIGRATION_GUIDE.md)
 
 ### Dexie.js (로컬 캐시)
 
@@ -216,23 +216,58 @@ URL 콘텐츠 추출 시 사용하는 프록시 목록 (순차 시도):
 
 ```text
 ggp_ojt_v2/
-├── index.html                    # 전체 앱 (단일 파일 SPA)
-├── supabase_*.sql                # DB 스키마 및 마이그레이션 파일들
+├── index.html                    # 레거시 단일 파일 SPA
 ├── playwright.config.js          # E2E 테스트 설정
-├── docs/
-│   ├── DB_MIGRATION_GUIDE.md     # DB 마이그레이션 가이드
-│   └── r2-setup-guide.md         # R2 설정 가이드
-├── tests/
-│   ├── e2e-homepage.spec.js      # 홈페이지 E2E 테스트
-│   └── e2e-admin-mode.spec.js    # Admin 모드 E2E 테스트
-└── ojt-r2-upload/                # Cloudflare R2 Worker 프로젝트
-    ├── src/index.js              # Worker 핸들러 (upload/delete/get)
-    └── wrangler.jsonc            # Cloudflare 설정
+├── CLAUDE.md                     # Claude Code 가이드
+├── .gitignore                    # Git 제외 규칙
+│
+├── database/                     # SQL 스키마 및 마이그레이션
+│   ├── migrations/               # 스키마 생성/변경 SQL
+│   │   ├── supabase_schema.sql
+│   │   ├── supabase_phase2_learning_progress.sql
+│   │   ├── supabase_phase3_teams.sql
+│   │   └── supabase_source_columns.sql
+│   └── fixes/                    # RLS/성능 수정 SQL
+│       ├── supabase_fix_rls.sql
+│       ├── supabase_fix_role_update.sql
+│       ├── supabase_rls_admin_update.sql
+│       ├── supabase_performance.sql
+│       └── supabase_audit_logs.sql
+│
+├── docs/                         # 문서화
+│   ├── auto_workflow.md          # 워크플로우 참조
+│   ├── guides/                   # 설정/가이드 문서
+│   │   ├── DB_MIGRATION_GUIDE.md
+│   │   ├── PERFORMANCE_OPTIMIZATION.md
+│   │   ├── SECURITY_RECOMMENDATIONS.md
+│   │   └── r2-setup-guide.md
+│   ├── reviews/                  # 코드 리뷰/분석 문서
+│   │   ├── CODE_REVIEW_*.md
+│   │   ├── PERFORMANCE_ANALYSIS.md
+│   │   └── TODO.md
+│   └── research/                 # 기술 조사 문서
+│       ├── chart-libraries-comparison.md
+│       └── rich-text-editor-comparison.md
+│
+├── tasks/                        # 태스크/PRD
+│   └── prds/                     # PRD 문서들
+│
+├── tests/                        # E2E 테스트 (Playwright)
+│   ├── e2e-homepage.spec.js
+│   ├── e2e-admin-mode.spec.js
+│   └── performance.spec.js
+│
+├── src-vite/                     # Vite React 앱 (권장)
+│   └── src/
+│
+└── ojt-r2-upload/                # Cloudflare R2 Worker
+    ├── src/index.js
+    └── wrangler.jsonc
 ```
 
 ## Known Issues
 
-> 상세 내용: `TODO.md`, `CODE_REVIEW_*.md`, `PERFORMANCE_ANALYSIS.md` 참조
+> 상세 내용: `docs/reviews/TODO.md`, `docs/reviews/CODE_REVIEW_*.md`, `docs/reviews/PERFORMANCE_ANALYSIS.md` 참조
 
 ### 작업 시 주의사항
 
