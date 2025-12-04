@@ -158,38 +158,29 @@
         render: 'color: #9C27B0; font-weight: bold',    // 보라색: 렌더링
       },
 
-      // 문제 1: snake_case ↔ camelCase 매핑 검증
+      // v2.7.0: snake_case 통일 아키텍처 - snake_case 필드 존재 확인
       checkFieldMapping(context, obj, expectedFields) {
         if (!this.enabled) return;
-        console.group(`%c🔍 [MAPPING] ${context}`, this.colors.mapping);
-        console.log('원본 객체:', obj);
+        console.group(`%c🔍 [FIELDS] ${context}`, this.colors.mapping);
+        console.log('객체:', obj);
 
-        const issues = [];
-        expectedFields.forEach(({ snake, camel }) => {
-          const hasSnake = obj?.hasOwnProperty(snake);
-          const hasCamel = obj?.hasOwnProperty(camel);
-          const snakeVal = obj?.[snake];
-          const camelVal = obj?.[camel];
-
-          console.log(`  ${snake}: ${hasSnake ? '✅' : '❌'} (${snakeVal})`);
-          console.log(`  ${camel}: ${hasCamel ? '✅' : '❌'} (${camelVal})`);
-
-          if (hasSnake && !hasCamel) {
-            issues.push(`❌ "${snake}" 있지만 "${camel}" 없음 → 매핑 누락!`);
-          }
-          if (hasCamel && !hasSnake) {
-            issues.push(`⚠️ "${camel}" 있지만 "${snake}" 없음 → 역매핑 필요?`);
+        const missing = [];
+        expectedFields.forEach(({ snake }) => {
+          const hasField = obj?.hasOwnProperty(snake);
+          const value = obj?.[snake];
+          console.log(`  ${snake}: ${hasField ? '✅' : '❌'} (${value})`);
+          if (!hasField) {
+            missing.push(snake);
           }
         });
 
-        if (issues.length > 0) {
-          console.log('%c⚠️ 매핑 불일치 발견:', this.colors.error);
-          issues.forEach(i => console.log(`  ${i}`));
+        if (missing.length > 0) {
+          console.log('%c⚠️ 누락된 필드:', this.colors.error, missing);
         } else {
-          console.log('%c✅ 모든 필드 매핑 정상', this.colors.state);
+          console.log('%c✅ 모든 snake_case 필드 정상', this.colors.state);
         }
         console.groupEnd();
-        return issues;
+        return missing;
       },
 
       // 문제 2: 데이터 흐름 추적
@@ -242,10 +233,11 @@
 
     // 콘솔에 디버깅 활성화 메시지 출력
     if (DEBUG.enabled) {
-      console.log('%c🔧 OJT Master 디버깅 모드 활성화', 'color: #E91E63; font-size: 16px; font-weight: bold');
+      console.log('%c🔧 OJT Master v2.7.0 디버깅 모드', 'color: #E91E63; font-size: 16px; font-weight: bold');
       console.log('DEBUG.enabled = false 로 비활성화 가능');
+      console.log('v2.7.0 아키텍처: snake_case 통일 (camelCase 매핑 제거됨)');
       console.log('주요 검증 영역:');
-      console.log('  1. snake_case ↔ camelCase 매핑');
+      console.log('  1. snake_case 필드 존재 확인');
       console.log('  2. 데이터 흐름 (Supabase → Cache → UI)');
       console.log('  3. 상태 변경 추적');
       console.log('  4. 렌더링 조건 검증');
@@ -951,13 +943,15 @@
           step: data.step,
           sections: data.sections,
           quiz: data.quiz,
-          author_id: data.authorId,
-          author_name: data.author,
-          estimated_minutes: data.estimatedMinutes || 30,
+          // snake_case 우선, camelCase fallback (하위 호환)
+          author_id: data.author_id ?? data.authorId,
+          author_name: data.author_name ?? data.author,
+          estimated_minutes: data.estimated_minutes ?? data.estimatedMinutes ?? 30,
           // Source tracking fields
           source_type: data.source_type || 'manual',
           source_url: data.source_url || null,
           source_file: data.source_file || null,
+          created_at: data.created_at ?? data.createdAt ?? now,
           updated_at: now
         };
       }
@@ -996,7 +990,7 @@
       const newId = crypto.randomUUID();
       let localData = { ...data, id: newId, created_at: now, updated_at: now };
 
-      // Supabase 필드명으로 변환
+      // Supabase 필드명으로 변환 (snake_case 우선, camelCase fallback)
       if (storeName === "ojt_docs") {
         localData = {
           id: newId,
@@ -1005,9 +999,10 @@
           step: data.step,
           sections: data.sections,
           quiz: data.quiz,
-          author_id: data.authorId,
-          author_name: data.author,
-          estimated_minutes: data.estimatedMinutes || 30,
+          // snake_case 우선, camelCase fallback (하위 호환)
+          author_id: data.author_id ?? data.authorId,
+          author_name: data.author_name ?? data.author,
+          estimated_minutes: data.estimated_minutes ?? data.estimatedMinutes ?? 30,
           // Source tracking fields
           source_type: data.source_type || 'manual',
           source_url: data.source_url || null,
@@ -2465,15 +2460,16 @@ URL: ${sourceUrl}
               title: doc.title || inputTitle || "제목 없음",
               team: inputTeam,
               step: doc.step || parseInt(inputStep),
-              author: user.name,
-              authorId: user.id
+              // snake_case 필드명 사용 (DB 스키마와 일치)
+              author_name: user.name,
+              author_id: user.id
             };
 
             // 편집 모드: 기존 문서 업데이트
             if (editingDoc && savedCount === 0) {
               docToSave.id = editingDoc.id;
-              docToSave.createdAt = editingDoc.createdAt;
-              docToSave.updatedAt = Date.now();
+              docToSave.created_at = editingDoc.created_at;
+              docToSave.updated_at = new Date().toISOString();
               // editingDoc의 source 필드 유지 (doc에 없을 경우 fallback)
               if (!docToSave.source_type && editingDoc.source_type) {
                 docToSave.source_type = editingDoc.source_type;
@@ -2482,8 +2478,8 @@ URL: ${sourceUrl}
               }
               await dbPut("ojt_docs", docToSave);
             } else {
-              // 신규 모드: 새 문서 추가
-              docToSave.createdAt = Date.now() + savedCount;
+              // 신규 모드: 새 문서 추가 (snake_case 필드명)
+              docToSave.created_at = new Date().toISOString();
               await dbAdd("ojt_docs", docToSave);
             }
             savedCount++;
@@ -4324,8 +4320,8 @@ URL: ${sourceUrl}
                     <div className="flex-1">
                       <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">{doc.team} - Step {doc.step}</span>
                       <h4 className="font-bold mt-2">{doc.title}</h4>
-                      {doc.updatedAt && (
-                        <p className="text-xs text-slate-400 mt-1">수정됨: {new Date(doc.updatedAt).toLocaleDateString()}</p>
+                      {doc.updated_at && (
+                        <p className="text-xs text-slate-400 mt-1">수정됨: {new Date(doc.updated_at).toLocaleDateString()}</p>
                       )}
                     </div>
                     <div className="flex gap-2 ml-2">
@@ -4355,7 +4351,7 @@ URL: ${sourceUrl}
       // 멘티 문서 새로고침 함수
       const refreshPublicDocs = async () => {
         const allDocs = await dbGetAll("ojt_docs");
-        allDocs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        allDocs.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
         setPublicDocs(allDocs);
       };
 
