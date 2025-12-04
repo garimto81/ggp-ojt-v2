@@ -426,10 +426,34 @@ export default function MentorDashboard({ aiStatus }) {
           ) : (
             myDocs.map((doc) => (
               <div key={doc.id} className="p-3 border rounded-lg hover:bg-gray-50">
-                <h4 className="font-medium text-sm">{doc.title}</h4>
+                <div className="flex items-start justify-between">
+                  <h4 className="font-medium text-sm">{doc.title}</h4>
+                  {doc.source_type && doc.source_type !== 'manual' && (
+                    <span
+                      className={`text-xs px-1.5 py-0.5 rounded ${
+                        doc.source_type === 'url'
+                          ? 'bg-blue-100 text-blue-600'
+                          : 'bg-purple-100 text-purple-600'
+                      }`}
+                    >
+                      {doc.source_type === 'url' ? '🔗 URL' : '📄 PDF'}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   {doc.team} · {formatDate(doc.created_at)}
                 </p>
+                {doc.source_url && (
+                  <a
+                    href={doc.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:text-blue-700 mt-1 block truncate"
+                    title={doc.source_url}
+                  >
+                    {doc.source_url}
+                  </a>
+                )}
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => setEditingDoc(doc)}
