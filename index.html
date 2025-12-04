@@ -843,6 +843,15 @@
       const newId = crypto.randomUUID();
       let localData = { ...data, id: newId, created_at: now, updated_at: now };
 
+      // DEBUG: source 필드 추적
+      if (storeName === "ojt_docs") {
+        console.log('[DEBUG dbAdd] Input data source fields:', {
+          source_type: data.source_type,
+          source_url: data.source_url,
+          source_file: data.source_file
+        });
+      }
+
       // Supabase 필드명으로 변환
       if (storeName === "ojt_docs") {
         localData = {
@@ -880,7 +889,25 @@
       // 2. 온라인이면 Supabase에 동기화
       if (isOnline()) {
         try {
-          await supabase.from(storeName).insert(localData);
+          // DEBUG: localData 출력
+          if (storeName === "ojt_docs") {
+            console.log('[DEBUG dbAdd] localData to insert:', {
+              id: localData.id,
+              title: localData.title,
+              source_type: localData.source_type,
+              source_url: localData.source_url,
+              source_file: localData.source_file
+            });
+          }
+          const { data: inserted, error } = await supabase.from(storeName).insert(localData).select();
+          // DEBUG: Supabase 응답 확인
+          if (storeName === "ojt_docs") {
+            console.log('[DEBUG dbAdd] Supabase response:', { inserted, error });
+          }
+          if (error) {
+            console.error("dbAdd Supabase error:", error);
+            await addToSyncQueue(storeName, 'insert', localData);
+          }
         } catch (e) {
           console.error("dbAdd sync error:", e);
           await addToSyncQueue(storeName, 'insert', localData);
@@ -2300,6 +2327,13 @@ URL: ${sourceUrl}
           let savedCount = 0;
 
           for (const doc of docsToSave) {
+            // DEBUG: doc 객체의 source 필드 확인
+            console.log('[DEBUG handleSaveToDB] doc source fields:', {
+              source_type: doc.source_type,
+              source_url: doc.source_url,
+              source_file: doc.source_file
+            });
+
             const docToSave = {
               ...doc,
               title: doc.title || inputTitle || "제목 없음",
@@ -2308,6 +2342,13 @@ URL: ${sourceUrl}
               author: user.name,
               authorId: user.id
             };
+
+            // DEBUG: docToSave 확인
+            console.log('[DEBUG handleSaveToDB] docToSave source fields:', {
+              source_type: docToSave.source_type,
+              source_url: docToSave.source_url,
+              source_file: docToSave.source_file
+            });
 
             // 편집 모드: 기존 문서 업데이트
             if (editingDoc && savedCount === 0) {
