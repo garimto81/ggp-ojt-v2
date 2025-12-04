@@ -42,6 +42,28 @@ export const GEMINI_CONFIG = {
   API_URL: 'https://generativelanguage.googleapis.com/v1beta/models',
 };
 
+// LLM Provider configuration
+export const LLM_CONFIG = {
+  // Active provider: 'gemini' | 'groq' | 'ollama'
+  PROVIDER: import.meta.env.VITE_LLM_PROVIDER || 'gemini',
+
+  // Groq Cloud API (Free tier, ultra-fast)
+  GROQ: {
+    API_KEY: import.meta.env.VITE_GROQ_API_KEY || '',
+    MODEL: import.meta.env.VITE_GROQ_MODEL || 'llama-3.3-70b-versatile',
+    API_URL: 'https://api.groq.com/openai/v1',
+  },
+
+  // Ollama Local (Self-hosted, zero cost)
+  OLLAMA: {
+    URL: import.meta.env.VITE_OLLAMA_URL || 'http://localhost:11434',
+    MODEL: import.meta.env.VITE_OLLAMA_MODEL || 'qwen3:8b',
+  },
+
+  // Fallback chain order (tried in sequence on failure)
+  FALLBACK_CHAIN: ['groq', 'gemini', 'ollama'],
+};
+
 // R2 Upload configuration
 export const R2_CONFIG = {
   WORKER_URL: import.meta.env.VITE_R2_WORKER_URL || 'https://ojt-r2-upload.your-worker.workers.dev',

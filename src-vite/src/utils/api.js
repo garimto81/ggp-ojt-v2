@@ -1,8 +1,9 @@
-// OJT Master v2.5.0 - API Utilities (Supabase, Gemini)
+// OJT Master v2.6.1 - API Utilities (Supabase, LLM Service)
 
 import { createClient } from '@supabase/supabase-js';
 import DOMPurify from 'dompurify';
-import { SUPABASE_CONFIG, GEMINI_CONFIG, CONFIG, CORS_PROXIES } from '../constants';
+import { SUPABASE_CONFIG, CONFIG, CORS_PROXIES } from '../constants';
+import { llmService, LLM_PROVIDERS } from '../services/llm';
 
 // Initialize Supabase client
 export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY);
@@ -13,34 +14,62 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Check Gemini AI status
- * @returns {Promise<{online: boolean, model: string}>}
+ * Check AI status (uses active LLM provider)
+ * @returns {Promise<{online: boolean, model: string, provider: string}>}
  */
 export async function checkAIStatus() {
   try {
-    const response = await fetch(
-      `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Hello' }] }],
-        }),
-      }
-    );
-
-    return {
-      online: response.ok,
-      model: GEMINI_CONFIG.MODEL,
-    };
+    const status = await llmService.checkStatus();
+    return status;
   } catch (error) {
     console.error('AI status check failed:', error);
-    return { online: false, model: GEMINI_CONFIG.MODEL };
+    const provider = llmService.getActiveProvider();
+    return {
+      online: false,
+      model: provider?.getModel() || 'unknown',
+      provider: provider?.getName() || 'unknown',
+    };
   }
 }
 
 /**
- * Generate OJT content using Gemini AI
+ * Check all available LLM providers status
+ * @returns {Promise<Object>} - Status of all providers
+ */
+export async function checkAllProvidersStatus() {
+  return llmService.checkAllStatus();
+}
+
+/**
+ * Set active LLM provider
+ * @param {string} providerName - Provider name ('gemini', 'groq', 'ollama')
+ * @returns {boolean} - Success status
+ */
+export function setLLMProvider(providerName) {
+  return llmService.setActiveProvider(providerName);
+}
+
+/**
+ * Get current LLM provider name
+ * @returns {string}
+ */
+export function getCurrentProvider() {
+  return llmService.getActiveProvider()?.getName() || 'unknown';
+}
+
+/**
+ * Get available LLM providers
+ * @returns {string[]}
+ */
+export function getAvailableProviders() {
+  return llmService.getAvailableProviders();
+}
+
+// Re-export LLM_PROVIDERS for convenience
+export { LLM_PROVIDERS };
+
+/**
+ * Generate OJT content using LLM Service (with fallback)
  * @param {string} contentText - Raw content text
  * @param {string} title - Document title
  * @param {number} stepNumber - Current step number
@@ -97,29 +126,24 @@ export async function generateOJTContent(
 ${contentText.substring(0, 12000)}`;
 
   try {
-    if (onProgress) onProgress('AI 분석 중...');
+    const providerName = llmService.getActiveProvider()?.getName() || 'unknown';
+    if (onProgress) onProgress(`AI 분석 중... (${providerName})`);
 
-    const response = await fetch(
-      `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: CONFIG.AI_TEMPERATURE,
-            maxOutputTokens: CONFIG.AI_MAX_TOKENS,
-          },
-        }),
-      }
-    );
+    // Use LLM Service with automatic fallback
+    const {
+      text: responseText,
+      provider,
+      fallbackUsed,
+    } = await llmService.generate({
+      prompt,
+      temperature: CONFIG.AI_TEMPERATURE,
+      maxTokens: CONFIG.AI_MAX_TOKENS,
+      useFallback: true,
+    });
 
-    if (!response.ok) {
-      throw new Error(`AI 응답 오류: ${response.status}`);
+    if (fallbackUsed) {
+      console.info(`Fallback to ${provider} provider`);
     }
-
-    const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!responseText) {
       throw new Error('AI 응답이 비어있습니다.');
@@ -127,6 +151,7 @@ ${contentText.substring(0, 12000)}`;
 
     // Parse AI response
     const result = parseAIResponse(responseText);
+    result.llm_provider = provider; // Track which provider was used
 
     // Validate and fill quiz if needed
     return validateAndFillResult(result, title);
@@ -150,7 +175,22 @@ ${contentText.substring(0, 12000)}`;
 function createFallbackContent(contentText, title, errorMessage) {
   // Sanitize HTML to prevent XSS
   const sanitizedContent = DOMPurify.sanitize(contentText, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'a', 'pre', 'code'],
+    ALLOWED_TAGS: [
+      'p',
+      'br',
+      'strong',
+      'em',
+      'ul',
+      'ol',
+      'li',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'a',
+      'pre',
+      'code',
+    ],
     ALLOWED_ATTR: ['href', 'target'],
   });
 
@@ -340,7 +380,7 @@ export function validateQuizQuality(quiz) {
 }
 
 /**
- * Regenerate specific quiz questions using AI
+ * Regenerate specific quiz questions using LLM Service
  * @param {string} contentText - Original content text
  * @param {Array} indices - Indices of questions to regenerate
  * @param {Array} existingQuiz - Existing quiz array
@@ -381,29 +421,16 @@ ${existingQuiz
 ${contentText.substring(0, 8000)}`;
 
   try {
-    if (onProgress) onProgress('퀴즈 재생성 중...');
+    const providerName = llmService.getActiveProvider()?.getName() || 'unknown';
+    if (onProgress) onProgress(`퀴즈 재생성 중... (${providerName})`);
 
-    const response = await fetch(
-      `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 4096,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`AI 응답 오류: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Use LLM Service with automatic fallback
+    const { text: responseText } = await llmService.generate({
+      prompt,
+      temperature: 0.5,
+      maxTokens: 4096,
+      useFallback: true,
+    });
 
     if (!responseText) {
       throw new Error('AI 응답이 비어있습니다.');
