@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.6.6 - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.6.8 - AI 기반 온보딩 교육 플랫폼</title>
   <!--
     CDN Script Loading Strategy:
     - Critical (sync): Tailwind, React, ReactDOM, Babel, Supabase, Dexie
@@ -323,6 +323,25 @@
           options: Array.isArray(q.options) ? q.options.map(opt => sanitizeText(opt)) : q.options
         })) : doc.quiz
       };
+    };
+
+    // 안전한 URL 열기 (XSS 방지: javascript:, data: 프로토콜 차단)
+    const safeOpenUrl = (url) => {
+      if (!url || typeof url !== 'string') {
+        Toast.error('유효하지 않은 URL입니다.');
+        return;
+      }
+      try {
+        const parsedUrl = new URL(url);
+        // 허용된 프로토콜만 열기
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          Toast.error('HTTP 또는 HTTPS URL만 열 수 있습니다.');
+          return;
+        }
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch (e) {
+        Toast.error('URL을 열 수 없습니다.');
+      }
     };
 
     // 캐시 전체 클리어 (로그아웃 또는 버전 업그레이드 시 사용)
@@ -2331,6 +2350,12 @@ URL: ${sourceUrl}
               docToSave.id = editingDoc.id;
               docToSave.createdAt = editingDoc.createdAt;
               docToSave.updatedAt = Date.now();
+              // editingDoc의 source 필드 유지 (doc에 없을 경우 fallback)
+              if (!docToSave.source_type && editingDoc.source_type) {
+                docToSave.source_type = editingDoc.source_type;
+                docToSave.source_url = editingDoc.source_url;
+                docToSave.source_file = editingDoc.source_file;
+              }
               await dbPut("ojt_docs", docToSave);
             } else {
               // 신규 모드: 새 문서 추가
@@ -2359,9 +2384,16 @@ URL: ${sourceUrl}
           if (quillInstanceRef.current) {
             quillInstanceRef.current.setText('');
           }
-          // 목록 새로고침
+          // 목록 새로고침 (초기 로드와 동일한 매핑 적용)
           const allDocs = await dbGetAll("ojt_docs");
-          const filtered = allDocs.filter(doc => doc.authorId === user.id);
+          const mapped = allDocs.map(doc => ({
+            ...doc,
+            authorId: doc.author_id,
+            author: doc.author_name,
+            estimatedMinutes: doc.estimated_minutes,
+            createdAt: new Date(doc.created_at).getTime()
+          }));
+          const filtered = mapped.filter(doc => doc.authorId === user.id);
           filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           setMyDocs(filtered);
         } catch (e) {
@@ -2509,8 +2541,15 @@ URL: ${sourceUrl}
           }
         }
 
-        // 기존 생성 결과 초기화
-        setGeneratedDoc(null);
+        // 편집 모드: 기존 문서를 generatedDoc에 복사 (source 필드 유지)
+        // URL/PDF 문서의 경우 source_type, source_url, source_file 필드가 미리보기에 표시됨
+        setGeneratedDoc({
+          ...doc,
+          // Supabase 필드명을 프론트엔드 필드명으로 매핑
+          author: doc.author_name || doc.author,
+          authorId: doc.author_id || doc.authorId,
+          estimatedMinutes: doc.estimated_minutes || doc.estimatedMinutes
+        });
         setGeneratedDocs([]);
 
         // 스크롤 맨 위로
@@ -2618,7 +2657,7 @@ URL: ${sourceUrl}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.6.6 (e8682ba) | Cache Sync Fix</p>
+                <p className="text-xs text-slate-400 mt-1">v2.6.8 | Field Mapping + XSS Fix</p>
                 <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat: R2 이미지 업로드 기능 추가 (#26)">feat: R2 이미지 업로드 기능 추가</p>
               </div>
 
@@ -2675,7 +2714,7 @@ URL: ${sourceUrl}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.6.6</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.6.8</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
@@ -3997,7 +4036,7 @@ URL: ${sourceUrl}
                             <p className="text-xs text-blue-600 truncate">{generatedDoc.source_url}</p>
                           </div>
                           <button
-                            onClick={() => window.open(generatedDoc.source_url, '_blank')}
+                            onClick={() => safeOpenUrl(generatedDoc.source_url)}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
                           >
                             원문 보기 ↗
@@ -4266,7 +4305,7 @@ URL: ${sourceUrl}
                       </div>
                     </div>
                     <button
-                      onClick={() => window.open(selectedDoc.source_url, '_blank')}
+                      onClick={() => safeOpenUrl(selectedDoc.source_url)}
                       className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition flex items-center gap-2"
                     >
                       <Icon name="eye" className="w-5 h-5" />
