@@ -29,8 +29,6 @@ export default function MentorDashboard({ aiStatus }) {
   const [inputTitle, setInputTitle] = useState('');
   const [autoSplit, setAutoSplit] = useState(true);
 
-  // Source tracking for URL/PDF
-  const [sourceInfo, setSourceInfo] = useState({ type: 'manual', url: null, file: null });
 
   // Processing states
   const [isProcessing, setIsProcessing] = useState(false);
@@ -70,13 +68,12 @@ export default function MentorDashboard({ aiStatus }) {
     try {
       let contentText = rawInput;
 
-      // Set source info based on input type
-      if (inputType === 'text') {
-        setSourceInfo({ type: 'manual', url: null, file: null });
-      } else if (inputType === 'url') {
-        setSourceInfo({ type: 'url', url: urlInput.trim(), file: null });
-      }
-      // PDF source info is set in handlePdfUpload
+      // Determine source info based on input type (local variable, not state)
+      const currentSourceInfo = {
+        type: inputType === 'url' ? 'url' : inputType === 'pdf' ? 'pdf' : 'manual',
+        url: inputType === 'url' ? urlInput.trim() : null,
+        file: null, // PDF file URL will be set when PDF upload is implemented
+      };
 
       // Handle URL input - extract text first
       if (inputType === 'url') {
@@ -106,7 +103,16 @@ export default function MentorDashboard({ aiStatus }) {
           )
         );
         const results = await Promise.all(promises);
-        docs.push(...results.map((r, i) => ({ ...r, step: i + 1 })));
+        docs.push(
+          ...results.map((r, i) => ({
+            ...r,
+            step: i + 1,
+            // Include source info in each doc
+            source_type: currentSourceInfo.type,
+            source_url: currentSourceInfo.url,
+            source_file: currentSourceInfo.file,
+          }))
+        );
       } else {
         const result = await generateOJTContent(
           contentText,
@@ -115,7 +121,14 @@ export default function MentorDashboard({ aiStatus }) {
           1,
           setProcessingStatus
         );
-        docs.push({ ...result, step: 1 });
+        docs.push({
+          ...result,
+          step: 1,
+          // Include source info
+          source_type: currentSourceInfo.type,
+          source_url: currentSourceInfo.url,
+          source_file: currentSourceInfo.file,
+        });
       }
 
       setGeneratedDocs(docs);
@@ -139,14 +152,11 @@ export default function MentorDashboard({ aiStatus }) {
   const handleSave = async () => {
     try {
       for (const doc of generatedDocs) {
+        // source_type, source_url, source_file are already included in doc
         await saveDocument({
           ...doc,
           author_id: user.id,
           author_name: user.name,
-          // Source tracking fields
-          source_type: sourceInfo.type,
-          source_url: sourceInfo.url,
-          source_file: sourceInfo.file,
         });
       }
 
@@ -155,7 +165,6 @@ export default function MentorDashboard({ aiStatus }) {
       setRawInput('');
       setUrlInput('');
       setInputTitle('');
-      setSourceInfo({ type: 'manual', url: null, file: null });
       await loadMyDocs();
     } catch (error) {
       Toast.error('저장 중 오류가 발생했습니다.');
