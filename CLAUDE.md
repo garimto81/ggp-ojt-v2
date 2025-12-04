@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.6.0)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.6.1)
 
 ## Tech Stack
 
@@ -222,7 +222,7 @@ localDb.version(2).stores({
 
 1. **버전 업데이트**: `index.html`, `package.json`, `src-vite/package.json`, `CLAUDE.md` 동시 수정
 2. **커밋 해시 업데이트**: `index.html` 로그인 페이지에 버전 + 커밋 해시 표시
-   - 위치: `<p className="text-xs text-slate-400 mt-1">v2.6.0 (b660923) | ...`
+   - 위치: `<p className="text-xs text-slate-400 mt-1">v2.6.1 (ae610f7) | ...`
 3. **버전 규칙**: MAJOR.MINOR.PATCH (버그=PATCH, 기능=MINOR, 큰변경=MAJOR)
 
 ```bash
