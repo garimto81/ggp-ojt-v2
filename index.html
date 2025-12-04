@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.6.9 - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.7.0 - AI 기반 온보딩 교육 플랫폼</title>
   <!--
     CDN Script Loading Strategy:
     - Critical (sync): Tailwind, React, ReactDOM, Babel, Supabase, Dexie
@@ -250,36 +250,6 @@
       console.log('  3. 상태 변경 추적');
       console.log('  4. 렌더링 조건 검증');
     }
-
-    // =========================================
-    // 중앙 집중식 필드 매핑 유틸리티 (Issue #34 수정)
-    // snake_case (DB) → camelCase (UI) 변환
-    // =========================================
-    const toCamelCaseDoc = (doc) => {
-      if (!doc) return doc;
-      return {
-        ...doc,
-        // 필수 매핑 필드
-        authorId: doc.author_id ?? doc.authorId,
-        author: doc.author_name ?? doc.author,
-        estimatedMinutes: doc.estimated_minutes ?? doc.estimatedMinutes,
-        // source 필드 (원문 보기 기능)
-        sourceType: doc.source_type ?? doc.sourceType,
-        sourceUrl: doc.source_url ?? doc.sourceUrl,
-        sourceFile: doc.source_file ?? doc.sourceFile,
-        // 타임스탬프
-        createdAt: doc.created_at ?? doc.createdAt,
-        updatedAt: doc.updated_at ?? doc.updatedAt,
-        // 팀 관련
-        teamId: doc.team_id ?? doc.teamId,
-      };
-    };
-
-    // 배열 변환 헬퍼
-    const toCamelCaseDocs = (docs) => {
-      if (!Array.isArray(docs)) return docs;
-      return docs.map(toCamelCaseDoc);
-    };
 
     // =========================================
     // 보안 세션 스토리지 헬퍼
@@ -942,22 +912,18 @@
         }
       }
 
-      // ojt_docs인 경우 XSS 방어 + camelCase 매핑 적용
+      // ojt_docs인 경우 XSS 방어만 적용 (snake_case 유지)
       if (storeName === "ojt_docs") {
-        // 🔍 DEBUG: dbGetAll 결과 검증 (문제 1: 매핑 불일치)
-        DEBUG.trackDataFlow('dbGetAll → ojt_docs 반환 전', cached, {
+        // 🔍 DEBUG: dbGetAll 결과 검증
+        DEBUG.trackDataFlow('dbGetAll → ojt_docs 반환', cached, {
           source: cacheEmpty ? 'Supabase' : 'LocalCache',
           filters
         });
         if (cached.length > 0) {
-          DEBUG.checkFieldMapping('dbGetAll 결과 (첫 번째 문서, 매핑 전)', cached[0], DEBUG.OJT_DOC_FIELDS);
+          DEBUG.checkFieldMapping('dbGetAll 결과 (첫 번째 문서)', cached[0], DEBUG.OJT_DOC_FIELDS);
         }
-        // 중앙 집중식 매핑 적용: sanitize → toCamelCase
-        const result = cached.map(doc => toCamelCaseDoc(sanitizeDocData(doc)));
-        if (result.length > 0) {
-          DEBUG.checkFieldMapping('dbGetAll 결과 (첫 번째 문서, 매핑 후)', result[0], DEBUG.OJT_DOC_FIELDS);
-        }
-        return result;
+        // XSS 방어만 적용, 필드명 매핑 없음 (snake_case 그대로 사용)
+        return cached.map(doc => sanitizeDocData(doc));
       }
 
       return cached;
@@ -2161,19 +2127,19 @@ URL: ${sourceUrl}
           console.log('%c📥 [초기 로드] loadMyDocs 시작', DEBUG.colors.data);
           console.log('  user.id:', user.id);
 
-          // dbGetAll에서 toCamelCaseDoc 매핑 완료됨 (중앙 집중식)
+          // snake_case 필드명 사용 (DB 스키마와 일치)
           const docs = await dbGetAll("ojt_docs", { authorId: user.id });
 
           // 🔍 DEBUG: dbGetAll 결과 검증
-          DEBUG.trackDataFlow('loadMyDocs → dbGetAll 결과 (매핑 완료)', docs, {
+          DEBUG.trackDataFlow('loadMyDocs → dbGetAll 결과', docs, {
             stage: '초기 로드',
-            filter: { authorId: user.id }
+            filter: { author_id: user.id }
           });
           if (docs.length > 0) {
-            DEBUG.checkFieldMapping('loadMyDocs 결과 검증', docs[0], DEBUG.OJT_DOC_FIELDS);
+            DEBUG.checkFieldMapping('loadMyDocs 결과', docs[0], DEBUG.OJT_DOC_FIELDS);
           }
 
-          // dbGetAll에서 이미 camelCase 매핑됨 - 중복 매핑 제거
+          // snake_case 그대로 사용
           setMyDocs(docs);
           console.log('%c✅ myDocs loaded:', DEBUG.colors.state, docs.length, 'documents');
         };
@@ -2184,7 +2150,7 @@ URL: ${sourceUrl}
       useEffect(() => {
         if (!user || user.role !== 'mentee') return;
         const loadPublicDocs = async () => {
-          // dbGetAll에서 toCamelCaseDoc 매핑 완료됨 (중앙 집중식)
+          // snake_case 그대로 사용
           const docs = await dbGetAll("ojt_docs");
           setPublicDocs(docs);
         };
@@ -2542,11 +2508,11 @@ URL: ${sourceUrl}
           if (quillInstanceRef.current) {
             quillInstanceRef.current.setText('');
           }
-          // 목록 새로고침 - dbGetAll에서 toCamelCaseDoc 매핑 완료됨 (중앙 집중식)
+          // 목록 새로고침 - snake_case 필드명 사용
           const allDocs = await dbGetAll("ojt_docs");
 
-          // 🔍 DEBUG: 저장 후 새로고침 데이터 검증 (중앙 집중식 매핑 적용됨)
-          DEBUG.trackDataFlow('handleSaveToDB → 저장 후 dbGetAll 결과 (매핑 완료)', allDocs, {
+          // 🔍 DEBUG: 저장 후 새로고침 데이터 검증
+          DEBUG.trackDataFlow('handleSaveToDB → 저장 후 dbGetAll 결과', allDocs, {
             stage: '저장 후 새로고침',
             totalCount: allDocs.length
           });
@@ -2554,8 +2520,8 @@ URL: ${sourceUrl}
             DEBUG.checkFieldMapping('저장 후 문서 검증', allDocs[0], DEBUG.OJT_DOC_FIELDS);
           }
 
-          // dbGetAll에서 이미 camelCase 매핑됨 - 중복 매핑 제거
-          const filtered = allDocs.filter(doc => doc.authorId === user.id);
+          // snake_case 필드명으로 필터링 (DB 스키마와 일치)
+          const filtered = allDocs.filter(doc => doc.author_id === user.id);
 
           // 🔍 DEBUG: 필터링 결과 검증
           DEBUG.trackDataFlow('handleSaveToDB → 필터링 후', filtered, {
@@ -2563,12 +2529,12 @@ URL: ${sourceUrl}
             userId: user.id,
             beforeFilter: allDocs.length,
             afterFilter: filtered.length,
-            filterCondition: 'doc.authorId === user.id'
+            filterCondition: 'doc.author_id === user.id'
           });
 
           filtered.sort((a, b) => {
-            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
             return bTime - aTime;
           });
           setMyDocs(filtered);
@@ -2719,7 +2685,7 @@ URL: ${sourceUrl}
 
         // 편집 모드: 기존 문서를 generatedDoc에 복사 (source 필드 유지)
         // URL/PDF 문서의 경우 source_type, source_url, source_file 필드가 미리보기에 표시됨
-        // doc은 dbGetAll에서 이미 camelCase 매핑됨 (중앙 집중식)
+        // snake_case 필드명 그대로 사용 (DB 스키마와 일치)
         setGeneratedDoc(doc);
         setGeneratedDocs([]);
 
@@ -4190,14 +4156,14 @@ URL: ${sourceUrl}
                       </p>
                     )}
 
-                    {/* URL/PDF 원문 보기 */}
+                    {/* URL/PDF 원문 보기 - snake_case 필드 사용 (DB 스키마 일치) */}
                     {/* 🔍 DEBUG: 렌더링 조건 검증 */}
                     {DEBUG.enabled && DEBUG.checkRenderCondition('Mentor 미리보기 - 원문 보기 버튼', {
                       'source_type': generatedDoc?.source_type,
                       'source_url': generatedDoc?.source_url,
                       'source_file': generatedDoc?.source_file,
-                      'URL 조건 (source_type===url && source_url)': generatedDoc?.source_type === 'url' && !!generatedDoc?.source_url,
-                      'PDF 조건 (source_type===pdf && source_file)': generatedDoc?.source_type === 'pdf' && !!generatedDoc?.source_file
+                      'URL 조건': generatedDoc?.source_type === 'url' && !!generatedDoc?.source_url,
+                      'PDF 조건': generatedDoc?.source_type === 'pdf' && !!generatedDoc?.source_file
                     })}
                     {generatedDoc.source_type === 'url' && generatedDoc.source_url && (
                       <div className="my-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -4459,21 +4425,19 @@ URL: ${sourceUrl}
                 <div>
                   <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">{selectedDoc.team} - Step {selectedDoc.step}</span>
                   <h1 className="text-2xl font-bold mt-2">{selectedDoc.title}</h1>
-                  <p className="text-sm text-slate-400 mt-1">작성자: {selectedDoc.author}</p>
+                  <p className="text-sm text-slate-400 mt-1">작성자: {selectedDoc.author_name}</p>
                 </div>
               </div>
 
-              {/* URL 원문 보기 */}
+              {/* URL 원문 보기 - snake_case 필드 사용 (DB 스키마 일치) */}
               {/* 🔍 DEBUG: Mentee 학습 화면 렌더링 조건 검증 */}
               {DEBUG.enabled && DEBUG.checkRenderCondition('Mentee 학습 - 원문 보기 버튼', {
-                'selectedDoc 전체 키': Object.keys(selectedDoc || {}),
                 'source_type': selectedDoc?.source_type,
                 'source_url': selectedDoc?.source_url,
                 'source_file': selectedDoc?.source_file,
                 'author_id': selectedDoc?.author_id,
-                'authorId': selectedDoc?.authorId,
-                'URL 조건 (source_type===url && source_url)': selectedDoc?.source_type === 'url' && !!selectedDoc?.source_url,
-                'PDF 조건 (source_type===pdf && source_file)': selectedDoc?.source_type === 'pdf' && !!selectedDoc?.source_file
+                'URL 조건': selectedDoc?.source_type === 'url' && !!selectedDoc?.source_url,
+                'PDF 조건': selectedDoc?.source_type === 'pdf' && !!selectedDoc?.source_file
               })}
               {selectedDoc.source_type === 'url' && selectedDoc.source_url && (
                 <div className="mb-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-xl">

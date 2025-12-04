@@ -7,86 +7,79 @@ const { test, expect } = require('@playwright/test');
  * 문제: URL/PDF 문서 저장 후 source 필드(source_type, source_url, source_file)가
  *      미리보기, 편집, 학습 화면에서 표시되지 않음
  *
- * 근본 원인: handleSaveToDB() 저장 후 새로고침 시 필드명 매핑 누락
- *           - dbGetAll()은 snake_case (author_id) 반환
- *           - 필터에서 camelCase (authorId)로 비교 → 필터 실패
- *
- * 수정: Line 2369-2379에서 초기 로드와 동일한 매핑 적용
+ * v2.7.0 해결책: snake_case 통일 아키텍처
+ *   - toCamelCaseDoc 매핑 함수 제거 (혼란의 원인)
+ *   - DB 필드명(snake_case) 그대로 사용
+ *   - 렌더링에서 source_type, source_url 직접 참조
  */
 
 test.describe('Issue #34: Source Field Persistence - TDD Tests', () => {
 
-  test('1. Field mapping function exists in code', async ({ page }) => {
-    // v2.6.9 수정: 중앙 집중식 toCamelCaseDoc 함수로 매핑 통합
-    // 수정 전: 여러 곳에서 중복 매핑 → 불일치 발생
-    // 수정 후: dbGetAll에서 toCamelCaseDoc 호출 → 일관성 보장
+  test('1. snake_case unified architecture (v2.7.0)', async ({ page }) => {
+    // v2.7.0 수정: snake_case 통일 아키텍처
+    // - toCamelCaseDoc 함수 제거 (더 이상 필요 없음)
+    // - DB 필드명 그대로 사용 (author_id, source_type 등)
+    // - 매핑 혼란 제거로 일관성 보장
 
     await page.goto('/', { waitUntil: 'networkidle' });
 
     const codeAnalysis = await page.evaluate(() => {
       const html = document.documentElement.outerHTML;
 
-      // 핵심 수정 확인: toCamelCaseDoc 중앙 집중식 매핑 함수 존재
+      // v2.7.0: toCamelCaseDoc 함수가 제거되었는지 확인 (있으면 안됨)
       const hasToCamelCaseDoc = html.includes('const toCamelCaseDoc');
       const hasToCamelCaseDocs = html.includes('const toCamelCaseDocs');
 
-      // toCamelCaseDoc 함수 내 매핑 로직 확인
-      const hasAuthorIdMapping = html.includes('authorId: doc.author_id');
-      const hasAuthorNameMapping = html.includes('author: doc.author_name');
-      const hasEstimatedMinutesMapping = html.includes('estimatedMinutes: doc.estimated_minutes');
+      // snake_case 필드 직접 사용 확인
+      const usesSnakeCaseFilter = html.includes('doc.author_id === user.id');
+      const usesSnakeCaseSort = html.includes('a.created_at') && html.includes('b.created_at');
+      const usesSnakeCaseAuthorName = html.includes('selectedDoc.author_name');
 
-      // source 필드 처리 확인
+      // source 필드 snake_case 사용 확인
       const hasSourceTypeCheck = html.includes("source_type === 'url'");
       const hasSourceUrlCheck = html.includes('source_url &&');
-
-      // source 필드 매핑 확인
-      const hasSourceTypeMapping = html.includes('sourceType: doc.source_type');
-      const hasSourceUrlMapping = html.includes('sourceUrl: doc.source_url');
 
       // safeOpenUrl XSS 방지 함수 확인
       const hasSafeOpenUrl = html.includes('safeOpenUrl');
       const hasProtocolCheck = html.includes("['http:', 'https:'].includes");
 
-      // dbGetAll에서 toCamelCaseDoc 호출 확인
-      const hasDbGetAllMapping = html.includes('toCamelCaseDoc(sanitizeDocData(doc))');
+      // sanitizeDocData만 사용 (매핑 없음)
+      const usesSanitizeOnly = html.includes('sanitizeDocData(doc)') &&
+                               !html.includes('toCamelCaseDoc(sanitizeDocData');
 
       return {
         hasToCamelCaseDoc,
         hasToCamelCaseDocs,
-        hasAuthorIdMapping,
-        hasAuthorNameMapping,
-        hasEstimatedMinutesMapping,
+        usesSnakeCaseFilter,
+        usesSnakeCaseSort,
+        usesSnakeCaseAuthorName,
         hasSourceTypeCheck,
         hasSourceUrlCheck,
-        hasSourceTypeMapping,
-        hasSourceUrlMapping,
         hasSafeOpenUrl,
         hasProtocolCheck,
-        hasDbGetAllMapping
+        usesSanitizeOnly
       };
     });
 
-    console.log('=== Code Analysis for Issue #34 Fix (v2.6.9) ===');
-    console.log('toCamelCaseDoc function:', codeAnalysis.hasToCamelCaseDoc);
-    console.log('toCamelCaseDocs helper:', codeAnalysis.hasToCamelCaseDocs);
-    console.log('authorId mapping:', codeAnalysis.hasAuthorIdMapping);
-    console.log('author mapping:', codeAnalysis.hasAuthorNameMapping);
-    console.log('estimatedMinutes mapping:', codeAnalysis.hasEstimatedMinutesMapping);
-    console.log('sourceType mapping:', codeAnalysis.hasSourceTypeMapping);
-    console.log('sourceUrl mapping:', codeAnalysis.hasSourceUrlMapping);
+    console.log('=== Code Analysis for Issue #34 Fix (v2.7.0 - snake_case 통일) ===');
+    console.log('toCamelCaseDoc removed:', !codeAnalysis.hasToCamelCaseDoc);
+    console.log('toCamelCaseDocs removed:', !codeAnalysis.hasToCamelCaseDocs);
+    console.log('Uses snake_case filter (author_id):', codeAnalysis.usesSnakeCaseFilter);
+    console.log('Uses snake_case sort (created_at):', codeAnalysis.usesSnakeCaseSort);
+    console.log('Uses snake_case author_name:', codeAnalysis.usesSnakeCaseAuthorName);
     console.log('source_type check:', codeAnalysis.hasSourceTypeCheck);
     console.log('source_url check:', codeAnalysis.hasSourceUrlCheck);
     console.log('safeOpenUrl function:', codeAnalysis.hasSafeOpenUrl);
     console.log('Protocol validation:', codeAnalysis.hasProtocolCheck);
-    console.log('dbGetAll uses toCamelCaseDoc:', codeAnalysis.hasDbGetAllMapping);
+    console.log('Uses sanitizeDocData only:', codeAnalysis.usesSanitizeOnly);
 
-    // 핵심 검증: 중앙 집중식 매핑 함수 존재
-    expect(codeAnalysis.hasToCamelCaseDoc).toBe(true);
-    expect(codeAnalysis.hasDbGetAllMapping).toBe(true);
-    expect(codeAnalysis.hasAuthorIdMapping).toBe(true);
-    expect(codeAnalysis.hasSourceTypeMapping).toBe(true);
-    expect(codeAnalysis.hasSourceTypeCheck).toBe(true);
-    expect(codeAnalysis.hasSafeOpenUrl).toBe(true);
+    // 핵심 검증: snake_case 통일 아키텍처
+    expect(codeAnalysis.hasToCamelCaseDoc).toBe(false);  // 매핑 함수 제거됨
+    expect(codeAnalysis.hasToCamelCaseDocs).toBe(false); // 매핑 함수 제거됨
+    expect(codeAnalysis.usesSnakeCaseFilter).toBe(true); // snake_case 필터 사용
+    expect(codeAnalysis.hasSourceTypeCheck).toBe(true);  // source_type 체크 존재
+    expect(codeAnalysis.hasSafeOpenUrl).toBe(true);      // XSS 방지 존재
+    expect(codeAnalysis.usesSanitizeOnly).toBe(true);    // sanitize만 사용
   });
 
   test('2. safeOpenUrl blocks javascript: protocol', async ({ page }) => {
