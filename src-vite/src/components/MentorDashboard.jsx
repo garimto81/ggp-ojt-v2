@@ -74,7 +74,9 @@ export default function MentorDashboard({ aiStatus }) {
         contentText = extracted.text;
         setRawInput(contentText); // Store for potential quiz regeneration
         if (extracted.wasTruncated) {
-          Toast.warning(`텍스트가 ${extracted.originalLength}자에서 ${extracted.extractedLength}자로 잘렸습니다.`);
+          Toast.warning(
+            `텍스트가 ${extracted.originalLength}자에서 ${extracted.extractedLength}자로 잘렸습니다.`
+          );
         }
       }
 
