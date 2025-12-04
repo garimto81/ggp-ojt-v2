@@ -801,6 +801,10 @@
           author_id: data.authorId,
           author_name: data.author,
           estimated_minutes: data.estimatedMinutes || 30,
+          // Source tracking fields
+          source_type: data.source_type || 'manual',
+          source_url: data.source_url || null,
+          source_file: data.source_file || null,
           updated_at: now
         };
       }
@@ -851,6 +855,10 @@
           author_id: data.authorId,
           author_name: data.author,
           estimated_minutes: data.estimatedMinutes || 30,
+          // Source tracking fields
+          source_type: data.source_type || 'manual',
+          source_url: data.source_url || null,
+          source_file: data.source_file || null,
           created_at: now,
           updated_at: now
         };
