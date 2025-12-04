@@ -1,4 +1,4 @@
-// OJT Master v2.3.0 - Mentee Study Component
+// OJT Master v2.5.0 - Mentee Study Component
 
 import { useState, useMemo, useEffect } from 'react';
 import { useDocs } from '../contexts/DocsContext';
@@ -127,6 +127,10 @@ export default function MenteeStudy() {
   // Section navigation
   const sections = selectedDoc?.sections || [];
   const totalSections = sections.length;
+
+  // Check if document has quiz (AI processed)
+  const hasQuiz = selectedDoc?.quiz && selectedDoc.quiz.length > 0;
+  const isAIProcessed = selectedDoc?.ai_processed !== false;
 
   const handlePrevSection = () => {
     if (currentSection > 0) {
@@ -376,12 +380,21 @@ export default function MenteeStudy() {
             </button>
 
             {studyCompleted ? (
-              <button
-                onClick={prepareQuiz}
-                className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition"
-              >
-                퀴즈 시작하기
-              </button>
+              hasQuiz ? (
+                <button
+                  onClick={prepareQuiz}
+                  className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition"
+                >
+                  퀴즈 시작하기
+                </button>
+              ) : (
+                <button
+                  onClick={handleBackToList}
+                  className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition"
+                >
+                  목록으로 돌아가기
+                </button>
+              )
             ) : (
               <button
                 onClick={handleNextSection}
@@ -398,8 +411,23 @@ export default function MenteeStudy() {
         </div>
       )}
 
-      {/* Quick Quiz Button */}
-      {studyCompleted && (
+      {/* AI 미처리 문서 알림 */}
+      {!isAIProcessed && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <span className="text-amber-500 text-xl">⚠️</span>
+            <div>
+              <h4 className="font-medium text-amber-800">AI 미처리 문서</h4>
+              <p className="text-sm text-amber-700 mt-1">
+                이 문서는 AI 분석 없이 원문 그대로 등록되었습니다. 퀴즈가 제공되지 않습니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Quiz Button - Only show if quiz exists */}
+      {studyCompleted && hasQuiz && (
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-6 text-white text-center">
           <h3 className="text-lg font-bold mb-2">학습 완료!</h3>
           <p className="opacity-90 mb-4">이제 퀴즈를 풀어 학습 내용을 확인해보세요.</p>
@@ -408,6 +436,22 @@ export default function MenteeStudy() {
             className="px-6 py-3 bg-white text-blue-600 font-medium rounded-lg hover:bg-gray-100 transition"
           >
             퀴즈 시작하기
+          </button>
+        </div>
+      )}
+
+      {/* Study Complete without Quiz */}
+      {studyCompleted && !hasQuiz && (
+        <div className="bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl p-6 text-white text-center">
+          <h3 className="text-lg font-bold mb-2">학습 완료!</h3>
+          <p className="opacity-90 mb-4">
+            이 문서는 퀴즈가 없습니다. 다른 문서를 학습해보세요.
+          </p>
+          <button
+            onClick={handleBackToList}
+            className="px-6 py-3 bg-white text-gray-600 font-medium rounded-lg hover:bg-gray-100 transition"
+          >
+            목록으로 돌아가기
           </button>
         </div>
       )}
