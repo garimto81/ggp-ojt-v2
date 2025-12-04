@@ -17,15 +17,20 @@ const { test, expect } = require('@playwright/test');
 test.describe('Issue #34: Source Field Persistence - TDD Tests', () => {
 
   test('1. Field mapping function exists in code', async ({ page }) => {
-    // 수정 전: 매핑 없이 직접 필터 → 실패
-    // 수정 후: mapped 변수로 매핑 후 필터 → 성공
+    // v2.6.9 수정: 중앙 집중식 toCamelCaseDoc 함수로 매핑 통합
+    // 수정 전: 여러 곳에서 중복 매핑 → 불일치 발생
+    // 수정 후: dbGetAll에서 toCamelCaseDoc 호출 → 일관성 보장
 
     await page.goto('/', { waitUntil: 'networkidle' });
 
     const codeAnalysis = await page.evaluate(() => {
       const html = document.documentElement.outerHTML;
 
-      // 핵심 수정 확인: handleSaveToDB 내에서 매핑 로직 존재 여부
+      // 핵심 수정 확인: toCamelCaseDoc 중앙 집중식 매핑 함수 존재
+      const hasToCamelCaseDoc = html.includes('const toCamelCaseDoc');
+      const hasToCamelCaseDocs = html.includes('const toCamelCaseDocs');
+
+      // toCamelCaseDoc 함수 내 매핑 로직 확인
       const hasAuthorIdMapping = html.includes('authorId: doc.author_id');
       const hasAuthorNameMapping = html.includes('author: doc.author_name');
       const hasEstimatedMinutesMapping = html.includes('estimatedMinutes: doc.estimated_minutes');
@@ -34,36 +39,52 @@ test.describe('Issue #34: Source Field Persistence - TDD Tests', () => {
       const hasSourceTypeCheck = html.includes("source_type === 'url'");
       const hasSourceUrlCheck = html.includes('source_url &&');
 
+      // source 필드 매핑 확인
+      const hasSourceTypeMapping = html.includes('sourceType: doc.source_type');
+      const hasSourceUrlMapping = html.includes('sourceUrl: doc.source_url');
+
       // safeOpenUrl XSS 방지 함수 확인
       const hasSafeOpenUrl = html.includes('safeOpenUrl');
       const hasProtocolCheck = html.includes("['http:', 'https:'].includes");
 
+      // dbGetAll에서 toCamelCaseDoc 호출 확인
+      const hasDbGetAllMapping = html.includes('toCamelCaseDoc(sanitizeDocData(doc))');
+
       return {
+        hasToCamelCaseDoc,
+        hasToCamelCaseDocs,
         hasAuthorIdMapping,
         hasAuthorNameMapping,
         hasEstimatedMinutesMapping,
         hasSourceTypeCheck,
         hasSourceUrlCheck,
+        hasSourceTypeMapping,
+        hasSourceUrlMapping,
         hasSafeOpenUrl,
         hasProtocolCheck,
-        // 매핑이 2번 이상 존재해야 함 (초기 로드 + 저장 후 새로고침)
-        mappingCount: (html.match(/authorId: doc\.author_id/g) || []).length
+        hasDbGetAllMapping
       };
     });
 
-    console.log('=== Code Analysis for Issue #34 Fix ===');
+    console.log('=== Code Analysis for Issue #34 Fix (v2.6.9) ===');
+    console.log('toCamelCaseDoc function:', codeAnalysis.hasToCamelCaseDoc);
+    console.log('toCamelCaseDocs helper:', codeAnalysis.hasToCamelCaseDocs);
     console.log('authorId mapping:', codeAnalysis.hasAuthorIdMapping);
     console.log('author mapping:', codeAnalysis.hasAuthorNameMapping);
     console.log('estimatedMinutes mapping:', codeAnalysis.hasEstimatedMinutesMapping);
+    console.log('sourceType mapping:', codeAnalysis.hasSourceTypeMapping);
+    console.log('sourceUrl mapping:', codeAnalysis.hasSourceUrlMapping);
     console.log('source_type check:', codeAnalysis.hasSourceTypeCheck);
     console.log('source_url check:', codeAnalysis.hasSourceUrlCheck);
     console.log('safeOpenUrl function:', codeAnalysis.hasSafeOpenUrl);
     console.log('Protocol validation:', codeAnalysis.hasProtocolCheck);
-    console.log('Mapping occurrences:', codeAnalysis.mappingCount);
+    console.log('dbGetAll uses toCamelCaseDoc:', codeAnalysis.hasDbGetAllMapping);
 
-    // 핵심 검증: 필드 매핑이 2회 이상 존재 (초기 로드 + 저장 후)
-    expect(codeAnalysis.mappingCount).toBeGreaterThanOrEqual(2);
+    // 핵심 검증: 중앙 집중식 매핑 함수 존재
+    expect(codeAnalysis.hasToCamelCaseDoc).toBe(true);
+    expect(codeAnalysis.hasDbGetAllMapping).toBe(true);
     expect(codeAnalysis.hasAuthorIdMapping).toBe(true);
+    expect(codeAnalysis.hasSourceTypeMapping).toBe(true);
     expect(codeAnalysis.hasSourceTypeCheck).toBe(true);
     expect(codeAnalysis.hasSafeOpenUrl).toBe(true);
   });
