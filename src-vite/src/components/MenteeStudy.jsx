@@ -336,6 +336,20 @@ export default function MenteeStudy() {
           <p className="text-sm text-gray-500">예상 학습 시간: {selectedDoc.estimated_minutes}분</p>
         )}
 
+        {/* 원문 보기 버튼 */}
+        {selectedDoc.source_url && (
+          <a
+            href={selectedDoc.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm"
+          >
+            <span>🔗</span>
+            <span>원문 보기</span>
+            <span className="text-xs text-blue-400">({selectedDoc.source_type === 'url' ? 'URL' : 'PDF'})</span>
+          </a>
+        )}
+
         {/* Section Progress */}
         <div className="mt-4">
           <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
