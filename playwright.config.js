@@ -13,8 +13,8 @@ module.exports = defineConfig({
     ['list']
   ],
   use: {
-    // baseURL: 'https://ggp-ojt-v2.vercel.app',  // Production
-    baseURL: 'http://localhost:51544',  // Local testing
+    baseURL: 'https://ggp-ojt-v2.vercel.app',  // Production
+    // baseURL: 'http://localhost:51544',  // Local testing
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'retain-on-failure',
