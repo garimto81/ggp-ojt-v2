@@ -126,7 +126,7 @@
     // =========================================
     // 설정 (Dexie.js - 로컬 캐시)
     // =========================================
-    const CACHE_VERSION = 2; // 캐시 스키마 버전 (변경 시 증가)
+    const CACHE_VERSION = 3; // 캐시 스키마 버전 (v3: source 필드 동기화)
     const CACHE_VERSION_KEY = 'ojt_cache_version';
 
     const localDb = new Dexie('OJTMasterCache');
