@@ -1335,7 +1335,40 @@ ${rawText}
 
       } catch (error) {
         console.error("AI Generation Error:", error);
-        throw error;
+
+        // Graceful Degradation: AI 실패 시 원문 기반 fallback
+        setProgress && setProgress("AI 분석 실패 - 원문으로 등록 중...");
+
+        // HTML 태그 검사
+        const isHtml = /<[a-z][\s\S]*>/i.test(rawText);
+        let formattedContent = rawText;
+
+        if (!isHtml) {
+          // 플레인 텍스트를 HTML 문단으로 변환
+          formattedContent = rawText
+            .split(/\n\n+/)
+            .filter(p => p.trim())
+            .map(p => `<p>${p.trim().replace(/\n/g, '<br>')}</p>`)
+            .join('\n');
+        }
+
+        // DOMPurify로 XSS 방어
+        const sanitizedContent = DOMPurify.sanitize(formattedContent, {
+          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'a', 'pre', 'code'],
+          ALLOWED_ATTR: ['href', 'target']
+        });
+
+        return {
+          title: "학습 자료",
+          estimatedMinutes: 15,
+          sections: [{
+            title: '원문 내용',
+            content: sanitizedContent
+          }],
+          quiz: [],
+          ai_processed: false,
+          ai_error: error.message
+        };
       }
     }
 
@@ -1430,7 +1463,17 @@ URL: ${sourceUrl}
 
       } catch (error) {
         console.error("URL Context AI Error:", error);
-        throw error;
+
+        // Graceful Degradation: AI 실패 시 fallback 반환
+        setProgress && setProgress("AI 분석 실패 - 원문으로 등록 중...");
+
+        return {
+          title: `${contentTypeLabel} 학습 자료`,
+          estimatedMinutes: 15,
+          quiz: [],
+          ai_processed: false,
+          ai_error: error.message
+        };
       }
     }
 
@@ -2081,7 +2124,13 @@ URL: ${sourceUrl}
             setGeneratedDocs([finalDoc]);
             setProcessingStatus("");
             setEditorTab('preview');
-            Toast.success("URL 분석 완료! 퀴즈가 생성되었습니다.");
+
+            // AI 처리 결과에 따른 메시지
+            if (aiResult.ai_processed === false) {
+              Toast.warning(`AI 분석 실패: ${aiResult.ai_error || '알 수 없는 오류'}. 퀴즈 없이 원문으로 등록됩니다.`);
+            } else {
+              Toast.success("URL 분석 완료! 퀴즈가 생성되었습니다.");
+            }
             return;
           }
 
@@ -2110,7 +2159,13 @@ URL: ${sourceUrl}
             setGeneratedDocs([finalDoc]);
             setProcessingStatus("");
             setEditorTab('preview');
-            Toast.success("PDF 분석 완료! 퀴즈가 생성되었습니다.");
+
+            // AI 처리 결과에 따른 메시지
+            if (aiResult.ai_processed === false) {
+              Toast.warning(`AI 분석 실패: ${aiResult.ai_error || '알 수 없는 오류'}. 퀴즈 없이 원문으로 등록됩니다.`);
+            } else {
+              Toast.success("PDF 분석 완료! 퀴즈가 생성되었습니다.");
+            }
             return;
           }
 
@@ -2188,6 +2243,14 @@ URL: ${sourceUrl}
             setGeneratedDoc(results[0]); // 첫 번째 문서를 미리보기에 표시
             setProcessingStatus("");
             setEditorTab('preview'); // 미리보기 탭으로 자동 전환
+
+            // AI 처리 실패 문서가 있는지 확인
+            const failedDocs = results.filter(r => r.ai_processed === false);
+            if (failedDocs.length > 0) {
+              Toast.warning(`AI 분석 실패 ${failedDocs.length}개. 퀴즈 없이 원문으로 등록됩니다.`);
+            } else {
+              Toast.success(`${results.length}개의 교육 자료가 생성되었습니다!`);
+            }
           } else {
             // 단일 스텝 생성
             setProcessingStatus("AI 생성 시작...");
@@ -2205,6 +2268,13 @@ URL: ${sourceUrl}
             setGeneratedDocs([finalDoc]);
             setProcessingStatus("");
             setEditorTab('preview'); // 미리보기 탭으로 자동 전환
+
+            // AI 처리 결과에 따른 메시지
+            if (aiResult.ai_processed === false) {
+              Toast.warning(`AI 분석 실패: ${aiResult.ai_error || '알 수 없는 오류'}. 퀴즈 없이 원문으로 등록됩니다.`);
+            } else {
+              Toast.success("교육 자료가 생성되었습니다!");
+            }
           }
         } catch (error) {
           Toast.error(`오류: ${error.message}`);
@@ -3857,6 +3927,11 @@ URL: ${sourceUrl}
                   <div>
                     <div className="flex items-center gap-2 mb-4">
                       <h1 className="text-xl font-bold">{generatedDoc.title}</h1>
+                      {generatedDoc.ai_processed === false && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full flex items-center gap-1">
+                          ⚠️ AI 미처리
+                        </span>
+                      )}
                       {generatedDoc.estimatedMinutes && (
                         <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full flex items-center gap-1">
                           <Icon name="clock" className="w-3 h-3" />
@@ -3864,6 +3939,23 @@ URL: ${sourceUrl}
                         </span>
                       )}
                     </div>
+                    {/* AI 미처리 알림 배너 */}
+                    {generatedDoc.ai_processed === false && (
+                      <div className="my-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <span className="text-amber-500 text-lg">⚠️</span>
+                          <div>
+                            <p className="text-sm font-medium text-amber-800">AI 분석 실패</p>
+                            <p className="text-xs text-amber-700 mt-1">
+                              {generatedDoc.ai_error || '알 수 없는 오류'}로 인해 퀴즈가 생성되지 않았습니다.
+                            </p>
+                            <p className="text-xs text-amber-600 mt-1">
+                              원문은 정상적으로 저장됩니다. 추후 AI 복구 시 재생성 가능합니다.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {generatedDoc.totalSteps > 1 && (
                       <p className="text-xs text-slate-500 mb-3">
                         📚 전체 {generatedDoc.totalSteps}개 스텝 중 {generatedDoc.stepIndex}번째
@@ -4183,6 +4275,24 @@ URL: ${sourceUrl}
                 </div>
               )}
 
+              {/* AI 미처리 문서 알림 */}
+              {selectedDoc.ai_processed === false && (
+                <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <span className="text-amber-500 text-xl">⚠️</span>
+                    <div>
+                      <p className="font-semibold text-amber-800">AI 미처리 문서</p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        이 문서는 AI 분석 없이 원문 그대로 등록되었습니다. 퀴즈가 제공되지 않습니다.
+                      </p>
+                      {selectedDoc.ai_error && (
+                        <p className="text-xs text-amber-600 mt-2">사유: {selectedDoc.ai_error}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* 기존 섹션 기반 콘텐츠 (manual 타입) */}
               {selectedDoc.sections?.length > 0 && selectedDoc.sections.map((s, i) => (
                 <div key={i} className="mb-6">
@@ -4191,9 +4301,18 @@ URL: ${sourceUrl}
                 </div>
               ))}
 
-              <button onClick={startQuizSession} className="w-full py-4 bg-indigo-600 text-white rounded-lg font-bold mt-8 hover:bg-indigo-700 transition-colors">
-                퀴즈 도전 ({selectedDoc.quiz?.length || 0}문제 중 4문제 출제)
-              </button>
+              {/* 퀴즈 버튼 - 퀴즈가 있을 때만 표시 */}
+              {selectedDoc.quiz && selectedDoc.quiz.length >= CONFIG.QUIZ_QUESTIONS_PER_TEST ? (
+                <button onClick={startQuizSession} className="w-full py-4 bg-indigo-600 text-white rounded-lg font-bold mt-8 hover:bg-indigo-700 transition-colors">
+                  퀴즈 도전 ({selectedDoc.quiz.length}문제 중 4문제 출제)
+                </button>
+              ) : (
+                <div className="w-full py-4 bg-slate-100 text-slate-500 rounded-lg font-bold mt-8 text-center">
+                  {selectedDoc.ai_processed === false
+                    ? '퀴즈 없음 (AI 미처리 문서)'
+                    : `퀴즈 부족 (${selectedDoc.quiz?.length || 0}문제 - 최소 ${CONFIG.QUIZ_QUESTIONS_PER_TEST}문제 필요)`}
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-white p-8 rounded-xl shadow border">
