@@ -1,10 +1,15 @@
-// OJT Master v2.3.0 - Mentor Dashboard Component
+// OJT Master v2.5.0 - Mentor Dashboard Component
 
 import { useState } from 'react';
 import { useDocs } from '../contexts/DocsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../contexts/ToastContext';
-import { generateOJTContent, validateQuizQuality, regenerateQuizQuestions } from '../utils/api';
+import {
+  generateOJTContent,
+  validateQuizQuality,
+  regenerateQuizQuestions,
+  extractUrlText,
+} from '../utils/api';
 import {
   estimateReadingTime,
   calculateRequiredSteps,
@@ -46,13 +51,13 @@ export default function MentorDashboard({ aiStatus }) {
 
   // Handle content generation
   const handleGenerate = async () => {
-    if (!rawInput.trim()) {
+    // Validate input based on type
+    if (inputType === 'text' && !rawInput.trim()) {
       Toast.warning('텍스트를 입력해주세요.');
       return;
     }
-
-    if (!aiStatus.online) {
-      Toast.error('Gemini AI 서비스에 연결할 수 없습니다.');
+    if (inputType === 'url' && !urlInput.trim()) {
+      Toast.warning('URL을 입력해주세요.');
       return;
     }
 
@@ -60,8 +65,26 @@ export default function MentorDashboard({ aiStatus }) {
     setProcessingStatus('콘텐츠 분석 중...');
 
     try {
+      let contentText = rawInput;
+
+      // Handle URL input - extract text first
+      if (inputType === 'url') {
+        setProcessingStatus('URL에서 텍스트 추출 중...');
+        const extracted = await extractUrlText(urlInput, setProcessingStatus);
+        contentText = extracted.text;
+        setRawInput(contentText); // Store for potential quiz regeneration
+        if (extracted.wasTruncated) {
+          Toast.warning(`텍스트가 ${extracted.originalLength}자에서 ${extracted.extractedLength}자로 잘렸습니다.`);
+        }
+      }
+
+      // Warn if AI is offline but proceed anyway (graceful degradation)
+      if (!aiStatus.online) {
+        Toast.warning('AI 서비스 오프라인 - 원문으로 등록됩니다.');
+      }
+
       const numSteps = autoSplit ? requiredSteps : 1;
-      const segments = splitContentForSteps(rawInput, numSteps);
+      const segments = splitContentForSteps(contentText, numSteps);
       const docs = [];
 
       // Generate content for each step (in parallel if multiple)
@@ -75,7 +98,7 @@ export default function MentorDashboard({ aiStatus }) {
         docs.push(...results.map((r, i) => ({ ...r, step: i + 1 })));
       } else {
         const result = await generateOJTContent(
-          rawInput,
+          contentText,
           inputTitle || '새 OJT 문서',
           1,
           1,
@@ -85,7 +108,14 @@ export default function MentorDashboard({ aiStatus }) {
       }
 
       setGeneratedDocs(docs);
-      Toast.success(`${docs.length}개 문서가 생성되었습니다.`);
+
+      // Check if any doc was created with fallback (AI failed)
+      const fallbackDocs = docs.filter((d) => d.ai_processed === false);
+      if (fallbackDocs.length > 0) {
+        Toast.warning(`${fallbackDocs.length}개 문서가 AI 분석 없이 원문으로 생성되었습니다.`);
+      } else {
+        Toast.success(`${docs.length}개 문서가 생성되었습니다.`);
+      }
     } catch (error) {
       Toast.error(`오류: ${error.message}`);
     } finally {
@@ -289,11 +319,20 @@ export default function MentorDashboard({ aiStatus }) {
           {/* Generate Button */}
           <button
             onClick={handleGenerate}
-            disabled={isProcessing || !aiStatus.online}
+            disabled={isProcessing}
             className="w-full mt-4 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
           >
-            {isProcessing ? processingStatus : 'AI로 교육 자료 생성'}
+            {isProcessing
+              ? processingStatus
+              : aiStatus.online
+                ? 'AI로 교육 자료 생성'
+                : '원문으로 등록 (AI 오프라인)'}
           </button>
+          {!aiStatus.online && (
+            <p className="text-xs text-amber-600 mt-2 text-center">
+              ⚠️ AI 서비스 오프라인 - 원문 그대로 등록됩니다
+            </p>
+          )}
         </div>
 
         {/* Generated Content Preview */}
@@ -311,15 +350,31 @@ export default function MentorDashboard({ aiStatus }) {
             <div className="space-y-4">
               {generatedDocs.map((doc, i) => {
                 const validation = validateQuizQuality(doc.quiz);
+                const isAIFailed = doc.ai_processed === false;
                 return (
-                  <div key={i} className="p-4 border rounded-lg">
-                    <h4 className="font-medium">{doc.title}</h4>
-                    <p className="text-sm text-gray-500">
+                  <div
+                    key={i}
+                    className={`p-4 border rounded-lg ${isAIFailed ? 'border-amber-300 bg-amber-50' : ''}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <h4 className="font-medium">{doc.title}</h4>
+                      {isAIFailed && (
+                        <span className="text-xs text-amber-700 bg-amber-200 px-2 py-1 rounded font-medium">
+                          AI 미처리
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">
                       {doc.sections?.length || 0}개 섹션, {doc.quiz?.length || 0}개 퀴즈
                     </p>
+                    {isAIFailed && doc.ai_error && (
+                      <p className="text-xs text-amber-600 mt-1">오류: {doc.ai_error}</p>
+                    )}
                     {/* Quiz quality indicator */}
                     <div className="mt-2 flex items-center gap-2">
-                      {validation.valid ? (
+                      {isAIFailed ? (
+                        <span className="text-xs text-gray-500">퀴즈 없음 (원문 모드)</span>
+                      ) : validation.valid ? (
                         <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
                           퀴즈 검증 통과
                         </span>
@@ -328,12 +383,14 @@ export default function MentorDashboard({ aiStatus }) {
                           {validation.stats.placeholders}개 더미 문제
                         </span>
                       )}
-                      <button
-                        onClick={() => handleQuizPreview(doc, i)}
-                        className="text-xs text-blue-500 hover:text-blue-700"
-                      >
-                        퀴즈 확인
-                      </button>
+                      {!isAIFailed && (
+                        <button
+                          onClick={() => handleQuizPreview(doc, i)}
+                          className="text-xs text-blue-500 hover:text-blue-700"
+                        >
+                          퀴즈 확인
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

@@ -1,6 +1,7 @@
-// OJT Master v2.3.0 - API Utilities (Supabase, Gemini)
+// OJT Master v2.5.0 - API Utilities (Supabase, Gemini)
 
 import { createClient } from '@supabase/supabase-js';
+import DOMPurify from 'dompurify';
 import { SUPABASE_CONFIG, GEMINI_CONFIG, CONFIG, CORS_PROXIES } from '../constants';
 
 // Initialize Supabase client
@@ -130,9 +131,51 @@ ${contentText.substring(0, 12000)}`;
     // Validate and fill quiz if needed
     return validateAndFillResult(result, title);
   } catch (error) {
-    console.error('OJT content generation failed:', error);
-    throw error;
+    console.warn('AI 분석 실패, 원문 모드로 전환:', error.message);
+
+    // Graceful Degradation: 원문 그대로 반환
+    if (onProgress) onProgress('AI 분석 실패 - 원문으로 등록 중...');
+
+    return createFallbackContent(contentText, title, error.message);
   }
+}
+
+/**
+ * Create fallback content when AI generation fails
+ * @param {string} contentText - Raw content text
+ * @param {string} title - Document title
+ * @param {string} errorMessage - Error message from AI
+ * @returns {Object} - Fallback OJT content
+ */
+function createFallbackContent(contentText, title, errorMessage) {
+  // Sanitize HTML to prevent XSS
+  const sanitizedContent = DOMPurify.sanitize(contentText, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'a', 'pre', 'code'],
+    ALLOWED_ATTR: ['href', 'target'],
+  });
+
+  // Convert plain text to HTML paragraphs if no HTML tags detected
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(contentText);
+  const formattedContent = hasHtmlTags
+    ? sanitizedContent
+    : `<div class="raw-content">${sanitizedContent
+        .split('\n\n')
+        .map((p) => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+        .join('')}</div>`;
+
+  return {
+    title: title || '제목 없음',
+    team: '미분류',
+    sections: [
+      {
+        title: '원문 내용',
+        content: formattedContent,
+      },
+    ],
+    quiz: [],
+    ai_processed: false,
+    ai_error: errorMessage,
+  };
 }
 
 /**
@@ -386,8 +429,9 @@ ${contentText.substring(0, 8000)}`;
 
     return updatedQuiz;
   } catch (error) {
-    console.error('Quiz regeneration failed:', error);
-    throw error;
+    console.warn('퀴즈 재생성 실패:', error.message);
+    // Graceful Degradation: 기존 퀴즈 그대로 반환
+    return existingQuiz;
   }
 }
 
