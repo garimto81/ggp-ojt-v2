@@ -3492,17 +3492,10 @@ URL: ${sourceUrl}
                     <button
                       onClick={() => {
                         setShowDocModal(false);
-                        // Mentor 모드로 전환 후 편집
+                        // Mentor 모드로 전환 후 편집 (snake_case 유지)
                         SecureSession.set('ojt_sessionMode', 'mentor');
                         setSessionMode('mentor');
-                        const mappedDoc = {
-                          ...selectedDoc,
-                          authorId: selectedDoc.author_id,
-                          author: selectedDoc.author_name,
-                          estimatedMinutes: selectedDoc.estimated_minutes,
-                          createdAt: new Date(selectedDoc.created_at).getTime()
-                        };
-                        handleEditDoc(mappedDoc);
+                        handleEditDoc(selectedDoc);
                         setViewState('mentor_dashboard');
                       }}
                       className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
@@ -4103,8 +4096,8 @@ URL: ${sourceUrl}
                         }`}
                       >
                         Step {doc.step}
-                        {doc.estimatedMinutes && (
-                          <span className="ml-1 opacity-70">({doc.estimatedMinutes}분)</span>
+                        {doc.estimated_minutes && (
+                          <span className="ml-1 opacity-70">({doc.estimated_minutes}분)</span>
                         )}
                       </button>
                     ))}
@@ -4122,10 +4115,10 @@ URL: ${sourceUrl}
                           ⚠️ AI 미처리
                         </span>
                       )}
-                      {generatedDoc.estimatedMinutes && (
+                      {generatedDoc.estimated_minutes && (
                         <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full flex items-center gap-1">
                           <Icon name="clock" className="w-3 h-3" />
-                          약 {generatedDoc.estimatedMinutes}분
+                          약 {generatedDoc.estimated_minutes}분
                         </span>
                       )}
                     </div>
@@ -4401,7 +4394,7 @@ URL: ${sourceUrl}
                 <div>
                   <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Step {doc.step}</span>
                   <h3 className="font-bold text-lg mt-2">{doc.title}</h3>
-                  <p className="text-xs text-slate-400 mt-1">작성자: {doc.author}</p>
+                  <p className="text-xs text-slate-400 mt-1">작성자: {doc.author_name}</p>
                 </div>
                 <button onClick={() => handleSelectDoc(doc)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition-colors">학습하기</button>
               </div>
