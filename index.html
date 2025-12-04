@@ -717,9 +717,11 @@
         console.error("Local cache read error:", e);
       }
 
-      // 2. 온라인이면 백그라운드에서 Supabase 동기화
+      // 2. 캐시가 비어있고 온라인이면 Supabase에서 먼저 동기화 (동기적 대기)
+      const cacheEmpty = cached.length === 0;
+
       if (isOnline()) {
-        (async () => {
+        const syncToCache = async () => {
           try {
             let query = supabase.from(storeName).select("*");
 
@@ -761,11 +763,26 @@
 
               // 원격 데이터로 캐시 업데이트
               await localDb[storeName].bulkPut(data);
+              return data;
             }
+            return null;
           } catch (e) {
-            console.error("Background sync error:", e);
+            console.error("Sync error:", e);
+            return null;
           }
-        })();
+        };
+
+        if (cacheEmpty) {
+          // 캐시가 비어있으면 동기적으로 Supabase에서 가져오기
+          console.log(`[dbGetAll] Cache empty for ${storeName}, fetching from Supabase...`);
+          const remoteData = await syncToCache();
+          if (remoteData) {
+            cached = remoteData;
+          }
+        } else {
+          // 캐시가 있으면 백그라운드에서 동기화
+          syncToCache();
+        }
       }
 
       // ojt_docs인 경우 XSS 방어를 위해 sanitize 적용
