@@ -29,6 +29,9 @@ export default function MentorDashboard({ aiStatus }) {
   const [inputTitle, setInputTitle] = useState('');
   const [autoSplit, setAutoSplit] = useState(true);
 
+  // Source tracking for URL/PDF
+  const [sourceInfo, setSourceInfo] = useState({ type: 'manual', url: null, file: null });
+
   // Processing states
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
@@ -66,6 +69,14 @@ export default function MentorDashboard({ aiStatus }) {
 
     try {
       let contentText = rawInput;
+
+      // Set source info based on input type
+      if (inputType === 'text') {
+        setSourceInfo({ type: 'manual', url: null, file: null });
+      } else if (inputType === 'url') {
+        setSourceInfo({ type: 'url', url: urlInput.trim(), file: null });
+      }
+      // PDF source info is set in handlePdfUpload
 
       // Handle URL input - extract text first
       if (inputType === 'url') {
@@ -132,13 +143,19 @@ export default function MentorDashboard({ aiStatus }) {
           ...doc,
           author_id: user.id,
           author_name: user.name,
+          // Source tracking fields
+          source_type: sourceInfo.type,
+          source_url: sourceInfo.url,
+          source_file: sourceInfo.file,
         });
       }
 
       Toast.success(`${generatedDocs.length}개 문서가 저장되었습니다.`);
       setGeneratedDocs([]);
       setRawInput('');
+      setUrlInput('');
       setInputTitle('');
+      setSourceInfo({ type: 'manual', url: null, file: null });
       await loadMyDocs();
     } catch (error) {
       Toast.error('저장 중 오류가 발생했습니다.');
