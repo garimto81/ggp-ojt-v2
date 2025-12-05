@@ -48,10 +48,8 @@ export async function initWebLLM(modelId = WEBLLM_CONFIG.DEFAULT_MODEL, onProgre
     const progressCallback = (report) => {
       loadingProgress = Math.round(report.progress * 100);
       if (onProgress) {
-        onProgress({
-          progress: loadingProgress,
-          text: report.text || `모델 로딩 중... ${loadingProgress}%`,
-        });
+        // 문자열로 전달 (React 렌더링 호환)
+        onProgress(report.text || `모델 로딩 중... ${loadingProgress}%`);
       }
     };
 
@@ -97,7 +95,7 @@ export async function generateWithWebLLM(contentText, title, onProgress = null) 
     throw new Error('WebLLM이 초기화되지 않았습니다. 먼저 initWebLLM()을 호출하세요.');
   }
 
-  if (onProgress) onProgress({ text: 'AI 분석 중 (WebLLM)...' });
+  if (onProgress) onProgress('AI 분석 중 (WebLLM)...');
 
   const prompt = `당신은 기업 교육 설계 전문가입니다.
 다음 텍스트로 신입사원 OJT 교육 자료를 JSON 형식으로 생성하세요.

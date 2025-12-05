@@ -100,19 +100,11 @@ describe('validateQuizQuality', () => {
   });
 });
 
-describe('generateOJTContent - Graceful Degradation', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
-  });
+describe('generateOJTContent - Graceful Degradation (WebLLM Only)', () => {
+  // WebLLM 전용: fetch mock 대신 WebLLM 미로드 상태에서 fallback 동작 테스트
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('returns fallback content when AI request fails', async () => {
-    // Mock fetch to simulate API error
-    global.fetch.mockRejectedValueOnce(new Error('API 결제 정지'));
-
+  it('returns fallback content when WebLLM is not loaded', async () => {
+    // WebLLM이 로드되지 않은 상태에서 테스트
     const result = await generateOJTContent(
       '테스트 콘텐츠 내용입니다. 이것은 원문 텍스트입니다.',
       '테스트 문서'
@@ -120,7 +112,7 @@ describe('generateOJTContent - Graceful Degradation', () => {
 
     // Should return fallback structure
     expect(result.ai_processed).toBe(false);
-    expect(result.ai_error).toBe('API 결제 정지');
+    expect(result.ai_error).toContain('WebLLM');
     expect(result.title).toBe('테스트 문서');
     expect(result.team).toBe('미분류');
     expect(result.sections).toHaveLength(1);
@@ -128,36 +120,7 @@ describe('generateOJTContent - Graceful Degradation', () => {
     expect(result.quiz).toEqual([]);
   });
 
-  it('returns fallback content when AI response is not ok', async () => {
-    // Mock fetch to simulate 402 Payment Required
-    global.fetch.mockResolvedValueOnce({
-      ok: false,
-      status: 402,
-    });
-
-    const result = await generateOJTContent('콘텐츠', '테스트');
-
-    expect(result.ai_processed).toBe(false);
-    expect(result.ai_error).toContain('402');
-    expect(result.quiz).toEqual([]);
-  });
-
-  it('returns fallback content when AI response is empty', async () => {
-    // Mock fetch to simulate empty response
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ candidates: [] }),
-    });
-
-    const result = await generateOJTContent('콘텐츠', '테스트');
-
-    expect(result.ai_processed).toBe(false);
-    expect(result.quiz).toEqual([]);
-  });
-
   it('sanitizes HTML content in fallback mode', async () => {
-    global.fetch.mockRejectedValueOnce(new Error('API error'));
-
     const maliciousContent = '<script>alert("xss")</script><p>정상 콘텐츠</p>';
     const result = await generateOJTContent(maliciousContent, '테스트');
 
@@ -167,8 +130,6 @@ describe('generateOJTContent - Graceful Degradation', () => {
   });
 
   it('converts plain text to HTML paragraphs in fallback mode', async () => {
-    global.fetch.mockRejectedValueOnce(new Error('API error'));
-
     const plainText = '첫 번째 문단\n\n두 번째 문단';
     const result = await generateOJTContent(plainText, '테스트');
 
@@ -178,55 +139,47 @@ describe('generateOJTContent - Graceful Degradation', () => {
   });
 
   it('uses default title when not provided', async () => {
-    global.fetch.mockRejectedValueOnce(new Error('API error'));
-
     const result = await generateOJTContent('콘텐츠', '');
 
     expect(result.title).toBe('제목 없음');
   });
 
-  it('calls onProgress callback with fallback message', async () => {
-    global.fetch.mockRejectedValueOnce(new Error('API error'));
-
+  it('calls onProgress callback with fallback message when WebLLM fails', async () => {
     const onProgress = vi.fn();
     await generateOJTContent('콘텐츠', '테스트', 1, 1, onProgress);
 
-    expect(onProgress).toHaveBeenCalledWith('AI 분석 중...');
+    // WebLLM 미로드 상태에서는 fallback 메시지만 호출
     expect(onProgress).toHaveBeenCalledWith('AI 분석 실패 - 원문으로 등록 중...');
   });
 });
 
-describe('checkAIStatus', () => {
-  beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn());
-  });
+describe('checkAIStatus (WebLLM Only)', () => {
+  // WebLLM 전용: WebGPU 지원 및 WebLLM 상태 확인
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('returns online: false when API fails', async () => {
-    global.fetch.mockRejectedValueOnce(new Error('Network error'));
-
+  it('returns WebLLM status structure', async () => {
     const result = await checkAIStatus();
 
-    expect(result.online).toBe(false);
-    expect(result.model).toBeDefined();
+    // 필수 필드 존재 확인
+    expect(result).toHaveProperty('online');
+    expect(result).toHaveProperty('model');
+    expect(result).toHaveProperty('loaded');
+    expect(result).toHaveProperty('loading');
+    expect(result).toHaveProperty('progress');
+    expect(result).toHaveProperty('webgpuSupported');
   });
 
-  it('returns online: false when response is not ok', async () => {
-    global.fetch.mockResolvedValueOnce({ ok: false });
-
+  it('returns online based on WebGPU support', async () => {
     const result = await checkAIStatus();
 
+    // jsdom 환경에서 WebGPU는 지원되지 않음
+    expect(result.webgpuSupported).toBe(false);
     expect(result.online).toBe(false);
   });
 
-  it('returns online: true when API responds ok', async () => {
-    global.fetch.mockResolvedValueOnce({ ok: true });
-
+  it('returns loaded: false when WebLLM is not initialized', async () => {
     const result = await checkAIStatus();
 
-    expect(result.online).toBe(true);
+    expect(result.loaded).toBe(false);
+    expect(result.loading).toBe(false);
   });
 });

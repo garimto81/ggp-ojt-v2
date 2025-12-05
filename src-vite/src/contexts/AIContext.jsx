@@ -56,10 +56,13 @@ export function AIProvider({ children }) {
       }));
 
       try {
-        await initWebLLM(modelId, (report) => {
+        await initWebLLM(modelId, (progressText) => {
+          // 문자열에서 progress 추출 (예: "모델 로딩 중... 50%")
+          const match = progressText.match(/(\d+)%/);
+          const progress = match ? parseInt(match[1], 10) : 0;
           setWebllmStatus((prev) => ({
             ...prev,
-            progress: report.progress,
+            progress,
           }));
         });
 
