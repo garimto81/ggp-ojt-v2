@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useDocs } from '../contexts/DocsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useAI } from '../contexts/AIContext';
 import { Toast } from '../contexts/ToastContext';
 import UrlPreviewPanel from './UrlPreviewPanel';
 import PdfUploader from './PdfUploader';
 import DocumentEditModal from './DocumentEditModal';
+import AIEngineSelector from './AIEngineSelector';
 import {
   generateOJTContent,
   validateQuizQuality,
@@ -24,6 +26,7 @@ import {
 export default function MentorDashboard({ aiStatus }) {
   const { myDocs, saveDocument, deleteDocument, loadMyDocs } = useDocs();
   const { user } = useAuth();
+  const { engine } = useAI();
 
   // Input states
   const [inputType, setInputType] = useState('text');
@@ -300,7 +303,15 @@ export default function MentorDashboard({ aiStatus }) {
       {/* Left: Input Panel */}
       <div className="col-span-2 space-y-4">
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">콘텐츠 입력</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-800">콘텐츠 입력</h2>
+            <AIEngineSelector compact />
+          </div>
+
+          {/* AI Engine Settings */}
+          <div className="mb-4">
+            <AIEngineSelector />
+          </div>
 
           {/* Input Type Selector */}
           <div className="flex gap-2 mb-4">
@@ -404,17 +415,21 @@ export default function MentorDashboard({ aiStatus }) {
           <button
             onClick={handleGenerate}
             disabled={isProcessing}
-            className="w-full mt-4 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+            className={`w-full mt-4 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition ${
+              engine === 'webllm' ? 'bg-purple-500 hover:bg-purple-600' : 'bg-blue-500 hover:bg-blue-600'
+            }`}
           >
             {isProcessing
               ? processingStatus
-              : aiStatus.online
-                ? 'AI로 교육 자료 생성'
-                : '원문으로 등록 (AI 오프라인)'}
+              : engine === 'webllm'
+                ? 'WebLLM으로 교육 자료 생성 (로컬)'
+                : aiStatus.online
+                  ? 'Gemini로 교육 자료 생성'
+                  : '원문으로 등록 (AI 오프라인)'}
           </button>
-          {!aiStatus.online && (
+          {engine === 'gemini' && !aiStatus.online && (
             <p className="text-xs text-amber-600 mt-2 text-center">
-              ⚠️ AI 서비스 오프라인 - 원문 그대로 등록됩니다
+              ⚠️ Gemini 오프라인 - WebLLM으로 전환하거나 원문으로 등록됩니다
             </p>
           )}
         </div>
