@@ -278,6 +278,94 @@ export default {
       }, { headers: corsHeaders });
     }
 
+    // CORS Proxy for URL extraction (FR-801)
+    if (request.method === 'GET' && url.pathname === '/proxy') {
+      try {
+        const targetUrl = url.searchParams.get('url');
+
+        if (!targetUrl) {
+          return Response.json(
+            { error: 'url 파라미터가 필요합니다' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Validate URL
+        let parsedUrl;
+        try {
+          parsedUrl = new URL(targetUrl);
+        } catch {
+          return Response.json(
+            { error: '유효하지 않은 URL입니다' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Security: Block internal IPs and localhost
+        const hostname = parsedUrl.hostname.toLowerCase();
+        const blockedPatterns = [
+          'localhost', '127.', '10.', '172.16.', '172.17.', '172.18.',
+          '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.',
+          '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.',
+          '172.31.', '192.168.', '169.254.', '0.0.0.0', 'metadata.google'
+        ];
+
+        if (blockedPatterns.some(p => hostname === p || hostname.startsWith(p))) {
+          return Response.json(
+            { error: '허용되지 않는 URL입니다 (내부 네트워크)' },
+            { status: 403, headers: corsHeaders }
+          );
+        }
+
+        // Only allow http/https
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          return Response.json(
+            { error: '허용되지 않는 프로토콜입니다 (http/https만 허용)' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
+        // Fetch the target URL
+        const proxyResponse = await fetch(targetUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; OJT-Master/2.0; +https://ggp-ojt-v2.vercel.app)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8',
+          },
+          cf: {
+            cacheTtl: 300, // Cache for 5 minutes
+            cacheEverything: true,
+          },
+        });
+
+        if (!proxyResponse.ok) {
+          return Response.json(
+            { error: `대상 URL 응답 오류: ${proxyResponse.status}` },
+            { status: proxyResponse.status, headers: corsHeaders }
+          );
+        }
+
+        const contentType = proxyResponse.headers.get('Content-Type') || 'text/html';
+        const body = await proxyResponse.text();
+
+        return new Response(body, {
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
+            'Content-Type': contentType,
+            'X-Proxy-Cache': proxyResponse.headers.get('CF-Cache-Status') || 'MISS',
+          }
+        });
+
+      } catch (error) {
+        console.error('Proxy error:', error);
+        return Response.json(
+          { error: `프록시 오류: ${error.message}` },
+          { status: 500, headers: corsHeaders }
+        );
+      }
+    }
+
     return Response.json(
       { error: 'Method not allowed' },
       { status: 405, headers: corsHeaders }

@@ -49,8 +49,32 @@ export const R2_CONFIG = {
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
 };
 
-// CORS Proxies for URL extraction
+// CORS Proxies for URL extraction (fallback only)
 export const CORS_PROXIES = ['https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?'];
+
+// CORS Proxy configuration (FR-801)
+export const CORS_CONFIG = {
+  // 자체 R2 Worker 프록시 사용 (constants.js의 R2_CONFIG.WORKER_URL + /proxy)
+  USE_SELF_PROXY: true,
+  // 타임아웃 (ms)
+  TIMEOUT: 10000,
+  // 캐시 TTL (초)
+  CACHE_TTL: 300,
+};
+
+// PDF Viewer configuration (FR-802)
+export const PDF_CONFIG = {
+  // react-pdf worker
+  WORKER_SRC: 'https://unpkg.com/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs',
+  // 최대 페이지 수 (메모리 제한)
+  MAX_PAGES: 100,
+  // 기본 확대 배율
+  DEFAULT_SCALE: 1.0,
+  // 확대/축소 단계
+  SCALE_STEP: 0.25,
+  MIN_SCALE: 0.5,
+  MAX_SCALE: 3.0,
+};
 
 // Role definitions
 export const ROLES = {

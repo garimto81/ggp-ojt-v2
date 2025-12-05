@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.6.1)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.6.8)
 
 ## Tech Stack
 
@@ -33,6 +33,7 @@ npm run format                  # Prettier 포맷팅
 npm run test                    # Watch 모드
 npm run test:run                # 1회 실행
 npm run test:coverage           # 커버리지 리포트
+npm run format:check            # 포맷 검사 (수정 없이)
 npx vitest run src/utils/api.test.js              # 단일 파일
 npx vitest run -t "checkAIStatus"                 # 특정 테스트명 매칭
 
@@ -40,9 +41,12 @@ npx vitest run -t "checkAIStatus"                 # 특정 테스트명 매칭
 npx serve . -p 3000             # 로컬 개발 서버
 
 # === E2E 테스트 (Playwright) - 루트에서 실행 ===
+# 기본 baseURL: https://ggp-ojt-v2.vercel.app (프로덕션)
+# 로컬 테스트: playwright.config.js에서 baseURL 주석 전환
 npm test                        # 전체 테스트
 npm run test:headed             # 브라우저 화면 표시
 npm run test:ui                 # Playwright UI 모드
+npm run test:report             # HTML 리포트 열기
 npx playwright test tests/e2e-homepage.spec.js   # 단일 파일
 npx playwright test -g "로그인"                   # 테스트명 매칭
 
@@ -81,6 +85,8 @@ ggp_ojt_v2/
 │   ├── migrations/         # 스키마 생성/변경 SQL
 │   └── fixes/              # RLS/성능 수정 SQL
 ├── tests/                  # Playwright E2E 테스트
+│   ├── e2e-*.spec.js       # E2E 테스트 파일
+│   └── performance.spec.js # 성능 테스트
 └── docs/                   # 가이드 문서
 ```
 
@@ -222,7 +228,7 @@ localDb.version(2).stores({
 
 1. **버전 업데이트**: `index.html`, `package.json`, `src-vite/package.json`, `CLAUDE.md` 동시 수정
 2. **커밋 해시 업데이트**: `index.html` 로그인 페이지에 버전 + 커밋 해시 표시
-   - 위치: `<p className="text-xs text-slate-400 mt-1">v2.6.1 (ae610f7) | ...`
+   - 위치: `<p className="text-xs text-slate-400 mt-1">v2.6.8 (<hash>) | ...`
 3. **버전 규칙**: MAJOR.MINOR.PATCH (버그=PATCH, 기능=MINOR, 큰변경=MAJOR)
 
 ```bash

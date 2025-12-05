@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import DOMPurify from 'dompurify';
-import { SUPABASE_CONFIG, GEMINI_CONFIG, CONFIG, CORS_PROXIES } from '../constants';
+import { SUPABASE_CONFIG, GEMINI_CONFIG, CONFIG } from '../constants';
 
 // Initialize Supabase client
 export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY);
@@ -150,7 +150,22 @@ ${contentText.substring(0, 12000)}`;
 function createFallbackContent(contentText, title, errorMessage) {
   // Sanitize HTML to prevent XSS
   const sanitizedContent = DOMPurify.sanitize(contentText, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'a', 'pre', 'code'],
+    ALLOWED_TAGS: [
+      'p',
+      'br',
+      'strong',
+      'em',
+      'ul',
+      'ol',
+      'li',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'a',
+      'pre',
+      'code',
+    ],
     ALLOWED_ATTR: ['href', 'target'],
   });
 
@@ -436,10 +451,11 @@ ${contentText.substring(0, 8000)}`;
 }
 
 /**
- * Extract text from URL using CORS proxy
+ * Extract text from URL using CORS proxy (FR-801)
+ * 우선순위: 자체 R2 Worker > allorigins > corsproxy
  * @param {string} url - URL to extract text from
  * @param {Function} onProgress - Progress callback
- * @returns {Promise<{text: string, wasTruncated: boolean, originalLength: number, extractedLength: number}>}
+ * @returns {Promise<{text: string, wasTruncated: boolean, originalLength: number, extractedLength: number, metadata: Object}>}
  */
 export async function extractUrlText(url, onProgress) {
   // SSRF validation
@@ -449,42 +465,26 @@ export async function extractUrlText(url, onProgress) {
 
   if (onProgress) onProgress('URL에서 텍스트 추출 중...');
 
-  let lastError = null;
+  // 동적 import로 순환 참조 방지
+  const { fetchWithCorsProxy, extractTextContent, extractMetadata } =
+    await import('./cors-proxy.js');
 
-  for (const proxy of CORS_PROXIES) {
-    try {
-      const response = await fetch(proxy + encodeURIComponent(url));
-      if (!response.ok) continue;
+  try {
+    const html = await fetchWithCorsProxy(url);
 
-      const html = await response.text();
+    // 메타데이터 추출
+    const metadata = extractMetadata(html);
 
-      // Extract text from HTML
-      const doc = new DOMParser().parseFromString(html, 'text/html');
+    // 본문 텍스트 추출
+    const result = extractTextContent(html, CONFIG.MAX_URL_EXTRACT_CHARS);
 
-      // Remove scripts, styles, etc.
-      doc
-        .querySelectorAll('script, style, nav, footer, header, aside')
-        .forEach((el) => el.remove());
-
-      const text = doc.body?.textContent?.trim() || '';
-      const originalLength = text.length;
-
-      // Truncate if too long
-      const truncatedText = text.substring(0, CONFIG.MAX_URL_EXTRACT_CHARS);
-
-      return {
-        text: truncatedText,
-        wasTruncated: originalLength > CONFIG.MAX_URL_EXTRACT_CHARS,
-        originalLength,
-        extractedLength: truncatedText.length,
-      };
-    } catch (error) {
-      lastError = error;
-      continue;
-    }
+    return {
+      ...result,
+      metadata,
+    };
+  } catch (error) {
+    throw new Error(`URL 텍스트 추출 실패: ${error.message}`);
   }
-
-  throw lastError || new Error('URL 텍스트 추출 실패');
 }
 
 /**
