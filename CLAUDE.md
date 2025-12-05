@@ -252,6 +252,21 @@ Vercel Dashboard → Settings → Environment Variables:
 git log -1 --format='%h'
 ```
 
+## Known Issues & Roadmap
+
+### AdminDashboard PRD 갭 (#54)
+
+PRD 요구사항 중 미구현 기능:
+
+| 기능 | 상태 | 비고 |
+|------|------|------|
+| 멘티 진도율 | 미구현 | learning_progress 테이블 활용 필요 |
+| 취약 파트 분석 | 미구현 | 퀴즈 오답 섹션별 집계 |
+| 멘토 기여도 | 미구현 | author_id 기준 문서 수 |
+| 진척도 그래프 | 미구현 | Chart.js 통합 예정 |
+
+현재 통계 탭: 플레이스홀더 상태 (AdminDashboard.jsx:339-343)
+
 ## 작업 시 주의사항
 
 1. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수
