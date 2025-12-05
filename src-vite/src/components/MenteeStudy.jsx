@@ -1,20 +1,25 @@
-// OJT Master v2.5.0 - Mentee Study Component
+// OJT Master v2.7.0 - Mentee Study Component
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { useDocs } from '../contexts/DocsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../contexts/ToastContext';
 import { supabase } from '../utils/api';
 import { sanitizeHtml, shuffleArray } from '../utils/helpers';
 import { CONFIG, VIEW_STATES } from '../constants';
+import SplitViewLayout, { useResponsive } from './SplitViewLayout';
+import { ResponsiveViewLayout } from './TabLayout';
+import OriginalContentViewer from './OriginalContentViewer';
 
 export default function MenteeStudy() {
   const { selectedDoc, setSelectedDoc } = useDocs();
   const { user, setViewState } = useAuth();
+  const { isMobile } = useResponsive();
 
   // Study state
   const [currentSection, setCurrentSection] = useState(0);
   const [studyCompleted, setStudyCompleted] = useState(false);
+  const [showSplitView, setShowSplitView] = useState(true);
 
   // Quiz state
   const [quizMode, setQuizMode] = useState(false);
@@ -336,18 +341,29 @@ export default function MenteeStudy() {
           <p className="text-sm text-gray-500">예상 학습 시간: {selectedDoc.estimated_minutes}분</p>
         )}
 
-        {/* 원문 보기 버튼 */}
-        {selectedDoc.source_url && (
-          <a
-            href={selectedDoc.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm"
-          >
-            <span>🔗</span>
-            <span>원문 보기</span>
-            <span className="text-xs text-blue-400">({selectedDoc.source_type === 'url' ? 'URL' : 'PDF'})</span>
-          </a>
+        {/* 원문 보기 버튼 / Split View 토글 */}
+        {(selectedDoc.source_url || selectedDoc.source_file) && (
+          <div className="flex items-center gap-3 mt-3">
+            <button
+              onClick={() => setShowSplitView(!showSplitView)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition text-sm ${
+                showSplitView
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+              }`}
+            >
+              <span>{selectedDoc.source_type === 'url' ? '🔗' : '📄'}</span>
+              <span>{showSplitView ? '원문 숨기기' : '원문 보기'}</span>
+            </button>
+            <a
+              href={selectedDoc.source_url || selectedDoc.source_file}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              새 탭에서 열기 ↗
+            </a>
+          </div>
         )}
 
         {/* Section Progress */}
@@ -369,61 +385,99 @@ export default function MenteeStudy() {
         </div>
       </div>
 
-      {/* Section Content */}
-      {sections.length > 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">
-            {sections[currentSection]?.title || `섹션 ${currentSection + 1}`}
-          </h2>
+      {/* Section Content with Split View */}
+      {(() => {
+        const hasOriginal = selectedDoc.source_url || selectedDoc.source_file;
+        const shouldShowSplit = hasOriginal && showSplitView && !isMobile;
+        const shouldShowTab = hasOriginal && showSplitView && isMobile;
 
-          <div
-            className="prose prose-blue max-w-none"
-            dangerouslySetInnerHTML={{
-              __html: sanitizeHtml(sections[currentSection]?.content || ''),
-            }}
-          />
+        const studyContent =
+          sections.length > 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6 h-full overflow-auto">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                {sections[currentSection]?.title || `섹션 ${currentSection + 1}`}
+              </h2>
 
-          {/* Section Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t">
-            <button
-              onClick={handlePrevSection}
-              disabled={currentSection === 0}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              ← 이전 섹션
-            </button>
+              <div
+                className="prose prose-blue max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeHtml(sections[currentSection]?.content || ''),
+                }}
+              />
 
-            {studyCompleted ? (
-              hasQuiz ? (
+              {/* Section Navigation */}
+              <div className="flex items-center justify-between mt-8 pt-6 border-t">
                 <button
-                  onClick={prepareQuiz}
-                  className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition"
+                  onClick={handlePrevSection}
+                  disabled={currentSection === 0}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  퀴즈 시작하기
+                  ← 이전 섹션
                 </button>
-              ) : (
-                <button
-                  onClick={handleBackToList}
-                  className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition"
-                >
-                  목록으로 돌아가기
-                </button>
-              )
-            ) : (
-              <button
-                onClick={handleNextSection}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
-              >
-                {currentSection < totalSections - 1 ? '다음 섹션 →' : '학습 완료'}
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm p-6 text-center text-gray-500">
-          이 문서에는 학습 섹션이 없습니다.
-        </div>
-      )}
+
+                {studyCompleted ? (
+                  hasQuiz ? (
+                    <button
+                      onClick={prepareQuiz}
+                      className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition"
+                    >
+                      퀴즈 시작하기
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleBackToList}
+                      className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition"
+                    >
+                      목록으로 돌아가기
+                    </button>
+                  )
+                ) : (
+                  <button
+                    onClick={handleNextSection}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+                  >
+                    {currentSection < totalSections - 1 ? '다음 섹션 →' : '학습 완료'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm p-6 text-center text-gray-500">
+              이 문서에는 학습 섹션이 없습니다.
+            </div>
+          );
+
+        const originalContent = <OriginalContentViewer doc={selectedDoc} />;
+
+        // Desktop: Split View
+        if (shouldShowSplit) {
+          return (
+            <div className="mb-6" style={{ height: '600px' }}>
+              <SplitViewLayout
+                leftPanel={originalContent}
+                rightPanel={studyContent}
+                initialRatio={40}
+              />
+            </div>
+          );
+        }
+
+        // Mobile: Tab Layout
+        if (shouldShowTab) {
+          return (
+            <div className="mb-6" style={{ height: '600px' }}>
+              <ResponsiveViewLayout
+                leftPanel={originalContent}
+                rightPanel={studyContent}
+                isMobile={true}
+              />
+            </div>
+          );
+        }
+
+        // No original or split view disabled: just study content
+        return studyContent;
+      })()}
 
       {/* AI 미처리 문서 알림 */}
       {!isAIProcessed && (
@@ -458,9 +512,7 @@ export default function MenteeStudy() {
       {studyCompleted && !hasQuiz && (
         <div className="bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl p-6 text-white text-center">
           <h3 className="text-lg font-bold mb-2">학습 완료!</h3>
-          <p className="opacity-90 mb-4">
-            이 문서는 퀴즈가 없습니다. 다른 문서를 학습해보세요.
-          </p>
+          <p className="opacity-90 mb-4">이 문서는 퀴즈가 없습니다. 다른 문서를 학습해보세요.</p>
           <button
             onClick={handleBackToList}
             className="px-6 py-3 bg-white text-gray-600 font-medium rounded-lg hover:bg-gray-100 transition"

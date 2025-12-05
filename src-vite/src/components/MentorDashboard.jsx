@@ -1,14 +1,17 @@
-// OJT Master v2.5.0 - Mentor Dashboard Component
+// OJT Master v2.7.0 - Mentor Dashboard Component
 
 import { useState } from 'react';
 import { useDocs } from '../contexts/DocsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../contexts/ToastContext';
+import UrlPreviewPanel from './UrlPreviewPanel';
+import PdfUploader from './PdfUploader';
+import DocumentEditModal from './DocumentEditModal';
 import {
   generateOJTContent,
   validateQuizQuality,
   regenerateQuizQuestions,
-  extractUrlText,
+  extractPdfText,
 } from '../utils/api';
 import {
   estimateReadingTime,
@@ -29,6 +32,11 @@ export default function MentorDashboard({ aiStatus }) {
   const [inputTitle, setInputTitle] = useState('');
   const [autoSplit, setAutoSplit] = useState(true);
 
+  // URL preview state
+  const [urlPreviewData, setUrlPreviewData] = useState(null);
+
+  // PDF upload state
+  const [pdfUploadData, setPdfUploadData] = useState(null);
 
   // Processing states
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,6 +69,10 @@ export default function MentorDashboard({ aiStatus }) {
       Toast.warning('URL을 입력해주세요.');
       return;
     }
+    if (inputType === 'pdf' && !pdfUploadData?.url) {
+      Toast.warning('PDF를 업로드해주세요.');
+      return;
+    }
 
     setIsProcessing(true);
     setProcessingStatus('콘텐츠 분석 중...');
@@ -72,17 +84,38 @@ export default function MentorDashboard({ aiStatus }) {
       const currentSourceInfo = {
         type: inputType === 'url' ? 'url' : inputType === 'pdf' ? 'pdf' : 'manual',
         url: inputType === 'url' ? urlInput.trim() : null,
-        file: null, // PDF file URL will be set when PDF upload is implemented
+        file: inputType === 'pdf' ? pdfUploadData?.url : null,
       };
 
-      // Handle URL input - extract text first
+      // Handle URL input - use preview data if available
       if (inputType === 'url') {
-        setProcessingStatus('URL에서 텍스트 추출 중...');
-        const extracted = await extractUrlText(urlInput, setProcessingStatus);
-        contentText = extracted.text;
-        setRawInput(contentText); // Store for potential quiz regeneration
-        if (extracted.wasTruncated) {
-          Toast.warning(`텍스트가 ${extracted.originalLength}자에서 ${extracted.extractedLength}자로 잘렸습니다.`);
+        if (urlPreviewData?.text) {
+          // Use already extracted text from preview
+          contentText = urlPreviewData.text;
+          setRawInput(contentText);
+          if (urlPreviewData.wasTruncated) {
+            Toast.warning(
+              `텍스트가 ${urlPreviewData.originalLength}자에서 ${urlPreviewData.charCount}자로 잘렸습니다.`
+            );
+          }
+        } else {
+          Toast.warning('URL 미리보기가 완료될 때까지 기다려주세요.');
+          setIsProcessing(false);
+          return;
+        }
+      }
+
+      // Handle PDF input - extract text from uploaded PDF
+      if (inputType === 'pdf' && pdfUploadData?.url) {
+        setProcessingStatus('PDF에서 텍스트 추출 중...');
+        try {
+          const pdfText = await extractPdfText(pdfUploadData.url, setProcessingStatus);
+          contentText = pdfText.text;
+          setRawInput(contentText);
+        } catch (pdfError) {
+          Toast.error(`PDF 텍스트 추출 실패: ${pdfError.message}`);
+          setIsProcessing(false);
+          return;
         }
       }
 
@@ -308,19 +341,44 @@ export default function MentorDashboard({ aiStatus }) {
           )}
 
           {inputType === 'url' && (
-            <input
-              type="url"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://example.com/article"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
+            <>
+              <input
+                type="url"
+                value={urlInput}
+                onChange={(e) => {
+                  setUrlInput(e.target.value);
+                  setUrlPreviewData(null); // Reset preview on URL change
+                }}
+                placeholder="https://example.com/article"
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+              <UrlPreviewPanel
+                url={urlInput}
+                onExtracted={(data) => {
+                  setUrlPreviewData(data);
+                  // Auto-fill title if empty
+                  if (!inputTitle && data.title) {
+                    setInputTitle(data.title);
+                  }
+                }}
+                onError={() => setUrlPreviewData(null)}
+              />
+            </>
           )}
 
           {inputType === 'pdf' && (
-            <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-500">
-              PDF 업로드 (구현 예정)
-            </div>
+            <PdfUploader
+              onUploadComplete={(data) => {
+                setPdfUploadData(data);
+                // Auto-fill title from filename
+                if (!inputTitle && data.filename) {
+                  const titleFromFilename = data.filename.replace(/\.pdf$/i, '');
+                  setInputTitle(titleFromFilename);
+                }
+              }}
+              onError={() => setPdfUploadData(null)}
+              existingUrl={pdfUploadData?.url}
+            />
           )}
 
           {/* Stats */}
@@ -602,6 +660,17 @@ export default function MentorDashboard({ aiStatus }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Document Edit Modal */}
+      {editingDoc && (
+        <DocumentEditModal
+          doc={editingDoc}
+          onClose={() => setEditingDoc(null)}
+          onSave={() => {
+            loadMyDocs();
+          }}
+        />
       )}
     </div>
   );

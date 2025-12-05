@@ -150,7 +150,22 @@ ${contentText.substring(0, 12000)}`;
 function createFallbackContent(contentText, title, errorMessage) {
   // Sanitize HTML to prevent XSS
   const sanitizedContent = DOMPurify.sanitize(contentText, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'a', 'pre', 'code'],
+    ALLOWED_TAGS: [
+      'p',
+      'br',
+      'strong',
+      'em',
+      'ul',
+      'ol',
+      'li',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'a',
+      'pre',
+      'code',
+    ],
     ALLOWED_ATTR: ['href', 'target'],
   });
 
@@ -587,4 +602,56 @@ export async function uploadImageToR2(file) {
   }
 
   return publicUrl;
+}
+
+/**
+ * Extract text from PDF file using pdfjs-dist
+ * @param {string} pdfUrl - URL of the PDF file
+ * @param {Function} onProgress - Progress callback
+ * @returns {Promise<{text: string, pageCount: number}>}
+ */
+export async function extractPdfText(pdfUrl, onProgress) {
+  onProgress?.('PDF 라이브러리 로딩 중...');
+
+  // Dynamic import of pdfjs-dist
+  const pdfjsLib = await import('pdfjs-dist');
+
+  // Set worker source
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+  onProgress?.('PDF 다운로드 중...');
+
+  try {
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    const pdf = await loadingTask.promise;
+
+    const pageCount = pdf.numPages;
+    const textParts = [];
+
+    // Extract text from each page
+    for (let i = 1; i <= pageCount; i++) {
+      onProgress?.(`페이지 ${i}/${pageCount} 처리 중...`);
+
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+
+      // Concatenate text items
+      const pageText = textContent.items.map((item) => item.str).join(' ');
+
+      textParts.push(pageText);
+    }
+
+    const fullText = textParts.join('\n\n');
+
+    onProgress?.('텍스트 추출 완료');
+
+    return {
+      text: fullText.trim(),
+      pageCount,
+    };
+  } catch (error) {
+    console.error('PDF text extraction error:', error);
+    throw new Error('PDF 텍스트 추출에 실패했습니다: ' + error.message);
+  }
 }
