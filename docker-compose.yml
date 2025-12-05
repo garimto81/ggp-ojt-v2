@@ -1,0 +1,108 @@
+# OJT Master - Docker Compose for Local Development
+# Usage: docker-compose up -d
+# Docs: docs/docker-setup.md
+
+services:
+  # ============================================
+  # Frontend (Vite Dev Server)
+  # ============================================
+  frontend:
+    build:
+      context: .
+      dockerfile: .docker/frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      # Hot reload: mount source code
+      - ./src-vite:/app/src-vite
+      - /app/src-vite/node_modules
+    environment:
+      - VITE_SUPABASE_URL=http://localhost:54321
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-your-anon-key}
+      - VITE_GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - VITE_R2_WORKER_URL=http://localhost:9000
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - ojt-network
+
+  # ============================================
+  # PostgreSQL (Supabase 대체)
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "54321:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ojt_master
+    volumes:
+      # 초기화 스크립트
+      - ./.docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      # 데이터 영속성
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ojt-network
+
+  # ============================================
+  # MinIO (Cloudflare R2 대체)
+  # ============================================
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - ojt-network
+
+  # ============================================
+  # MinIO Setup (버킷 자동 생성)
+  # ============================================
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb --ignore-existing myminio/ojt-media;
+      mc anonymous set download myminio/ojt-media;
+      echo 'MinIO bucket ojt-media created and configured';
+      "
+    networks:
+      - ojt-network
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  ojt-network:
+    driver: bridge
