@@ -1,11 +1,14 @@
-// OJT Master v2.3.0 - Admin Dashboard Component
+// OJT Master v2.9.3 - Admin Dashboard Component
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useDocs } from '../contexts/DocsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Toast } from '../contexts/ToastContext';
 import { supabase } from '../utils/api';
 import { confirmDeleteWithCSRF, formatDate } from '../utils/helpers';
+
+// 기본 부서 목록
+const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 
 export default function AdminDashboard() {
   const { allDocs, deleteDocument, isLoading: docsLoading } = useDocs();
@@ -84,6 +87,62 @@ export default function AdminDashboard() {
       Toast.error('부서 변경에 실패했습니다: ' + e.message);
     }
   };
+
+  // Toggle user active status (정지/활성화)
+  const handleToggleActive = async (userId, currentStatus) => {
+    const newStatus = !currentStatus;
+    const targetUser = allUsers.find((u) => u.id === userId);
+
+    if (!window.confirm(`${targetUser?.name}님을 ${newStatus ? '활성화' : '정지'}하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_active: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setAllUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, is_active: newStatus } : u))
+      );
+      Toast.success(`사용자가 ${newStatus ? '활성화' : '정지'}되었습니다.`);
+    } catch (e) {
+      console.error('Toggle active error:', e);
+      Toast.error('상태 변경에 실패했습니다: ' + e.message);
+    }
+  };
+
+  // Delete user
+  const handleDeleteUser = async (userId) => {
+    const targetUser = allUsers.find((u) => u.id === userId);
+
+    if (!window.confirm(`정말 ${targetUser?.name}님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('users').delete().eq('id', userId);
+
+      if (error) throw error;
+
+      setAllUsers((prev) => prev.filter((u) => u.id !== userId));
+      Toast.success('사용자가 삭제되었습니다.');
+    } catch (e) {
+      console.error('Delete user error:', e);
+      Toast.error('사용자 삭제에 실패했습니다: ' + e.message);
+    }
+  };
+
+  // 부서 목록 (기본 + 기존 사용자 부서)
+  const departmentOptions = useMemo(() => {
+    const existingDepts = allUsers
+      .map((u) => u.department)
+      .filter((d) => d && !DEFAULT_DEPARTMENTS.includes(d));
+    return [...new Set([...DEFAULT_DEPARTMENTS, ...existingDepts])].sort();
+  }, [allUsers]);
 
   // Delete document
   const handleDeleteDoc = async (docId) => {
@@ -195,36 +254,43 @@ export default function AdminDashboard() {
                         </select>
                       </td>
                       <td className="py-3">
-                        <input
-                          type="text"
+                        <select
                           value={u.department || ''}
-                          onChange={(e) => {
-                            // Update local state immediately for responsive UI
-                            setAllUsers((prev) =>
-                              prev.map((usr) =>
-                                usr.id === u.id ? { ...usr, department: e.target.value } : usr
-                              )
-                            );
-                          }}
-                          onBlur={(e) => {
-                            // Save to database on blur
-                            const originalUser = allUsers.find((usr) => usr.id === u.id);
-                            if (originalUser?.department !== e.target.value) {
-                              handleDepartmentChange(u.id, e.target.value);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.target.blur();
-                            }
-                          }}
-                          placeholder="부서 입력"
-                          className="px-2 py-1 border rounded text-sm w-32"
-                        />
+                          onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
+                          className="px-2 py-1 border rounded text-sm"
+                        >
+                          <option value="">선택 안함</option>
+                          {departmentOptions.map((dept) => (
+                            <option key={dept} value={dept}>
+                              {dept}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="py-3 text-sm text-gray-500">{formatDate(u.created_at)}</td>
                       <td className="py-3">
-                        {u.id === user?.id && <span className="text-xs text-gray-400">(본인)</span>}
+                        {u.id === user?.id ? (
+                          <span className="text-xs text-gray-400">(본인)</span>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleToggleActive(u.id, u.is_active !== false)}
+                              className={`text-xs px-2 py-1 rounded ${
+                                u.is_active === false
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                              }`}
+                            >
+                              {u.is_active === false ? '활성화' : '정지'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u.id)}
+                              className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
