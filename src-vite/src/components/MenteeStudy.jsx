@@ -346,7 +346,9 @@ export default function MenteeStudy() {
           >
             <span>🔗</span>
             <span>원문 보기</span>
-            <span className="text-xs text-blue-400">({selectedDoc.source_type === 'url' ? 'URL' : 'PDF'})</span>
+            <span className="text-xs text-blue-400">
+              ({selectedDoc.source_type === 'url' ? 'URL' : 'PDF'})
+            </span>
           </a>
         )}
 
@@ -458,9 +460,7 @@ export default function MenteeStudy() {
       {studyCompleted && !hasQuiz && (
         <div className="bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl p-6 text-white text-center">
           <h3 className="text-lg font-bold mb-2">학습 완료!</h3>
-          <p className="opacity-90 mb-4">
-            이 문서는 퀴즈가 없습니다. 다른 문서를 학습해보세요.
-          </p>
+          <p className="opacity-90 mb-4">이 문서는 퀴즈가 없습니다. 다른 문서를 학습해보세요.</p>
           <button
             onClick={handleBackToList}
             className="px-6 py-3 bg-white text-gray-600 font-medium rounded-lg hover:bg-gray-100 transition"
