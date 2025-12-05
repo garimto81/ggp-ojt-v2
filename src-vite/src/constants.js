@@ -50,7 +50,11 @@ export const R2_CONFIG = {
 };
 
 // CORS Proxies for URL extraction
-export const CORS_PROXIES = ['https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?'];
+// Note: corsproxy.io returns 403, use alternatives
+export const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
+];
 
 // Role definitions
 export const ROLES = {
@@ -74,4 +78,39 @@ export const ROLE_VIEW_MAP = {
   [ROLES.ADMIN]: VIEW_STATES.ADMIN_DASHBOARD,
   [ROLES.MENTOR]: VIEW_STATES.MENTOR_DASHBOARD,
   [ROLES.MENTEE]: VIEW_STATES.MENTEE_LIST,
+};
+
+// === WEBLLM CONFIG (PRD-0007) ===
+export const WEBLLM_CONFIG = {
+  // Available models for browser-based LLM
+  MODELS: {
+    'qwen-2.5-3b': {
+      id: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
+      name: 'Qwen 2.5 3B',
+      size: '2.4GB',
+      koreanQuality: 5, // 1-5 rating
+      description: '한국어 최적화, 권장',
+    },
+    'gemma-3-2b': {
+      id: 'gemma-2-2b-it-q4f16_1-MLC',
+      name: 'Gemma 2 2B',
+      size: '1.5GB',
+      koreanQuality: 4,
+      description: '경량 모델, 저사양 기기용',
+    },
+  },
+  DEFAULT_MODEL: 'qwen-2.5-3b',
+
+  // Storage keys
+  STORAGE_KEYS: {
+    PREFERRED_ENGINE: 'ojt_preferred_ai_engine', // 'gemini' | 'webllm'
+    SELECTED_MODEL: 'ojt_webllm_model',
+    MODEL_CACHED: 'ojt_webllm_cached',
+  },
+
+  // Generation settings (matches Gemini for consistency)
+  GENERATION: {
+    temperature: 0.3,
+    maxTokens: 8192,
+  },
 };

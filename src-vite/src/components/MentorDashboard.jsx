@@ -1,14 +1,19 @@
-// OJT Master v2.5.0 - Mentor Dashboard Component
+// OJT Master v2.7.0 - Mentor Dashboard Component
 
 import { useState } from 'react';
 import { useDocs } from '../contexts/DocsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useAI } from '../contexts/AIContext';
 import { Toast } from '../contexts/ToastContext';
+import UrlPreviewPanel from './UrlPreviewPanel';
+import PdfUploader from './PdfUploader';
+import DocumentEditModal from './DocumentEditModal';
+import AIEngineSelector from './AIEngineSelector';
 import {
   generateOJTContent,
   validateQuizQuality,
   regenerateQuizQuestions,
-  extractUrlText,
+  extractPdfText,
 } from '../utils/api';
 import {
   estimateReadingTime,
@@ -21,6 +26,7 @@ import {
 export default function MentorDashboard({ aiStatus }) {
   const { myDocs, saveDocument, deleteDocument, loadMyDocs } = useDocs();
   const { user } = useAuth();
+  const { engine } = useAI();
 
   // Input states
   const [inputType, setInputType] = useState('text');
@@ -29,6 +35,11 @@ export default function MentorDashboard({ aiStatus }) {
   const [inputTitle, setInputTitle] = useState('');
   const [autoSplit, setAutoSplit] = useState(true);
 
+  // URL preview state
+  const [urlPreviewData, setUrlPreviewData] = useState(null);
+
+  // PDF upload state
+  const [pdfUploadData, setPdfUploadData] = useState(null);
 
   // Processing states
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,6 +72,10 @@ export default function MentorDashboard({ aiStatus }) {
       Toast.warning('URL을 입력해주세요.');
       return;
     }
+    if (inputType === 'pdf' && !pdfUploadData?.url) {
+      Toast.warning('PDF를 업로드해주세요.');
+      return;
+    }
 
     setIsProcessing(true);
     setProcessingStatus('콘텐츠 분석 중...');
@@ -72,17 +87,38 @@ export default function MentorDashboard({ aiStatus }) {
       const currentSourceInfo = {
         type: inputType === 'url' ? 'url' : inputType === 'pdf' ? 'pdf' : 'manual',
         url: inputType === 'url' ? urlInput.trim() : null,
-        file: null, // PDF file URL will be set when PDF upload is implemented
+        file: inputType === 'pdf' ? pdfUploadData?.url : null,
       };
 
-      // Handle URL input - extract text first
+      // Handle URL input - use preview data if available
       if (inputType === 'url') {
-        setProcessingStatus('URL에서 텍스트 추출 중...');
-        const extracted = await extractUrlText(urlInput, setProcessingStatus);
-        contentText = extracted.text;
-        setRawInput(contentText); // Store for potential quiz regeneration
-        if (extracted.wasTruncated) {
-          Toast.warning(`텍스트가 ${extracted.originalLength}자에서 ${extracted.extractedLength}자로 잘렸습니다.`);
+        if (urlPreviewData?.text) {
+          // Use already extracted text from preview
+          contentText = urlPreviewData.text;
+          setRawInput(contentText);
+          if (urlPreviewData.wasTruncated) {
+            Toast.warning(
+              `텍스트가 ${urlPreviewData.originalLength}자에서 ${urlPreviewData.charCount}자로 잘렸습니다.`
+            );
+          }
+        } else {
+          Toast.warning('URL 미리보기가 완료될 때까지 기다려주세요.');
+          setIsProcessing(false);
+          return;
+        }
+      }
+
+      // Handle PDF input - extract text from uploaded PDF
+      if (inputType === 'pdf' && pdfUploadData?.url) {
+        setProcessingStatus('PDF에서 텍스트 추출 중...');
+        try {
+          const pdfText = await extractPdfText(pdfUploadData.url, setProcessingStatus);
+          contentText = pdfText.text;
+          setRawInput(contentText);
+        } catch (pdfError) {
+          Toast.error(`PDF 텍스트 추출 실패: ${pdfError.message}`);
+          setIsProcessing(false);
+          return;
         }
       }
 
@@ -267,7 +303,15 @@ export default function MentorDashboard({ aiStatus }) {
       {/* Left: Input Panel */}
       <div className="col-span-2 space-y-4">
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">콘텐츠 입력</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-800">콘텐츠 입력</h2>
+            <AIEngineSelector compact />
+          </div>
+
+          {/* AI Engine Settings */}
+          <div className="mb-4">
+            <AIEngineSelector />
+          </div>
 
           {/* Input Type Selector */}
           <div className="flex gap-2 mb-4">
@@ -308,19 +352,44 @@ export default function MentorDashboard({ aiStatus }) {
           )}
 
           {inputType === 'url' && (
-            <input
-              type="url"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://example.com/article"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
+            <>
+              <input
+                type="url"
+                value={urlInput}
+                onChange={(e) => {
+                  setUrlInput(e.target.value);
+                  setUrlPreviewData(null); // Reset preview on URL change
+                }}
+                placeholder="https://example.com/article"
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+              <UrlPreviewPanel
+                url={urlInput}
+                onExtracted={(data) => {
+                  setUrlPreviewData(data);
+                  // Auto-fill title if empty
+                  if (!inputTitle && data.title) {
+                    setInputTitle(data.title);
+                  }
+                }}
+                onError={() => setUrlPreviewData(null)}
+              />
+            </>
           )}
 
           {inputType === 'pdf' && (
-            <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-500">
-              PDF 업로드 (구현 예정)
-            </div>
+            <PdfUploader
+              onUploadComplete={(data) => {
+                setPdfUploadData(data);
+                // Auto-fill title from filename
+                if (!inputTitle && data.filename) {
+                  const titleFromFilename = data.filename.replace(/\.pdf$/i, '');
+                  setInputTitle(titleFromFilename);
+                }
+              }}
+              onError={() => setPdfUploadData(null)}
+              existingUrl={pdfUploadData?.url}
+            />
           )}
 
           {/* Stats */}
@@ -346,17 +415,21 @@ export default function MentorDashboard({ aiStatus }) {
           <button
             onClick={handleGenerate}
             disabled={isProcessing}
-            className="w-full mt-4 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+            className={`w-full mt-4 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition ${
+              engine === 'webllm' ? 'bg-purple-500 hover:bg-purple-600' : 'bg-blue-500 hover:bg-blue-600'
+            }`}
           >
             {isProcessing
               ? processingStatus
-              : aiStatus.online
-                ? 'AI로 교육 자료 생성'
-                : '원문으로 등록 (AI 오프라인)'}
+              : engine === 'webllm'
+                ? 'WebLLM으로 교육 자료 생성 (로컬)'
+                : aiStatus.online
+                  ? 'Gemini로 교육 자료 생성'
+                  : '원문으로 등록 (AI 오프라인)'}
           </button>
-          {!aiStatus.online && (
+          {engine === 'gemini' && !aiStatus.online && (
             <p className="text-xs text-amber-600 mt-2 text-center">
-              ⚠️ AI 서비스 오프라인 - 원문 그대로 등록됩니다
+              ⚠️ Gemini 오프라인 - WebLLM으로 전환하거나 원문으로 등록됩니다
             </p>
           )}
         </div>
@@ -602,6 +675,17 @@ export default function MentorDashboard({ aiStatus }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Document Edit Modal */}
+      {editingDoc && (
+        <DocumentEditModal
+          doc={editingDoc}
+          onClose={() => setEditingDoc(null)}
+          onSave={() => {
+            loadMyDocs();
+          }}
+        />
       )}
     </div>
   );

@@ -3,3 +3,4 @@
 export { AuthProvider, useAuth } from './AuthContext';
 export { DocsProvider, useDocs } from './DocsContext';
 export { ToastProvider, useToast, Toast } from './ToastContext';
+export { AIProvider, useAI, AI_STATUS } from './AIContext';

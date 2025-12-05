@@ -29,7 +29,7 @@ function getAllowedOrigins(env) {
   return Array.from(origins);
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (PDF 지원)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
 // 파일 매직 넘버 (파일 헤더 시그니처)
@@ -105,7 +105,7 @@ export default {
 
         if (fileSize && fileSize > MAX_FILE_SIZE) {
           return Response.json(
-            { error: '파일 크기는 10MB를 초과할 수 없습니다' },
+            { error: '파일 크기는 50MB를 초과할 수 없습니다' },
             { status: 400, headers: corsHeaders }
           );
         }
@@ -155,7 +155,7 @@ export default {
         const contentLength = parseInt(request.headers.get('Content-Length') || '0');
         if (contentLength > MAX_FILE_SIZE) {
           return Response.json(
-            { error: '파일 크기는 10MB를 초과할 수 없습니다' },
+            { error: '파일 크기는 50MB를 초과할 수 없습니다' },
             { status: 413, headers: corsHeaders }
           );
         }
@@ -166,7 +166,7 @@ export default {
         // 실제 파일 크기 재검증
         if (arrayBuffer.byteLength > MAX_FILE_SIZE) {
           return Response.json(
-            { error: '파일 크기는 10MB를 초과할 수 없습니다' },
+            { error: '파일 크기는 50MB를 초과할 수 없습니다' },
             { status: 413, headers: corsHeaders }
           );
         }

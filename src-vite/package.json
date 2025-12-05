@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.80",
     "@supabase/supabase-js": "^2.86.0",
     "chart.js": "^4.5.1",
     "dexie": "^4.2.1",
@@ -25,7 +26,8 @@
     "quill": "^2.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-hot-toast": "^2.6.0"
+    "react-hot-toast": "^2.6.0",
+    "react-pdf": "^10.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
