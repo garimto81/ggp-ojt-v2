@@ -1,8 +1,8 @@
-// OJT Master v2.5.0 - API Utilities (Supabase, Gemini)
+// OJT Master v2.8.0 - API Utilities (Supabase, Gemini, WebLLM)
 
 import { createClient } from '@supabase/supabase-js';
 import DOMPurify from 'dompurify';
-import { SUPABASE_CONFIG, GEMINI_CONFIG, CONFIG } from '../constants';
+import { SUPABASE_CONFIG, GEMINI_CONFIG, CONFIG, AI_ENGINE_CONFIG } from '../constants';
 
 // Initialize Supabase client
 export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY);
@@ -40,12 +40,15 @@ export async function checkAIStatus() {
 }
 
 /**
- * Generate OJT content using Gemini AI
+ * Generate OJT content using selected AI engine (Gemini or WebLLM)
  * @param {string} contentText - Raw content text
  * @param {string} title - Document title
  * @param {number} stepNumber - Current step number
  * @param {number} totalSteps - Total number of steps
  * @param {Function} onProgress - Progress callback
+ * @param {Object} options - Additional options
+ * @param {string} options.engine - AI engine to use ('gemini' | 'webllm')
+ * @param {boolean} options.fallbackEnabled - Enable fallback to Gemini on WebLLM failure
  * @returns {Promise<Object>} - Generated OJT content
  */
 export async function generateOJTContent(
@@ -53,8 +56,40 @@ export async function generateOJTContent(
   title,
   stepNumber = 1,
   totalSteps = 1,
-  onProgress
+  onProgress,
+  options = {}
 ) {
+  const { engine = 'gemini', fallbackEnabled = AI_ENGINE_CONFIG.FALLBACK_ENABLED } = options;
+
+  // WebLLM 엔진 사용 시
+  if (engine === 'webllm') {
+    try {
+      const { generateWithWebLLM, getWebLLMStatus } = await import('./webllm.js');
+      const status = getWebLLMStatus();
+
+      if (!status.loaded) {
+        throw new Error('WebLLM이 로드되지 않았습니다. 먼저 모델을 로드해주세요.');
+      }
+
+      if (onProgress) onProgress('WebLLM으로 콘텐츠 생성 중...');
+      const result = await generateWithWebLLM(contentText, title, onProgress);
+      result.ai_engine = 'webllm';
+      return result;
+    } catch (error) {
+      console.warn('WebLLM 생성 실패:', error.message);
+
+      // Fallback to Gemini
+      if (fallbackEnabled) {
+        if (onProgress) onProgress('WebLLM 실패 - Gemini로 전환 중...');
+        console.log('Fallback to Gemini API');
+        // Continue to Gemini generation below
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  // Gemini 엔진 사용 (기본 또는 Fallback)
   const stepLabel = totalSteps > 1 ? ` (${stepNumber}/${totalSteps}단계)` : '';
 
   const prompt = `당신은 10년 경력의 기업 교육 설계 전문가입니다.
@@ -129,7 +164,9 @@ ${contentText.substring(0, 12000)}`;
     const result = parseAIResponse(responseText);
 
     // Validate and fill quiz if needed
-    return validateAndFillResult(result, title);
+    const validatedResult = validateAndFillResult(result, title);
+    validatedResult.ai_engine = 'gemini';
+    return validatedResult;
   } catch (error) {
     console.warn('AI 분석 실패, 원문 모드로 전환:', error.message);
 
