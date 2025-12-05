@@ -1,18 +1,20 @@
-// OJT Master v2.3.0 - Application Entry Point
+// OJT Master v2.8.0 - Application Entry Point
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { AuthProvider, DocsProvider, ToastProvider } from './contexts';
+import { AuthProvider, DocsProvider, ToastProvider, AIProvider } from './contexts';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ToastProvider>
       <AuthProvider>
-        <DocsProvider>
-          <App />
-        </DocsProvider>
+        <AIProvider>
+          <DocsProvider>
+            <App />
+          </DocsProvider>
+        </AIProvider>
       </AuthProvider>
     </ToastProvider>
   </StrictMode>
