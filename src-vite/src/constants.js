@@ -79,3 +79,36 @@ export const ROLE_VIEW_MAP = {
   [ROLES.MENTOR]: VIEW_STATES.MENTOR_DASHBOARD,
   [ROLES.MENTEE]: VIEW_STATES.MENTEE_LIST,
 };
+
+// === CORS PROXY CONFIG (PRD-0008) ===
+export const CORS_CONFIG = {
+  // 자체 Worker 프록시 (R2 Worker 통합)
+  WORKER_PROXY: import.meta.env.VITE_R2_WORKER_URL
+    ? `${import.meta.env.VITE_R2_WORKER_URL}/proxy`
+    : null,
+  // 폴백 프록시 (외부 서비스)
+  FALLBACK_PROXIES: [
+    'https://api.allorigins.win/raw?url=',
+    'https://api.codetabs.com/v1/proxy?quest=',
+  ],
+  // 요청 타임아웃 (15초)
+  TIMEOUT: 15000,
+};
+
+// === PDF CONFIG (PRD-0008) ===
+export const PDF_CONFIG = {
+  // 최대 파일 크기 (50MB)
+  MAX_SIZE: 50 * 1024 * 1024,
+  // 뷰어 설정
+  VIEWER: {
+    DEFAULT_SCALE: 1.0,
+    MIN_SCALE: 0.5,
+    MAX_SCALE: 3.0,
+    SCALE_STEP: 0.25,
+  },
+  // OCR 설정 (Phase 2)
+  OCR: {
+    ENABLED: false,
+    LANGUAGES: ['kor', 'eng'],
+  },
+};
