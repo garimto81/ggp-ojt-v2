@@ -50,7 +50,11 @@ export const R2_CONFIG = {
 };
 
 // CORS Proxies for URL extraction
-export const CORS_PROXIES = ['https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?'];
+// Note: corsproxy.io returns 403, use alternatives
+export const CORS_PROXIES = [
+  'https://api.allorigins.win/raw?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
+];
 
 // Role definitions
 export const ROLES = {
