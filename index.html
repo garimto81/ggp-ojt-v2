@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.7.0 - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.8.0 - AI 기반 온보딩 교육 플랫폼</title>
   <!--
     CDN Script Loading Strategy:
     - Critical (sync): Tailwind, React, ReactDOM, Babel, Supabase, Dexie
@@ -158,7 +158,7 @@
         render: 'color: #9C27B0; font-weight: bold',    // 보라색: 렌더링
       },
 
-      // v2.7.0: snake_case 통일 아키텍처 - snake_case 필드 존재 확인
+      // v2.8.0: snake_case 통일 아키텍처 - snake_case 필드 존재 확인
       checkFieldMapping(context, obj, expectedFields) {
         if (!this.enabled) return;
         console.group(`%c🔍 [FIELDS] ${context}`, this.colors.mapping);
@@ -233,9 +233,9 @@
 
     // 콘솔에 디버깅 활성화 메시지 출력
     if (DEBUG.enabled) {
-      console.log('%c🔧 OJT Master v2.7.0 디버깅 모드', 'color: #E91E63; font-size: 16px; font-weight: bold');
+      console.log('%c🔧 OJT Master v2.8.0 디버깅 모드', 'color: #E91E63; font-size: 16px; font-weight: bold');
       console.log('DEBUG.enabled = false 로 비활성화 가능');
-      console.log('v2.7.0 아키텍처: snake_case 통일 (camelCase 매핑 제거됨)');
+      console.log('v2.8.0 아키텍처: snake_case 통일 + WebLLM 오픈소스 LLM 통합');
       console.log('주요 검증 영역:');
       console.log('  1. snake_case 필드 존재 확인');
       console.log('  2. 데이터 흐름 (Supabase → Cache → UI)');
@@ -2790,8 +2790,8 @@ URL: ${sourceUrl}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.7.0 (5da7f5e) | PRD-0008 URL/PDF 최적화</p>
-                <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat(prd-0008): URL/PDF 기능 최적화 및 UI 개선">feat: URL/PDF 기능 최적화</p>
+                <p className="text-xs text-slate-400 mt-1">v2.8.0 (02c4a0f) | WebLLM 오픈소스 LLM 통합</p>
+                <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="feat(ai): WebLLM 브라우저 내 AI 실행">feat: WebLLM 오픈소스 LLM 통합</p>
               </div>
 
               <div className="mb-6">
@@ -2847,7 +2847,7 @@ URL: ${sourceUrl}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.7.0</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.8.0</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode
