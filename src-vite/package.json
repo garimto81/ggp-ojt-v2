@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.80",
     "@supabase/supabase-js": "^2.86.0",
     "chart.js": "^4.5.1",
     "dexie": "^4.2.1",
