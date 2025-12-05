@@ -43,6 +43,8 @@ export function AuthProvider({ children }) {
 
       if (profile && profile.role) {
         // Valid profile with role
+        console.log('[Auth] Profile loaded:', { role: profile.role, id: profile.id });
+
         setUser({
           id: profile.id,
           name: profile.name || session.user.user_metadata?.full_name,
@@ -57,7 +59,9 @@ export function AuthProvider({ children }) {
           setSessionMode(tempMode);
         }
 
-        setViewState(getViewStateByRole(profile.role, tempMode));
+        const newViewState = getViewStateByRole(profile.role, tempMode);
+        console.log('[Auth] Setting viewState:', newViewState, '(role:', profile.role, ', tempMode:', tempMode, ')');
+        setViewState(newViewState);
       } else if (profile && !profile.role) {
         // Corrupted cache: profile exists but no role - treat as new user
         console.warn('Corrupted user cache detected (no role), clearing...');

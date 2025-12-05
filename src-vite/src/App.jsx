@@ -14,6 +14,9 @@ import MenteeStudy from './components/MenteeStudy';
 function App() {
   const { viewState, isLoading } = useAuth();
 
+  // Debug log
+  console.log('[App] Render - viewState:', viewState, ', isLoading:', isLoading);
+
   // Loading state
   if (isLoading || viewState === VIEW_STATES.LOADING) {
     return (
