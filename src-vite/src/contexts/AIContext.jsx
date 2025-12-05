@@ -1,8 +1,8 @@
-// OJT Master - AI Context (Issue #30, #45)
-// AI 엔진 상태 관리 (Gemini / WebLLM)
+// OJT Master - AI Context (WebLLM Only)
+// 브라우저 내 AI 엔진 상태 관리
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { AI_ENGINE_CONFIG, WEBLLM_CONFIG } from '../constants';
+import { WEBLLM_CONFIG } from '../constants';
 import {
   initWebLLM,
   getWebLLMStatus,
@@ -14,13 +14,6 @@ import {
 const AIContext = createContext(null);
 
 export function AIProvider({ children }) {
-  // AI 엔진 상태
-  const [engine, setEngine] = useState(() => {
-    // 로컬 스토리지에서 이전 선택 복원
-    const saved = localStorage.getItem(AI_ENGINE_CONFIG.STORAGE_KEY);
-    return saved || AI_ENGINE_CONFIG.DEFAULT_ENGINE;
-  });
-
   // WebLLM 상태
   const [webllmStatus, setWebllmStatus] = useState({
     loaded: false,
@@ -41,43 +34,6 @@ export function AIProvider({ children }) {
     checkWebGPUSupport().then(setWebgpuSupported);
   }, []);
 
-  // 엔진 선택 저장
-  useEffect(() => {
-    localStorage.setItem(AI_ENGINE_CONFIG.STORAGE_KEY, engine);
-  }, [engine]);
-
-  /**
-   * AI 엔진 전환
-   * @param {'gemini' | 'webllm'} newEngine
-   */
-  const switchEngine = useCallback(
-    async (newEngine) => {
-      if (newEngine === engine) return;
-
-      // WebLLM으로 전환 시 WebGPU 확인
-      if (newEngine === 'webllm' && !webgpuSupported) {
-        throw new Error(
-          '이 브라우저는 WebGPU를 지원하지 않습니다. Chrome 113+ 또는 Edge 113+가 필요합니다.'
-        );
-      }
-
-      // 기존 WebLLM 해제
-      if (engine === 'webllm' && newEngine === 'gemini') {
-        await unloadWebLLM();
-        setWebllmStatus({
-          loaded: false,
-          loading: false,
-          model: null,
-          progress: 0,
-          error: null,
-        });
-      }
-
-      setEngine(newEngine);
-    },
-    [engine, webgpuSupported]
-  );
-
   /**
    * WebLLM 모델 로딩
    * @param {string} modelId - 모델 ID (선택)
@@ -85,6 +41,13 @@ export function AIProvider({ children }) {
   const loadWebLLM = useCallback(
     async (modelId = selectedModel) => {
       if (webllmStatus.loading) return;
+
+      // WebGPU 미지원 시 에러
+      if (!webgpuSupported) {
+        throw new Error(
+          '이 브라우저는 WebGPU를 지원하지 않습니다. Chrome 113+ 또는 Edge 113+가 필요합니다.'
+        );
+      }
 
       setWebllmStatus((prev) => ({
         ...prev,
@@ -118,7 +81,7 @@ export function AIProvider({ children }) {
         throw error;
       }
     },
-    [selectedModel, webllmStatus.loading]
+    [selectedModel, webllmStatus.loading, webgpuSupported]
   );
 
   /**
@@ -150,10 +113,8 @@ export function AIProvider({ children }) {
   }, []);
 
   const value = {
-    // 현재 선택된 엔진
-    engine,
-    // 엔진 전환
-    switchEngine,
+    // WebLLM 전용 (engine 항상 'webllm')
+    engine: 'webllm',
     // WebLLM 상태
     webllmStatus,
     // WebGPU 지원 여부
@@ -169,8 +130,6 @@ export function AIProvider({ children }) {
     setSelectedModel,
     // 사용 가능한 모델 목록
     availableModels: getAvailableModels(),
-    // Fallback 활성화 여부
-    fallbackEnabled: AI_ENGINE_CONFIG.FALLBACK_ENABLED,
   };
 
   return <AIContext.Provider value={value}>{children}</AIContext.Provider>;

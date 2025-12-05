@@ -1,4 +1,4 @@
-// OJT Master v2.8.0 - Mentor Dashboard Component
+// OJT Master v2.9.0 - Mentor Dashboard Component (WebLLM Only)
 
 import { useState } from 'react';
 import { useDocs } from '../contexts/DocsContext';
@@ -20,10 +20,10 @@ import {
 } from '../utils/helpers';
 import AIEngineSelector from './AIEngineSelector';
 
-export default function MentorDashboard({ aiStatus }) {
+export default function MentorDashboard() {
   const { myDocs, saveDocument, deleteDocument, loadMyDocs } = useDocs();
   const { user } = useAuth();
-  const { engine, webllmStatus, fallbackEnabled } = useAI();
+  const { webllmStatus } = useAI();
 
   // Input states
   const [inputType, setInputType] = useState('text');
@@ -90,27 +90,16 @@ export default function MentorDashboard({ aiStatus }) {
         }
       }
 
-      // Warn if AI is offline but proceed anyway (graceful degradation)
-      if (!aiStatus.online) {
-        Toast.warning('AI 서비스 오프라인 - 원문으로 등록됩니다.');
+      // WebLLM 모델 로드 확인
+      if (!webllmStatus.loaded) {
+        Toast.warning('WebLLM 모델을 먼저 로드해주세요.');
+        setIsProcessing(false);
+        return;
       }
 
       const numSteps = autoSplit ? requiredSteps : 1;
       const segments = splitContentForSteps(contentText, numSteps);
       const docs = [];
-
-      // AI 엔진 옵션 설정
-      const aiOptions = {
-        engine,
-        fallbackEnabled,
-      };
-
-      // WebLLM 선택 시 모델 로드 확인
-      if (engine === 'webllm' && !webllmStatus.loaded) {
-        Toast.warning('WebLLM 모델을 먼저 로드해주세요.');
-        setIsProcessing(false);
-        return;
-      }
 
       // Generate content for each step (in parallel if multiple)
       if (numSteps > 1) {
@@ -120,8 +109,7 @@ export default function MentorDashboard({ aiStatus }) {
             inputTitle || '새 OJT 문서',
             i + 1,
             numSteps,
-            (status) => setProcessingStatus(`Step ${i + 1}: ${status}`),
-            aiOptions
+            (status) => setProcessingStatus(`Step ${i + 1}: ${status}`)
           )
         );
         const results = await Promise.all(promises);
@@ -141,8 +129,7 @@ export default function MentorDashboard({ aiStatus }) {
           inputTitle || '새 OJT 문서',
           1,
           1,
-          setProcessingStatus,
-          aiOptions
+          setProcessingStatus
         );
         docs.push({
           ...result,
@@ -371,29 +358,16 @@ export default function MentorDashboard({ aiStatus }) {
           {/* Generate Button */}
           <button
             onClick={handleGenerate}
-            disabled={isProcessing || (engine === 'webllm' && !webllmStatus.loaded)}
-            className={`w-full mt-4 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition ${
-              engine === 'webllm'
-                ? 'bg-green-500 hover:bg-green-600'
-                : 'bg-blue-500 hover:bg-blue-600'
-            }`}
+            disabled={isProcessing || !webllmStatus.loaded}
+            className="w-full mt-4 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition bg-green-500 hover:bg-green-600"
           >
             {isProcessing
               ? processingStatus
-              : engine === 'webllm'
-                ? webllmStatus.loaded
-                  ? '💻 WebLLM으로 교육 자료 생성'
-                  : '모델을 먼저 로드해주세요'
-                : aiStatus.online
-                  ? '☁️ Gemini로 교육 자료 생성'
-                  : '원문으로 등록 (AI 오프라인)'}
+              : webllmStatus.loaded
+                ? '💻 WebLLM으로 교육 자료 생성'
+                : '모델을 먼저 로드해주세요'}
           </button>
-          {engine === 'gemini' && !aiStatus.online && (
-            <p className="text-xs text-amber-600 mt-2 text-center">
-              ⚠️ Gemini 서비스 오프라인 - 원문 그대로 등록됩니다
-            </p>
-          )}
-          {engine === 'webllm' && !webllmStatus.loaded && (
+          {!webllmStatus.loaded && (
             <p className="text-xs text-green-600 mt-2 text-center">
               💡 상단에서 모델을 로드한 후 사용할 수 있습니다
             </p>
@@ -425,14 +399,8 @@ export default function MentorDashboard({ aiStatus }) {
                       <h4 className="font-medium">{doc.title}</h4>
                       <div className="flex gap-1">
                         {doc.ai_engine && (
-                          <span
-                            className={`text-xs px-2 py-1 rounded font-medium ${
-                              doc.ai_engine === 'webllm'
-                                ? 'text-green-700 bg-green-100'
-                                : 'text-blue-700 bg-blue-100'
-                            }`}
-                          >
-                            {doc.ai_engine === 'webllm' ? '💻 WebLLM' : '☁️ Gemini'}
+                          <span className="text-xs px-2 py-1 rounded font-medium text-green-700 bg-green-100">
+                            💻 WebLLM
                           </span>
                         )}
                         {isAIFailed && (

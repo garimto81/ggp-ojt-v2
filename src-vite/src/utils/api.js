@@ -1,8 +1,8 @@
-// OJT Master v2.8.0 - API Utilities (Supabase, Gemini, WebLLM)
+// OJT Master v2.9.0 - API Utilities (Supabase, WebLLM Only)
 
 import { createClient } from '@supabase/supabase-js';
 import DOMPurify from 'dompurify';
-import { SUPABASE_CONFIG, GEMINI_CONFIG, CONFIG, AI_ENGINE_CONFIG } from '../constants';
+import { SUPABASE_CONFIG, CONFIG } from '../constants';
 
 // Initialize Supabase client
 export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY);
@@ -13,42 +13,36 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Check Gemini AI status
- * @returns {Promise<{online: boolean, model: string}>}
+ * Check WebLLM AI status
+ * @returns {Promise<{online: boolean, model: string|null, loaded: boolean}>}
  */
 export async function checkAIStatus() {
   try {
-    const response = await fetch(
-      `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Hello' }] }],
-        }),
-      }
-    );
+    const { getWebLLMStatus, checkWebGPUSupport } = await import('./webllm.js');
+    const status = getWebLLMStatus();
+    const webgpuSupported = await checkWebGPUSupport();
 
     return {
-      online: response.ok,
-      model: GEMINI_CONFIG.MODEL,
+      online: webgpuSupported,
+      model: status.model,
+      loaded: status.loaded,
+      loading: status.loading,
+      progress: status.progress,
+      webgpuSupported,
     };
   } catch (error) {
     console.error('AI status check failed:', error);
-    return { online: false, model: GEMINI_CONFIG.MODEL };
+    return { online: false, model: null, loaded: false, webgpuSupported: false };
   }
 }
 
 /**
- * Generate OJT content using selected AI engine (Gemini or WebLLM)
+ * Generate OJT content using WebLLM (브라우저 내 AI)
  * @param {string} contentText - Raw content text
  * @param {string} title - Document title
- * @param {number} stepNumber - Current step number
- * @param {number} totalSteps - Total number of steps
+ * @param {number} stepNumber - Current step number (unused, for compatibility)
+ * @param {number} totalSteps - Total number of steps (unused, for compatibility)
  * @param {Function} onProgress - Progress callback
- * @param {Object} options - Additional options
- * @param {string} options.engine - AI engine to use ('gemini' | 'webllm')
- * @param {boolean} options.fallbackEnabled - Enable fallback to Gemini on WebLLM failure
  * @returns {Promise<Object>} - Generated OJT content
  */
 export async function generateOJTContent(
@@ -56,119 +50,22 @@ export async function generateOJTContent(
   title,
   stepNumber = 1,
   totalSteps = 1,
-  onProgress,
-  options = {}
+  onProgress
 ) {
-  const { engine = 'gemini', fallbackEnabled = AI_ENGINE_CONFIG.FALLBACK_ENABLED } = options;
-
-  // WebLLM 엔진 사용 시
-  if (engine === 'webllm') {
-    try {
-      const { generateWithWebLLM, getWebLLMStatus } = await import('./webllm.js');
-      const status = getWebLLMStatus();
-
-      if (!status.loaded) {
-        throw new Error('WebLLM이 로드되지 않았습니다. 먼저 모델을 로드해주세요.');
-      }
-
-      if (onProgress) onProgress('WebLLM으로 콘텐츠 생성 중...');
-      const result = await generateWithWebLLM(contentText, title, onProgress);
-      result.ai_engine = 'webllm';
-      return result;
-    } catch (error) {
-      console.warn('WebLLM 생성 실패:', error.message);
-
-      // Fallback to Gemini
-      if (fallbackEnabled) {
-        if (onProgress) onProgress('WebLLM 실패 - Gemini로 전환 중...');
-        console.log('Fallback to Gemini API');
-        // Continue to Gemini generation below
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  // Gemini 엔진 사용 (기본 또는 Fallback)
-  const stepLabel = totalSteps > 1 ? ` (${stepNumber}/${totalSteps}단계)` : '';
-
-  const prompt = `당신은 10년 경력의 기업 교육 설계 전문가입니다.
-
-다음 텍스트를 분석하여 신입사원 OJT(On-the-Job Training) 교육 자료를 생성하세요.
-문서 제목: "${title}${stepLabel}"
-
-## 출력 형식 (반드시 JSON)
-{
-  "title": "문서 제목",
-  "team": "팀 또는 분야명",
-  "sections": [
-    {
-      "title": "섹션 제목",
-      "content": "HTML 형식의 상세 내용 (p, ul, li, strong 태그 사용)"
-    }
-  ],
-  "quiz": [
-    {
-      "question": "문제",
-      "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
-      "correct": 0
-    }
-  ]
-}
-
-## 섹션 구성 (4-6개)
-1. 학습 목표
-2. 핵심 내용 (가장 중요)
-3. 실무 예시
-4. 주의사항
-5. 요약 정리
-
-## 퀴즈 구성 (20개)
-- 기억형 40%: 핵심 용어, 정의
-- 이해형 35%: 개념 관계, 비교
-- 적용형 25%: 실무 상황 판단
-
-## 입력 텍스트
-${contentText.substring(0, 12000)}`;
-
   try {
-    if (onProgress) onProgress('AI 분석 중...');
+    const { generateWithWebLLM, getWebLLMStatus } = await import('./webllm.js');
+    const status = getWebLLMStatus();
 
-    const response = await fetch(
-      `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: CONFIG.AI_TEMPERATURE,
-            maxOutputTokens: CONFIG.AI_MAX_TOKENS,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`AI 응답 오류: ${response.status}`);
+    if (!status.loaded) {
+      throw new Error('WebLLM이 로드되지 않았습니다. 먼저 모델을 로드해주세요.');
     }
 
-    const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!responseText) {
-      throw new Error('AI 응답이 비어있습니다.');
-    }
-
-    // Parse AI response
-    const result = parseAIResponse(responseText);
-
-    // Validate and fill quiz if needed
-    const validatedResult = validateAndFillResult(result, title);
-    validatedResult.ai_engine = 'gemini';
-    return validatedResult;
+    if (onProgress) onProgress('WebLLM으로 콘텐츠 생성 중...');
+    const result = await generateWithWebLLM(contentText, title, onProgress);
+    result.ai_engine = 'webllm';
+    return result;
   } catch (error) {
-    console.warn('AI 분석 실패, 원문 모드로 전환:', error.message);
+    console.warn('WebLLM 생성 실패:', error.message);
 
     // Graceful Degradation: 원문 그대로 반환
     if (onProgress) onProgress('AI 분석 실패 - 원문으로 등록 중...');
@@ -392,7 +289,7 @@ export function validateQuizQuality(quiz) {
 }
 
 /**
- * Regenerate specific quiz questions using AI
+ * Regenerate specific quiz questions using WebLLM
  * @param {string} contentText - Original content text
  * @param {Array} indices - Indices of questions to regenerate
  * @param {Array} existingQuiz - Existing quiz array
@@ -400,89 +297,36 @@ export function validateQuizQuality(quiz) {
  * @returns {Promise<Array>} - Updated quiz array
  */
 export async function regenerateQuizQuestions(contentText, indices, existingQuiz, onProgress) {
-  const count = indices.length;
-
-  const prompt = `당신은 10년 경력의 기업 교육 설계 전문가입니다.
-
-다음 텍스트를 기반으로 새로운 퀴즈 문제 ${count}개를 생성하세요.
-
-## 출력 형식 (반드시 JSON 배열만)
-[
-  {
-    "question": "문제 내용",
-    "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
-    "correct": 0
-  }
-]
-
-## 퀴즈 작성 규칙
-- 기억형 40%: 핵심 용어, 정의 관련
-- 이해형 35%: 개념 관계, 비교 관련
-- 적용형 25%: 실무 상황 판단 관련
-- 각 문제는 4개의 명확히 다른 선택지를 가져야 함
-- 정답은 반드시 선택지 중 하나여야 함
-- 문제는 20자 이상의 구체적인 질문이어야 함
-
-## 기존 문제 (중복 방지)
-${existingQuiz
-  .filter((_, i) => !indices.includes(i))
-  .map((q) => q.question)
-  .join('\n')}
-
-## 입력 텍스트
-${contentText.substring(0, 8000)}`;
-
   try {
+    const { getWebLLMStatus } = await import('./webllm.js');
+    const status = getWebLLMStatus();
+
+    if (!status.loaded) {
+      console.warn('WebLLM이 로드되지 않아 퀴즈 재생성 불가');
+      return existingQuiz;
+    }
+
     if (onProgress) onProgress('퀴즈 재생성 중...');
 
-    const response = await fetch(
-      `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 4096,
-          },
-        }),
-      }
-    );
+    // WebLLM으로 전체 콘텐츠 재생성 후 퀴즈만 교체
+    const { generateWithWebLLM } = await import('./webllm.js');
+    const result = await generateWithWebLLM(contentText, '퀴즈 재생성', onProgress);
 
-    if (!response.ok) {
-      throw new Error(`AI 응답 오류: ${response.status}`);
+    if (!result.quiz || result.quiz.length === 0) {
+      return existingQuiz;
     }
-
-    const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!responseText) {
-      throw new Error('AI 응답이 비어있습니다.');
-    }
-
-    // Parse new questions
-    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      throw new Error('JSON 배열을 찾을 수 없습니다.');
-    }
-
-    // eslint-disable-next-line no-control-regex
-    const jsonStr = jsonMatch[0].replace(/[\x00-\x1F\x7F]/g, ' ');
-    const newQuestions = JSON.parse(jsonStr);
 
     // Replace specified indices with new questions
     const updatedQuiz = [...existingQuiz];
     indices.forEach((targetIdx, i) => {
-      if (newQuestions[i] && targetIdx < updatedQuiz.length) {
-        updatedQuiz[targetIdx] = normalizeQuizQuestion(newQuestions[i], targetIdx, '');
+      if (result.quiz[i] && targetIdx < updatedQuiz.length) {
+        updatedQuiz[targetIdx] = result.quiz[i];
       }
     });
 
     return updatedQuiz;
   } catch (error) {
     console.warn('퀴즈 재생성 실패:', error.message);
-    // Graceful Degradation: 기존 퀴즈 그대로 반환
     return existingQuiz;
   }
 }

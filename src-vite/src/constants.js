@@ -1,4 +1,4 @@
-// OJT Master v2.3.0 - Constants and Configuration
+// OJT Master v2.9.0 - Constants and Configuration (WebLLM Only)
 
 export const CONFIG = {
   // Time limits
@@ -12,11 +12,6 @@ export const CONFIG = {
   QUIZ_PASS_THRESHOLD: 3, // 3/4 to pass
   QUIZ_QUESTIONS_PER_TEST: 4,
   QUIZ_TOTAL_POOL: 20,
-
-  // AI settings
-  AI_RETRY_TIMEOUT: 30000,
-  AI_TEMPERATURE: 0.3,
-  AI_MAX_TOKENS: 8192,
 
   // Security
   ALLOWED_ORIGINS: [
@@ -33,13 +28,6 @@ export const CONFIG = {
 export const SUPABASE_CONFIG = {
   URL: import.meta.env.VITE_SUPABASE_URL || '',
   ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-};
-
-// Gemini API configuration
-export const GEMINI_CONFIG = {
-  API_KEY: import.meta.env.VITE_GEMINI_API_KEY || '',
-  MODEL: 'gemini-2.0-flash-exp',
-  API_URL: 'https://generativelanguage.googleapis.com/v1beta/models',
 };
 
 // R2 Upload configuration
@@ -97,12 +85,10 @@ export const WEBLLM_CONFIG = {
   ],
 };
 
-// AI Engine configuration
+// AI Engine configuration (WebLLM Only)
 export const AI_ENGINE_CONFIG = {
-  // 기본 엔진: 'gemini' | 'webllm'
-  DEFAULT_ENGINE: 'gemini',
-  // WebLLM 실패 시 Gemini로 폴백
-  FALLBACK_ENABLED: true,
+  // WebLLM 전용
+  DEFAULT_ENGINE: 'webllm',
   // 로컬 스토리지 키
   STORAGE_KEY: 'ojt_ai_engine',
 };

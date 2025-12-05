@@ -1,15 +1,27 @@
-// OJT Master v2.3.0 - Header Component
+// OJT Master v2.9.0 - Header Component (WebLLM Only)
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAI } from '../contexts/AIContext';
 import { ROLES } from '../constants';
 
-export default function Header({ aiStatus }) {
+export default function Header() {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();
+  const { webllmStatus, webgpuSupported } = useAI();
   const [showModeMenu, setShowModeMenu] = useState(false);
 
   const isAdmin = user?.role === ROLES.ADMIN;
   const isTempMentorMode = sessionMode === 'mentor';
+
+  // AI 상태 결정
+  const getAIStatusText = () => {
+    if (webgpuSupported === false) return 'WebGPU 미지원';
+    if (webllmStatus.loading) return `로딩 ${webllmStatus.progress}%`;
+    if (webllmStatus.loaded) return 'WebLLM 준비됨';
+    return 'AI 대기 중';
+  };
+
+  const isAIReady = webllmStatus.loaded;
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -17,13 +29,13 @@ export default function Header({ aiStatus }) {
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">OJT</span>
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
               <p className="text-xs text-gray-500">
-                {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.3.0'}
+                {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.9.0 (WebLLM)'}
               </p>
             </div>
           </div>
@@ -34,12 +46,14 @@ export default function Header({ aiStatus }) {
             <div className="flex items-center gap-2">
               <span
                 className={`w-2 h-2 rounded-full ${
-                  aiStatus.online ? 'bg-green-500' : 'bg-red-500'
+                  isAIReady
+                    ? 'bg-green-500'
+                    : webllmStatus.loading
+                      ? 'bg-amber-500 animate-pulse'
+                      : 'bg-gray-400'
                 }`}
               />
-              <span className="text-sm text-gray-600">
-                {aiStatus.online ? 'Gemini 온라인' : 'AI 오프라인'}
-              </span>
+              <span className="text-sm text-gray-600">{getAIStatusText()}</span>
             </div>
 
             {/* Mode Switch (Admin only) */}

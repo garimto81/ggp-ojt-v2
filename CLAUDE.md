@@ -4,16 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.8.0)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.9.0)
 
 ## Tech Stack
 
 | 영역 | 기술 |
 |------|------|
-| **Frontend** | React 19 + Vite 7 (권장) / React 18 CDN (레거시) |
+| **Frontend** | React 19 + Vite 7 |
 | **Backend/DB** | Supabase (PostgreSQL + Auth + RLS) |
 | **Local Cache** | Dexie.js (IndexedDB) |
-| **AI** | Google Gemini API (gemini-2.0-flash-exp) |
+| **AI** | WebLLM (브라우저 내 LLM - 무료, 오프라인 가능) |
 | **Image Storage** | Cloudflare R2 (Worker 프록시) |
 | **Editor** | Quill 2.0 (Rich Text) |
 | **Hosting** | Vercel (자동 배포) |
@@ -21,7 +21,7 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 ## Commands
 
 ```bash
-# === Vite 앱 (src-vite/) - 권장 ===
+# === Vite 앱 (src-vite/) ===
 cd src-vite
 npm run dev                     # 개발 서버 (http://localhost:5173)
 npm run build                   # 프로덕션 빌드
@@ -36,9 +36,6 @@ npm run test:coverage           # 커버리지 리포트
 npm run format:check            # 포맷 검사 (수정 없이)
 npx vitest run src/utils/api.test.js              # 단일 파일
 npx vitest run -t "checkAIStatus"                 # 특정 테스트명 매칭
-
-# === 레거시 앱 (루트 index.html) ===
-npx serve . -p 3000             # 로컬 개발 서버
 
 # === E2E 테스트 (Playwright) - 루트에서 실행 ===
 # 기본 baseURL: https://ggp-ojt-v2.vercel.app (프로덕션)
@@ -63,8 +60,9 @@ npm test                        # Vitest 테스트
 # src-vite/.env (복사: .env.example → .env)
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_GEMINI_API_KEY=your-gemini-api-key
 VITE_R2_WORKER_URL=https://ojt-r2-upload.your-worker.workers.dev
+
+# Note: No AI API keys required! WebLLM runs entirely in the browser.
 ```
 
 ## Architecture
@@ -73,12 +71,11 @@ VITE_R2_WORKER_URL=https://ojt-r2-upload.your-worker.workers.dev
 
 ```
 ggp_ojt_v2/
-├── index.html              # 레거시 단일 파일 SPA (CDN React)
-├── src-vite/               # 모던 Vite 앱 (권장)
+├── src-vite/               # Vite 앱 (프로덕션)
 │   └── src/
 │       ├── components/     # React 컴포넌트
-│       ├── contexts/       # React Context (Auth, Docs, Toast)
-│       ├── utils/          # API, DB, Helpers
+│       ├── contexts/       # React Context (Auth, Docs, Toast, AI)
+│       ├── utils/          # API, DB, Helpers, WebLLM
 │       └── constants.js    # 설정값
 ├── ojt-r2-upload/          # Cloudflare R2 Worker
 ├── database/               # SQL 스키마 및 마이그레이션
@@ -87,6 +84,7 @@ ggp_ojt_v2/
 ├── tests/                  # Playwright E2E 테스트
 │   ├── e2e-*.spec.js       # E2E 테스트 파일
 │   └── performance.spec.js # 성능 테스트
+├── vercel.json             # Vercel 배포 설정 (src-vite 빌드)
 └── docs/                   # 가이드 문서
 ```
 
@@ -98,6 +96,10 @@ App.jsx
         ├── user, viewState, sessionMode 상태 관리
         ├── handleGoogleLogin, handleLogout, handleRoleSelect
         └── handleModeSwitch (Admin → Mentor 모드 전환)
+
+  └── AIProvider (contexts/AIContext.jsx)
+        ├── webllmStatus 상태 관리
+        └── loadWebLLM, unloadModel, refreshStatus
 
   └── DocsProvider (contexts/DocsContext.jsx)
         ├── docs, selectedDoc 상태 관리
@@ -116,7 +118,7 @@ App.jsx
 [React Component] ──→ [Context Hook] ──→ [utils/api.js]
      │                    │                    │
      │                    │                    ▼
-     │                    │            [Gemini API / Supabase]
+     │                    │            [WebLLM / Supabase]
      │                    │                    │
      │                    ▼                    │
      │              [utils/db.js] ◄────────────┘
@@ -185,34 +187,42 @@ localDb.version(2).stores({
 
 **Admin 모드 전환**: Header "모드" 버튼 → `sessionStorage`로 세션 유지
 
-## AI Content Generation
+## AI Content Generation (WebLLM)
 
-### Gemini API 설정
+### WebLLM 설정
 
-- Model: `gemini-2.0-flash-exp`
+- **Default Model**: Qwen 2.5 3B (한국어 우수, 2.4GB)
+- **Fallback Model**: Gemma 2 2B (저사양용, 1.8GB)
 - Temperature: 0.3
-- Max tokens: 8192
-- 프롬프트: 10년 경력 기업 교육 설계 전문가 역할
+- Max tokens: 4096
+- **요구사항**: WebGPU 지원 브라우저 (Chrome 113+, Edge 113+)
 
 ### 콘텐츠 생성 방식
 
 | 입력 방식 | 처리 |
 |-----------|------|
-| 직접 작성/텍스트 | 섹션 구조화 + 퀴즈 20개 생성 |
-| URL/PDF (v2.4.0) | Gemini URL Context Tool로 직접 분석, 원문 보존 |
+| 직접 작성/텍스트 | 섹션 구조화 + 퀴즈 10개 생성 |
+| URL | CORS 프록시로 텍스트 추출 후 분석 |
 
 ### 퀴즈 구성
 
 - 기억형 40%: 핵심 용어, 정의
 - 이해형 35%: 개념 관계, 비교
 - 적용형 25%: 실무 상황 판단
-- 20개 미만 시 더미 자동 생성
+- 10개 미만 시 더미 자동 생성
+
+### WebLLM 장점
+
+- **무료**: API 비용 없음
+- **프라이버시**: 데이터가 브라우저 외부로 전송되지 않음
+- **오프라인**: 첫 모델 다운로드 후 오프라인 사용 가능
 
 ## Error Handling
 
 | 영역 | 전략 |
 |------|------|
-| Gemini JSON 파싱 실패 | Regex fallback으로 필드 추출 |
+| WebLLM 로드 실패 | WebGPU 미지원 안내 표시 |
+| AI JSON 파싱 실패 | Regex fallback으로 필드 추출 |
 | 퀴즈 부족 | `createPlaceholderQuiz()`로 자동 채움 |
 | CORS 차단 | `allorigins.win` → `corsproxy.io` 순차 시도 |
 | 오프라인 동기화 | 3회 실패 시 큐에서 제거 |
@@ -221,15 +231,21 @@ localDb.version(2).stores({
 ## Deployment
 
 - **Production**: https://ggp-ojt-v2.vercel.app
+- **Build**: `src-vite/` → `dist/` (vercel.json 설정)
 - **Branch**: main (Vercel 자동 배포)
 - **Auth**: Supabase Google OAuth
 
-### 코드 수정 후 필수 작업
+### Vercel 환경 변수 설정
 
-1. **버전 업데이트**: `index.html`, `package.json`, `src-vite/package.json`, `CLAUDE.md` 동시 수정
-2. **커밋 해시 업데이트**: `index.html` 로그인 페이지에 버전 + 커밋 해시 표시
-   - 위치: `<p className="text-xs text-slate-400 mt-1">v2.6.8 (<hash>) | ...`
-3. **버전 규칙**: MAJOR.MINOR.PATCH (버그=PATCH, 기능=MINOR, 큰변경=MAJOR)
+Vercel Dashboard → Settings → Environment Variables:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_R2_WORKER_URL` (선택)
+
+### 버전 업데이트 규칙
+
+1. **버전 파일**: `package.json`, `src-vite/package.json`, `CLAUDE.md`
+2. **버전 규칙**: MAJOR.MINOR.PATCH (버그=PATCH, 기능=MINOR, 큰변경=MAJOR)
 
 ```bash
 # 최신 커밋 해시 확인
@@ -238,8 +254,7 @@ git log -1 --format='%h'
 
 ## 작업 시 주의사항
 
-1. **API 키**: 레거시 `index.html`에 노출됨 → Vite 앱에서는 `.env` 사용
-2. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수 (Vite 앱에 포함)
-3. **퀴즈 정답 인덱스**: 0 처리 주의 (`=== 0` 대신 `hasOwnProperty` 사용)
-4. **버전 동기화**: 수정 후 4개 파일 버전 + 커밋 해시 일치 필수
-5. **SSRF 방어**: `validateUrlForSSRF()` - localhost, 내부 IP 차단됨
+1. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수
+2. **퀴즈 정답 인덱스**: 0 처리 주의 (`=== 0` 대신 `hasOwnProperty` 사용)
+3. **SSRF 방어**: `validateUrlForSSRF()` - localhost, 내부 IP 차단됨
+4. **WebGPU**: Chrome/Edge 113+ 필수, Safari/Firefox 미지원
