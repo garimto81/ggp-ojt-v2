@@ -1,4 +1,4 @@
-// OJT Master v2.3.0 - Header Component
+// OJT Master v2.8.0-webllm - Header Component
 
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,7 +23,7 @@ export default function Header({ aiStatus }) {
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
               <p className="text-xs text-gray-500">
-                {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.3.0'}
+                {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.8.0-webllm'}
               </p>
             </div>
           </div>
