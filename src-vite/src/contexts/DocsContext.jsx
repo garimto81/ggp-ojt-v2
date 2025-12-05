@@ -31,14 +31,16 @@ export function DocsProvider({ children }) {
 
   // Load all documents
   const loadAllDocs = useCallback(async () => {
+    console.log('[Docs] loadAllDocs called');
     setIsLoading(true);
     try {
       const docs = await dbGetAll('ojt_docs');
+      console.log('[Docs] Loaded docs count:', docs.length);
       const sanitizedDocs = docs.map(sanitizeDocData);
       sanitizedDocs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       setAllDocs(sanitizedDocs);
     } catch (error) {
-      console.error('Load all docs error:', error);
+      console.error('[Docs] Load all docs error:', error);
     } finally {
       setIsLoading(false);
     }

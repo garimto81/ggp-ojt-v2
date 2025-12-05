@@ -113,32 +113,43 @@ export function AuthProvider({ children }) {
 
   // Initialize auth state
   useEffect(() => {
-    // Safety timeout to prevent infinite loading
-    const loadingTimeout = setTimeout(() => {
-      if (isLoading) {
-        console.warn('Auth loading timeout - forcing role select view');
-        setIsLoading(false);
-        setViewState(VIEW_STATES.ROLE_SELECT);
-      }
+    let loadingTimeout;
+    let isMounted = true;
+
+    // Safety timeout to prevent infinite loading (uses functional update to avoid stale closure)
+    loadingTimeout = setTimeout(() => {
+      setIsLoading((prev) => {
+        if (prev && isMounted) {
+          console.warn('Auth loading timeout - forcing role select view');
+          setViewState(VIEW_STATES.ROLE_SELECT);
+          return false;
+        }
+        return prev;
+      });
     }, 15000); // 15 second max loading time
 
     // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      loadUserProfile(session);
+      if (isMounted) {
+        loadUserProfile(session);
+      }
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      loadUserProfile(session);
+      if (isMounted) {
+        loadUserProfile(session);
+      }
     });
 
     return () => {
+      isMounted = false;
       clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
-  }, [loadUserProfile, isLoading]);
+  }, [loadUserProfile]); // ← isLoading 제거 (순환 실행 방지)
 
   // Google login
   const handleGoogleLogin = async () => {
@@ -169,6 +180,13 @@ export function AuthProvider({ children }) {
   const handleRoleSelect = async (selectedRole) => {
     if (!user) return;
 
+    // Validate role
+    const validRoles = [ROLES.ADMIN, ROLES.MENTOR, ROLES.MENTEE];
+    if (!validRoles.includes(selectedRole)) {
+      console.error('[Auth] Invalid role:', selectedRole);
+      throw new Error('Invalid role selected');
+    }
+
     try {
       const userData = {
         id: user.id,
@@ -179,7 +197,20 @@ export function AuthProvider({ children }) {
         updated_at: new Date().toISOString(),
       };
 
+      // Save to Supabase first (source of truth)
+      console.log('[Auth] Saving role to Supabase:', selectedRole);
+      const { error: supabaseError } = await supabase
+        .from('users')
+        .upsert(userData, { onConflict: 'id' });
+
+      if (supabaseError) {
+        console.error('[Auth] Supabase save error:', supabaseError);
+        throw supabaseError;
+      }
+
+      // Then save to local cache
       await dbSave('users', userData);
+      console.log('[Auth] Role saved successfully to both Supabase and local cache');
 
       setUser((prev) => ({ ...prev, role: selectedRole }));
       setViewState(getViewStateByRole(selectedRole));
