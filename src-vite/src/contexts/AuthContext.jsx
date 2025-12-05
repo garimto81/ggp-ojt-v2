@@ -29,26 +29,33 @@ export function AuthProvider({ children }) {
     console.log('[Auth] Session user id:', session.user.id, 'email:', session.user.email);
 
     try {
-      // Check local cache first
-      const localUsers = await dbGetAll('users');
-      console.log('[Auth] Local users count:', localUsers.length);
-      let profile = localUsers.find((u) => u.id === session.user.id);
-      console.log('[Auth] Profile from local cache:', profile ? { role: profile.role, id: profile.id } : 'not found');
+      // Always fetch from Supabase first (source of truth for role)
+      console.log('[Auth] Fetching profile from Supabase...');
+      const { data: supabaseProfile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
 
-      // If not in cache, fetch from Supabase
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 = no rows returned (new user)
+        console.error('[Auth] Supabase fetch error:', error);
+      }
+      console.log('[Auth] Profile from Supabase:', supabaseProfile ? { role: supabaseProfile.role, id: supabaseProfile.id } : 'not found');
+
+      let profile = supabaseProfile;
+
+      // Fallback to local cache only if Supabase fails (offline mode)
       if (!profile) {
-        console.log('[Auth] Fetching profile from Supabase...');
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error) {
-          console.error('[Auth] Supabase fetch error:', error);
-        }
-        console.log('[Auth] Profile from Supabase:', data ? { role: data.role, id: data.id } : 'not found');
-        profile = data;
+        console.log('[Auth] Supabase returned null, checking local cache...');
+        const localUsers = await dbGetAll('users');
+        console.log('[Auth] Local users count:', localUsers.length);
+        profile = localUsers.find((u) => u.id === session.user.id);
+        console.log('[Auth] Profile from local cache:', profile ? { role: profile.role, id: profile.id } : 'not found');
+      } else {
+        // Sync Supabase data to local cache
+        console.log('[Auth] Syncing Supabase profile to local cache...');
+        await dbSave('users', supabaseProfile);
       }
 
       if (profile && profile.role) {
