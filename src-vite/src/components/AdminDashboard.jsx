@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ role: newRole, updated_at: Date.now() })
+        .update({ role: newRole, updated_at: new Date().toISOString() })
         .eq('id', userId);
 
       if (error) throw error;
@@ -70,7 +70,7 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ department: newDepartment || null, updated_at: Date.now() })
+        .update({ department: newDepartment || null, updated_at: new Date().toISOString() })
         .eq('id', userId);
 
       if (error) throw error;
