@@ -19,25 +19,35 @@ export function AuthProvider({ children }) {
 
   // Load user profile
   const loadUserProfile = useCallback(async (session) => {
+    console.log('[Auth] loadUserProfile called, session:', session ? 'exists' : 'null');
     if (!session?.user) {
+      console.log('[Auth] No session user, setting ROLE_SELECT');
       setViewState(VIEW_STATES.ROLE_SELECT);
       setIsLoading(false);
       return;
     }
+    console.log('[Auth] Session user id:', session.user.id, 'email:', session.user.email);
 
     try {
       // Check local cache first
       const localUsers = await dbGetAll('users');
+      console.log('[Auth] Local users count:', localUsers.length);
       let profile = localUsers.find((u) => u.id === session.user.id);
+      console.log('[Auth] Profile from local cache:', profile ? { role: profile.role, id: profile.id } : 'not found');
 
       // If not in cache, fetch from Supabase
       if (!profile) {
-        const { data } = await supabase
+        console.log('[Auth] Fetching profile from Supabase...');
+        const { data, error } = await supabase
           .from('users')
           .select('*')
           .eq('id', session.user.id)
           .single();
 
+        if (error) {
+          console.error('[Auth] Supabase fetch error:', error);
+        }
+        console.log('[Auth] Profile from Supabase:', data ? { role: data.role, id: data.id } : 'not found');
         profile = data;
       }
 
@@ -55,11 +65,15 @@ export function AuthProvider({ children }) {
 
         // Restore session mode if admin
         const tempMode = SecureSession.get('ojt_sessionMode');
+        console.log('[Auth] SessionMode from storage:', tempMode, ', user role:', profile.role, ', ROLES.ADMIN:', ROLES.ADMIN);
+        console.log('[Auth] Role comparison (profile.role === ROLES.ADMIN):', profile.role === ROLES.ADMIN);
         if (profile.role === ROLES.ADMIN && tempMode) {
+          console.log('[Auth] Admin with tempMode, setting sessionMode:', tempMode);
           setSessionMode(tempMode);
         }
 
         const newViewState = getViewStateByRole(profile.role, tempMode);
+        console.log('[Auth] getViewStateByRole result:', newViewState);
         console.log('[Auth] Setting viewState:', newViewState, '(role:', profile.role, ', tempMode:', tempMode, ')');
         setViewState(newViewState);
       } else if (profile && !profile.role) {
