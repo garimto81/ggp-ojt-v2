@@ -2,7 +2,7 @@
 // 브라우저 내 AI 모델 선택 UI
 
 import { useState } from 'react';
-import { useAI } from '../contexts/AIContext';
+import { useAI } from '../hooks/AIContext';
 
 /**
  * WebLLM 모델 선택 컴포넌트

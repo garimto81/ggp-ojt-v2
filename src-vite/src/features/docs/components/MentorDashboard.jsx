@@ -1,24 +1,24 @@
 // OJT Master v2.9.0 - Mentor Dashboard Component (WebLLM Only)
 
 import { useState } from 'react';
-import { useDocs } from '../contexts/DocsContext';
-import { useAuth } from '../contexts/AuthContext';
-import { useAI } from '../contexts/AIContext';
-import { Toast } from '../contexts/ToastContext';
+import { useDocs } from '../../../contexts/DocsContext';
+import { useAuth } from '../../auth/hooks/AuthContext';
+import { useAI } from '../../ai/hooks/AIContext';
+import { Toast } from '../../../contexts/ToastContext';
 import {
   generateOJTContent,
   validateQuizQuality,
   regenerateQuizQuestions,
   extractUrlText,
-} from '../utils/api';
+} from '../../../utils/api';
 import {
   estimateReadingTime,
   calculateRequiredSteps,
   splitContentForSteps,
   confirmDeleteWithCSRF,
   formatDate,
-} from '../utils/helpers';
-import AIEngineSelector from './AIEngineSelector';
+} from '../../../utils/helpers';
+import AIEngineSelector from '../../ai/components/AIEngineSelector';
 
 export default function MentorDashboard() {
   const { myDocs, saveDocument, deleteDocument, loadMyDocs } = useDocs();
@@ -104,12 +104,8 @@ export default function MentorDashboard() {
       // Generate content for each step (in parallel if multiple)
       if (numSteps > 1) {
         const promises = segments.map((segment, i) =>
-          generateOJTContent(
-            segment,
-            inputTitle || '새 OJT 문서',
-            i + 1,
-            numSteps,
-            (status) => setProcessingStatus(`Step ${i + 1}: ${status}`)
+          generateOJTContent(segment, inputTitle || '새 OJT 문서', i + 1, numSteps, (status) =>
+            setProcessingStatus(`Step ${i + 1}: ${status}`)
           )
         );
         const results = await Promise.all(promises);

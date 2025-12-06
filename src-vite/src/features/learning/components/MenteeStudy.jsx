@@ -1,12 +1,12 @@
 // OJT Master v2.5.0 - Mentee Study Component
 
 import { useState, useMemo, useEffect } from 'react';
-import { useDocs } from '../contexts/DocsContext';
-import { useAuth } from '../contexts/AuthContext';
-import { Toast } from '../contexts/ToastContext';
-import { supabase } from '../utils/api';
-import { sanitizeHtml, shuffleArray } from '../utils/helpers';
-import { CONFIG, VIEW_STATES } from '../constants';
+import { useDocs } from '../../../contexts/DocsContext';
+import { useAuth } from '../../auth/hooks/AuthContext';
+import { Toast } from '../../../contexts/ToastContext';
+import { supabase } from '../../../utils/api';
+import { sanitizeHtml, shuffleArray } from '../../../utils/helpers';
+import { CONFIG, VIEW_STATES } from '../../../constants';
 
 export default function MenteeStudy() {
   const { selectedDoc, setSelectedDoc } = useDocs();

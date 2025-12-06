@@ -1,10 +1,10 @@
 // OJT Master v2.3.0 - Authentication Context
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../utils/api';
-import { dbGetAll, dbSave } from '../utils/db';
-import { SecureSession, getViewStateByRole } from '../utils/helpers';
-import { VIEW_STATES, ROLES } from '../constants';
+import { supabase } from '../../../utils/api';
+import { dbGetAll, dbSave } from '../../../utils/db';
+import { SecureSession, getViewStateByRole } from '../../../utils/helpers';
+import { VIEW_STATES, ROLES } from '../../../constants';
 
 const AuthContext = createContext(null);
 
@@ -41,7 +41,10 @@ export function AuthProvider({ children }) {
         // PGRST116 = no rows returned (new user)
         console.error('[Auth] Supabase fetch error:', error);
       }
-      console.log('[Auth] Profile from Supabase:', supabaseProfile ? { role: supabaseProfile.role, id: supabaseProfile.id } : 'not found');
+      console.log(
+        '[Auth] Profile from Supabase:',
+        supabaseProfile ? { role: supabaseProfile.role, id: supabaseProfile.id } : 'not found'
+      );
 
       let profile = supabaseProfile;
 
@@ -51,7 +54,10 @@ export function AuthProvider({ children }) {
         const localUsers = await dbGetAll('users');
         console.log('[Auth] Local users count:', localUsers.length);
         profile = localUsers.find((u) => u.id === session.user.id);
-        console.log('[Auth] Profile from local cache:', profile ? { role: profile.role, id: profile.id } : 'not found');
+        console.log(
+          '[Auth] Profile from local cache:',
+          profile ? { role: profile.role, id: profile.id } : 'not found'
+        );
       } else {
         // Sync Supabase data to local cache
         console.log('[Auth] Syncing Supabase profile to local cache...');
@@ -72,8 +78,18 @@ export function AuthProvider({ children }) {
 
         // Restore session mode if admin
         const tempMode = SecureSession.get('ojt_sessionMode');
-        console.log('[Auth] SessionMode from storage:', tempMode, ', user role:', profile.role, ', ROLES.ADMIN:', ROLES.ADMIN);
-        console.log('[Auth] Role comparison (profile.role === ROLES.ADMIN):', profile.role === ROLES.ADMIN);
+        console.log(
+          '[Auth] SessionMode from storage:',
+          tempMode,
+          ', user role:',
+          profile.role,
+          ', ROLES.ADMIN:',
+          ROLES.ADMIN
+        );
+        console.log(
+          '[Auth] Role comparison (profile.role === ROLES.ADMIN):',
+          profile.role === ROLES.ADMIN
+        );
         if (profile.role === ROLES.ADMIN && tempMode) {
           console.log('[Auth] Admin with tempMode, setting sessionMode:', tempMode);
           setSessionMode(tempMode);
@@ -81,7 +97,15 @@ export function AuthProvider({ children }) {
 
         const newViewState = getViewStateByRole(profile.role, tempMode);
         console.log('[Auth] getViewStateByRole result:', newViewState);
-        console.log('[Auth] Setting viewState:', newViewState, '(role:', profile.role, ', tempMode:', tempMode, ')');
+        console.log(
+          '[Auth] Setting viewState:',
+          newViewState,
+          '(role:',
+          profile.role,
+          ', tempMode:',
+          tempMode,
+          ')'
+        );
         setViewState(newViewState);
       } else if (profile && !profile.role) {
         // Corrupted cache: profile exists but no role - treat as new user

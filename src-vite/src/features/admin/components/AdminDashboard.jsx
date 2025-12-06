@@ -1,12 +1,12 @@
 // OJT Master v2.9.4 - Admin Dashboard Component
 
 import { useState, useEffect, useMemo } from 'react';
-import { useDocs } from '../contexts/DocsContext';
-import { useAuth } from '../contexts/AuthContext';
-import { Toast } from '../contexts/ToastContext';
-import { supabase } from '../utils/api';
-import { confirmDeleteWithCSRF, formatDate } from '../utils/helpers';
-import { useDebounce } from '../hooks/useDebounce';
+import { useDocs } from '../../../contexts/DocsContext';
+import { useAuth } from '../../auth/hooks/AuthContext';
+import { Toast } from '../../../contexts/ToastContext';
+import { supabase } from '../../../utils/api';
+import { confirmDeleteWithCSRF, formatDate } from '../../../utils/helpers';
+import { useDebounce } from '../../../hooks/useDebounce';
 
 // 기본 부서 목록
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
@@ -148,7 +148,9 @@ export default function AdminDashboard() {
     const targetUser = allUsers.find((u) => u.id === userId);
 
     if (
-      !window.confirm(`정말 ${targetUser?.name}님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)
+      !window.confirm(
+        `정말 ${targetUser?.name}님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+      )
     ) {
       return;
     }
@@ -222,7 +224,15 @@ export default function AdminDashboard() {
     const paginated = filtered.slice(startIndex, startIndex + userItemsPerPage);
 
     return { filteredUsers: filtered, paginatedUsers: paginated, totalUserPages: totalPages };
-  }, [allUsers, debouncedUserSearch, userRoleFilter, userDeptFilter, userSort, userPage, userItemsPerPage]);
+  }, [
+    allUsers,
+    debouncedUserSearch,
+    userRoleFilter,
+    userDeptFilter,
+    userSort,
+    userPage,
+    userItemsPerPage,
+  ]);
 
   // Filtered and paginated docs
   const { filteredDocs, paginatedDocs, totalDocPages } = useMemo(() => {

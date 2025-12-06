@@ -3,7 +3,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { AuthProvider, DocsProvider, ToastProvider, AIProvider } from './contexts';
+import { AuthProvider } from './features/auth/hooks/AuthContext';
+import { AIProvider } from './features/ai/hooks/AIContext';
+import { DocsProvider } from './contexts/DocsContext';
+import { ToastProvider } from './contexts/ToastContext';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(

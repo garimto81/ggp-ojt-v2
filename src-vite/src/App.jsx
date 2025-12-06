@@ -1,15 +1,17 @@
 // OJT Master v2.9.0 - Main Application Component (WebLLM Only)
 
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './features/auth/hooks/AuthContext';
 import { VIEW_STATES } from './constants';
 
-// Components
-import Header from './components/Header';
-import RoleSelectionPage from './components/RoleSelectionPage';
-import AdminDashboard from './components/AdminDashboard';
-import MentorDashboard from './components/MentorDashboard';
-import MenteeList from './components/MenteeList';
-import MenteeStudy from './components/MenteeStudy';
+// Layouts
+import Header from './layouts/Header';
+
+// Feature Components
+import RoleSelectionPage from './features/auth/components/RoleSelectionPage';
+import AdminDashboard from './features/admin/components/AdminDashboard';
+import MentorDashboard from './features/docs/components/MentorDashboard';
+import MenteeList from './features/learning/components/MenteeList';
+import MenteeStudy from './features/learning/components/MenteeStudy';
 
 function App() {
   const { viewState, isLoading } = useAuth();

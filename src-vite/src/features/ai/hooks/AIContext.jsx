@@ -2,7 +2,7 @@
 // 브라우저 내 AI 엔진 상태 관리 - Service Worker 지원
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { WEBLLM_CONFIG } from '../constants';
+import { WEBLLM_CONFIG } from '../../../constants';
 import {
   initWebLLM,
   getWebLLMStatus,
@@ -11,7 +11,7 @@ import {
   getAvailableModels,
   checkModelCache,
   WEBLLM_ERROR_TYPES,
-} from '../utils/webllm';
+} from '../services/webllm';
 
 const AIContext = createContext(null);
 
@@ -81,15 +81,19 @@ export function AIProvider({ children }) {
 
       try {
         // Service Worker 사용하여 모델 로드
-        await initWebLLM(modelId, (progressText) => {
-          // 문자열에서 progress 추출 (예: "모델 로딩 중... 50%")
-          const match = progressText.match(/(\d+)%/);
-          const progress = match ? parseInt(match[1], 10) : 0;
-          setWebllmStatus((prev) => ({
-            ...prev,
-            progress,
-          }));
-        }, true); // useServiceWorker = true
+        await initWebLLM(
+          modelId,
+          (progressText) => {
+            // 문자열에서 progress 추출 (예: "모델 로딩 중... 50%")
+            const match = progressText.match(/(\d+)%/);
+            const progress = match ? parseInt(match[1], 10) : 0;
+            setWebllmStatus((prev) => ({
+              ...prev,
+              progress,
+            }));
+          },
+          true
+        ); // useServiceWorker = true
 
         setWebllmStatus({
           loaded: true,
