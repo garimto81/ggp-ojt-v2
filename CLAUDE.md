@@ -10,12 +10,13 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 
 | 영역 | 기술 |
 |------|------|
-| **Frontend** | React 19 + Vite 7 |
+| **Frontend** | React 19 + Vite 7 + Tailwind CSS 4 |
 | **Backend/DB** | Supabase (PostgreSQL + Auth + RLS) |
 | **Local Cache** | Dexie.js (IndexedDB) |
 | **AI** | WebLLM (브라우저 내 LLM - 무료, 오프라인 가능) |
 | **Image Storage** | Cloudflare R2 (Worker 프록시) |
 | **Editor** | Quill 2.0 (Rich Text) |
+| **PDF** | pdfjs-dist (PDF 텍스트 추출) |
 | **Hosting** | Vercel (자동 배포) |
 
 ## Commands
@@ -39,7 +40,8 @@ npx vitest run -t "checkAIStatus"                 # 특정 테스트명 매칭
 
 # === E2E 테스트 (Playwright) - 루트에서 실행 ===
 # 기본 baseURL: https://ggp-ojt-v2.vercel.app (프로덕션)
-# 로컬 테스트: playwright.config.js에서 baseURL 주석 전환
+# 로컬 테스트: playwright.config.js 17행 주석 해제, 16행 주석 처리
+# 로컬 서버: cd src-vite && npm run dev 후 포트 확인
 npm test                        # 전체 테스트
 npm run test:headed             # 브라우저 화면 표시
 npm run test:ui                 # Playwright UI 모드
@@ -203,6 +205,7 @@ localDb.version(2).stores({
 |-----------|------|
 | 직접 작성/텍스트 | 섹션 구조화 + 퀴즈 10개 생성 |
 | URL | CORS 프록시로 텍스트 추출 후 분석 |
+| PDF 파일 | pdfjs-dist로 텍스트 추출 → 섹션화 + 퀴즈 생성 |
 
 ### 퀴즈 구성
 

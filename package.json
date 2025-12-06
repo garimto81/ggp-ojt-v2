@@ -1,22 +1,25 @@
 {
   "name": "ggp_ojt_v2",
   "version": "2.9.4",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
-  },
+  "description": "OJT Master - AI 기반 신입사원 온보딩 교육 시스템",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
+    "dev": "pnpm --filter src-vite dev",
+    "build": "pnpm --filter src-vite build",
+    "lint": "pnpm --filter src-vite lint",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "test:vite": "pnpm --filter src-vite test:run",
+    "test:worker": "pnpm --filter ojt-r2-upload test"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/garimto81/ggp-ojt-v2.git"
   },
-  "keywords": [],
+  "keywords": ["ojt", "education", "ai", "webllm"],
   "author": "",
   "license": "ISC",
   "bugs": {
