@@ -3,7 +3,7 @@
 
 import { useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { PDF_CONFIG } from '../../../constants';
+import { PDF_CONFIG } from '@/constants';
 
 // PDF.js worker 설정
 pdfjs.GlobalWorkerOptions.workerSrc = PDF_CONFIG.WORKER_SRC;

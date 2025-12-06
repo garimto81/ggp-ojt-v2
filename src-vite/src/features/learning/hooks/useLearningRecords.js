@@ -1,7 +1,8 @@
-// OJT Master - React Query Hooks for Learning Records (Issue #58)
+// OJT Master v2.10.0 - React Query Hooks for Learning Records
+// 역할: 학습 기록 서버 상태 관리 (Supabase 데이터 fetching, 캐싱)
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../utils/api';
+import { supabase } from '@utils/api';
 
 // Query Keys
 export const learningKeys = {

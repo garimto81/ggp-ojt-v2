@@ -1,9 +1,11 @@
-// OJT Master v2.3.0 - Documents Context
+// OJT Master v2.10.0 - Documents Context
+// 역할: 클라이언트 UI 상태 관리 (selectedDoc, generatedDoc 등)
+// 참고: 서버 데이터 fetching은 @features/docs/hooks/useDocs.js (React Query) 사용
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { dbGetAll, dbSave, dbDelete } from '../utils/db';
-import { sanitizeDocData } from '../utils/helpers';
-import { useAuth } from '../features/auth/hooks/AuthContext';
+import { dbGetAll, dbSave, dbDelete } from '@utils/db';
+import { sanitizeDocData } from '@utils/helpers';
+import { useAuth } from '@features/auth/hooks/AuthContext';
 
 const DocsContext = createContext(null);
 
@@ -102,18 +104,13 @@ export function DocsProvider({ children }) {
     async (docId) => {
       await dbDelete('ojt_docs', docId);
 
-      // Update local state
+      // Update local state (#71 - 의존성 수정)
       setAllDocs((prev) => prev.filter((d) => d.id !== docId));
       setMyDocs((prev) => prev.filter((d) => d.id !== docId));
-
-      if (selectedDoc?.id === docId) {
-        setSelectedDoc(null);
-      }
-      if (editingDoc?.id === docId) {
-        setEditingDoc(null);
-      }
+      setSelectedDoc((prev) => (prev?.id === docId ? null : prev));
+      setEditingDoc((prev) => (prev?.id === docId ? null : prev));
     },
-    [selectedDoc?.id, editingDoc?.id]
+    []
   );
 
   // Get documents by team

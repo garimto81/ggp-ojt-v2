@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.9.4)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.10.0)
 
 ## Tech Stack
 
 | 영역 | 기술 |
 |------|------|
-| **Frontend** | React 19 + Vite 7 + Tailwind CSS 4 |
+| **Frontend** | React 19 + Vite 7 + Tailwind CSS 4 + React Query 5 |
 | **Backend/DB** | Supabase (PostgreSQL + Auth + RLS) |
 | **Local Cache** | Dexie.js (IndexedDB) |
 | **AI** | WebLLM (브라우저 내 LLM - 무료, 오프라인 가능) |
@@ -69,46 +69,97 @@ VITE_R2_WORKER_URL=https://ojt-r2-upload.your-worker.workers.dev
 
 ## Architecture
 
-### 프로젝트 구조
+### 프로젝트 구조 (Feature-Based)
 
 ```
 ggp_ojt_v2/
-├── src-vite/               # Vite 앱 (프로덕션)
+├── src-vite/                   # Vite 앱 (프로덕션)
 │   └── src/
-│       ├── components/     # React 컴포넌트
-│       ├── contexts/       # React Context (Auth, Docs, Toast, AI)
-│       ├── utils/          # API, DB, Helpers, WebLLM
-│       └── constants.js    # 설정값
-├── ojt-r2-upload/          # Cloudflare R2 Worker
-├── database/               # SQL 스키마 및 마이그레이션
-│   ├── migrations/         # 스키마 생성/변경 SQL
-│   └── fixes/              # RLS/성능 수정 SQL
-├── tests/                  # Playwright E2E 테스트
-│   ├── e2e-*.spec.js       # E2E 테스트 파일
-│   └── performance.spec.js # 성능 테스트
-├── vercel.json             # Vercel 배포 설정 (src-vite 빌드)
-└── docs/                   # 가이드 문서
+│       ├── features/           # Feature-Based 구조 (v2.10.0+)
+│       │   ├── admin/          # 관리자 기능
+│       │   │   ├── components/ # AdminDashboard, AnalyticsCharts
+│       │   │   └── hooks/      # useUsers, useAnalytics
+│       │   ├── ai/             # AI 기능
+│       │   │   ├── components/ # AIEngineSelector
+│       │   │   ├── hooks/      # AIContext
+│       │   │   └── services/   # webllm, contentGenerator, quizValidator
+│       │   ├── auth/           # 인증 기능
+│       │   │   ├── components/ # RoleSelectionPage
+│       │   │   └── hooks/      # AuthContext
+│       │   ├── docs/           # 문서 기능
+│       │   │   ├── components/ # MentorDashboard, PdfViewer, UrlPreviewPanel
+│       │   │   ├── hooks/      # useDocs
+│       │   │   └── services/   # urlExtractor
+│       │   └── learning/       # 학습 기능
+│       │       ├── components/ # MenteeList, MenteeStudy
+│       │       └── hooks/      # useLearningRecords
+│       ├── contexts/           # 전역 Context (DocsContext, ToastContext)
+│       ├── hooks/              # 공용 Hooks (useDebounce)
+│       ├── layouts/            # Header
+│       ├── utils/              # API, DB, Helpers, CORS-proxy
+│       │   └── security/       # validateUrl (SSRF 방어)
+│       ├── constants.js        # 설정값
+│       ├── App.jsx             # 라우팅
+│       └── main.jsx            # 엔트리포인트
+├── ojt-r2-upload/              # Cloudflare R2 Worker
+├── database/                   # SQL 스키마 및 마이그레이션
+│   ├── migrations/             # 스키마 생성/변경 SQL
+│   └── fixes/                  # RLS/성능 수정 SQL
+├── tests/                      # Playwright E2E 테스트
+├── vercel.json                 # Vercel 배포 설정
+└── docs/                       # 가이드 문서
 ```
 
-### Context API 패턴 (src-vite)
+### Path Aliases (v2.10.0+)
 
+`vite.config.js` 및 `jsconfig.json`에 설정됨:
+
+| Alias | 경로 |
+|-------|------|
+| `@` | `src/` |
+| `@features` | `src/features/` |
+| `@utils` | `src/utils/` |
+| `@contexts` | `src/contexts/` |
+| `@layouts` | `src/layouts/` |
+| `@hooks` | `src/hooks/` |
+| `@components` | `src/components/` |
+
+```javascript
+// 사용 예시
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { Toast } from '@contexts/ToastContext';
+import { ROLES } from '@/constants';
 ```
-App.jsx
-  └── AuthProvider (contexts/AuthContext.jsx)
-        ├── user, viewState, sessionMode 상태 관리
-        ├── handleGoogleLogin, handleLogout, handleRoleSelect
-        └── handleModeSwitch (Admin → Mentor 모드 전환)
 
-  └── AIProvider (contexts/AIContext.jsx)
-        ├── webllmStatus 상태 관리
-        └── loadWebLLM, unloadModel, refreshStatus
+### 상태 관리 패턴 (React Query + Context API)
 
-  └── DocsProvider (contexts/DocsContext.jsx)
-        ├── docs, selectedDoc 상태 관리
-        └── CRUD 작업 (fetchDocs, saveDoc, deleteDoc)
+**React Query** - 서버 상태 (비동기 데이터 페칭, 캐싱):
+```javascript
+// features/*/hooks/use*.js
+import { useQuery, useMutation } from '@tanstack/react-query';
 
-  └── ToastProvider (contexts/ToastContext.jsx)
-        └── react-hot-toast 래퍼
+export function useDocs(filters) {
+  return useQuery({
+    queryKey: ['docs', filters],
+    queryFn: () => fetchDocs(filters),
+  });
+}
+```
+
+**Context API** - 클라이언트 상태 (인증, UI 상태):
+```
+main.jsx
+  └── QueryClientProvider (React Query)
+        └── ToastProvider (@contexts/ToastContext)
+              └── AuthProvider (@features/auth/hooks/AuthContext)
+                    ├── user, viewState, sessionMode 관리
+                    └── handleGoogleLogin, handleLogout, handleModeSwitch
+                    └── AIProvider (@features/ai/hooks/AIContext)
+                          ├── webllmStatus 상태
+                          └── loadWebLLM, unloadModel
+                          └── DocsProvider (@contexts/DocsContext)
+                                ├── selectedDoc, generatedDoc 관리
+                                └── CRUD 작업
 ```
 
 ### 데이터 흐름
@@ -257,54 +308,36 @@ git log -1 --format='%h'
 
 ## Known Issues & Roadmap
 
-> **마스터 플랜**: `tasks/prds/refactoring-master-plan.md` 참조
+### v2.10.0 완료된 작업
 
-### v3.0 리팩토링 이슈
-
-| 이슈 | 제목 | 우선순위 | 상태 |
-|------|------|----------|------|
-| #55 | AdminDashboard 사용자/콘텐츠 관리 기능 개선 | P1 | PR #56 |
-| #57 | Feature-Based 폴더 구조 전환 | P1 | OPEN |
-| #58 | React Query 도입으로 서버 상태 관리 개선 | P2 | OPEN |
-| #59 | api.js 모듈 분리 (SRP 적용) | P2 | OPEN |
-| #60 | 오프라인 동기화 완성 (processSyncQueue) | P3 | OPEN |
-| #61 | pnpm workspaces 전환 (의존성 통합) | P0 | OPEN |
-| #62 | WebLLM Service Worker 활성화 및 UX 개선 | P0 | OPEN |
-
-### 이슈 의존성
-
-```
-#61 pnpm workspaces ──┐
-                      ├──→ #57 Feature-Based 구조 ──→ #59 api.js 분리
-#62 WebLLM Service ───┘                                     │
-                                                            ▼
-#55 AdminDashboard ──────────────────────────────→ #58 React Query
-                                                            │
-                                                            ▼
-                                                      #60 오프라인
-```
-
-### 기술 부채 현황
-
-| 영역 | 문제 | 심각도 |
-|------|------|--------|
-| 컴포넌트 | AdminDashboard 705줄, MentorDashboard 628줄 | HIGH |
-| API 레이어 | api.js 300줄+, 7개 책임 혼재 | HIGH |
-| 폴더 구조 | Layer-Based, 확장성 제한 | MEDIUM |
-| 테스트 | Context/컴포넌트 테스트 없음 (~10% 커버리지) | MEDIUM |
-
-### AdminDashboard PRD 갭 (#54)
-
-PRD 요구사항 중 미구현 기능:
-
-| 기능 | 상태 | 비고 |
+| 이슈 | 제목 | 상태 |
 |------|------|------|
-| 멘티 진도율 | 미구현 | learning_progress 테이블 활용 필요 |
-| 취약 파트 분석 | 미구현 | 퀴즈 오답 섹션별 집계 |
-| 멘토 기여도 | 미구현 | author_id 기준 문서 수 |
-| 진척도 그래프 | 미구현 | Chart.js 통합 예정 |
+| #57 | Feature-Based 폴더 구조 전환 | ✅ CLOSED |
+| #58 | React Query 도입 | ✅ CLOSED |
+| #54 | AdminDashboard PRD 갭 해결 | ✅ CLOSED |
+| #60 | 오프라인 동기화 완성 | ✅ CLOSED |
+| #71 | completed_at 타입 통일 | ✅ CLOSED |
+| #73 | 절대경로 alias 도입 | ✅ CLOSED |
+| #78 | CSRF 토큰 방어 강화 | ✅ CLOSED |
 
-현재 통계 탭: 플레이스홀더 상태 (AdminDashboard.jsx:339-343)
+### 진행 중인 개선사항
+
+| 이슈 | 제목 | 우선순위 |
+|------|------|----------|
+| #74 | CLAUDE.md Feature-Based 구조 반영 | P1 |
+| #75 | React Query vs Context API 역할 명확화 | P2 |
+| #76 | 색상/Spinner/Input 패턴 표준화 | P2 |
+| #77 | 접근성 속성 전면 적용 | P2 |
+
+### AdminDashboard 통계 (구현 완료)
+
+| 기능 | 상태 | 위치 |
+|------|------|------|
+| 멘티 진도율 | ✅ 구현됨 | `ProgressDistributionChart` |
+| 취약 파트 분석 | ✅ 구현됨 | `quizWeakness` 테이블 |
+| 멘토 기여도 | ✅ 구현됨 | `MentorContributionChart` |
+| 학습 활동 그래프 | ✅ 구현됨 | `ActivityChart` (최근 7일) |
+| 팀별 통계 | ✅ 구현됨 | `TeamStatsChart` |
 
 ## 작업 시 주의사항
 

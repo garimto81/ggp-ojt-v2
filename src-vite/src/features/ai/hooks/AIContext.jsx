@@ -2,7 +2,7 @@
 // 브라우저 내 AI 엔진 상태 관리 - Service Worker 지원
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { WEBLLM_CONFIG } from '../../../constants';
+import { WEBLLM_CONFIG } from '@/constants';
 import {
   initWebLLM,
   getWebLLMStatus,

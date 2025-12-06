@@ -1,8 +1,8 @@
 // OJT Master v2.3.0 - Role Selection Page
 
-import { useAuth } from '../hooks/AuthContext';
-import { Toast } from '../../../contexts/ToastContext';
-import { ROLES } from '../../../constants';
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { Toast } from '@contexts/ToastContext';
+import { ROLES } from '@/constants';
 
 export default function RoleSelectionPage() {
   const { user, handleGoogleLogin, handleRoleSelect } = useAuth();

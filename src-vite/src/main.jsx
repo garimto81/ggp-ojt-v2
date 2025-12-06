@@ -4,12 +4,12 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import App from './App';
-import { AuthProvider } from './features/auth/hooks/AuthContext';
-import { AIProvider } from './features/ai/hooks/AIContext';
-import { DocsProvider } from './contexts/DocsContext';
-import { ToastProvider } from './contexts/ToastContext';
-import './index.css';
+import App from '@/App';
+import { AuthProvider } from '@features/auth/hooks/AuthContext';
+import { AIProvider } from '@features/ai/hooks/AIContext';
+import { DocsProvider } from '@contexts/DocsContext';
+import { ToastProvider } from '@contexts/ToastContext';
+import '@/index.css';
 
 // React Query Client 설정
 const queryClient = new QueryClient({

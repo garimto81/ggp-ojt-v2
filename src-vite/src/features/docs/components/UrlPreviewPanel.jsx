@@ -2,7 +2,7 @@
 // URL 메타데이터 미리보기 및 콘텐츠 표시
 
 import { useState, useEffect } from 'react';
-import { fetchWithCorsProxy, extractMetadata, extractTextContent } from '../../../utils/cors-proxy';
+import { fetchWithCorsProxy, extractMetadata, extractTextContent } from '@utils/cors-proxy';
 
 export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
   const [isLoading, setIsLoading] = useState(false);

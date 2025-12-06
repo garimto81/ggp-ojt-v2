@@ -1,12 +1,13 @@
 // OJT Master v2.10.0 - Admin Dashboard Component (Issue #54)
 
 import { useState, useEffect, useMemo } from 'react';
-import { useDocs } from '../../../contexts/DocsContext';
-import { useAuth } from '../../auth/hooks/AuthContext';
-import { Toast } from '../../../contexts/ToastContext';
-import { supabase } from '../../../utils/api';
-import { confirmDeleteWithCSRF, formatDate } from '../../../utils/helpers';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDocs } from '@contexts/DocsContext';
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { Toast } from '@contexts/ToastContext';
+import { supabase } from '@utils/api';
+import { confirmDeleteWithCSRF, formatDate, sanitizeText } from '@utils/helpers';
+import { ROLES } from '@/constants';
+import { useDebounce } from '@hooks/useDebounce';
 import {
   useMentorContribution,
   useLearningProgress,
@@ -54,8 +55,15 @@ export default function AdminDashboard() {
   const debouncedUserSearch = useDebounce(userSearch, 300);
   const debouncedDocSearch = useDebounce(docSearch, 300);
 
-  // Load admin data
+  // Load admin data with permission check (#78)
   useEffect(() => {
+    // Admin 권한 검증
+    if (user?.role !== ROLES.ADMIN) {
+      Toast.error('관리자만 접근 가능합니다.');
+      setIsLoading(false);
+      return;
+    }
+
     const loadAdminData = async () => {
       setIsLoading(true);
       try {
@@ -81,7 +89,7 @@ export default function AdminDashboard() {
     };
 
     loadAdminData();
-  }, []);
+  }, [user?.role]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -92,8 +100,13 @@ export default function AdminDashboard() {
     setDocPage(1);
   }, [debouncedDocSearch, docTeamFilter, docAuthorFilter, docItemsPerPage]);
 
-  // Change user role
+  // Change user role with confirmation (#78)
   const handleRoleChange = async (userId, newRole) => {
+    const targetUser = allUsers.find((u) => u.id === userId);
+    if (!window.confirm(`${targetUser?.name}님의 역할을 ${newRole}(으)로 변경하시겠습니까?`)) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('users')
@@ -157,15 +170,23 @@ export default function AdminDashboard() {
     }
   };
 
-  // Delete user
+  // Delete user with 2-step confirmation (#78)
   const handleDeleteUser = async (userId) => {
     const targetUser = allUsers.find((u) => u.id === userId);
 
+    // 1단계: 기본 확인
     if (
       !window.confirm(
         `정말 ${targetUser?.name}님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
       )
     ) {
+      return;
+    }
+
+    // 2단계: 이름 입력 확인 (CSRF 방어)
+    const userInput = prompt(`삭제를 확인하려면 사용자 이름을 입력하세요:\n"${targetUser?.name}"`);
+    if (userInput !== targetUser?.name) {
+      Toast.warning('이름이 일치하지 않습니다. 삭제가 취소되었습니다.');
       return;
     }
 

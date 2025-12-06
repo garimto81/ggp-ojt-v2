@@ -1,7 +1,9 @@
-// OJT Master - React Query Hooks for Users (Issue #58)
+// OJT Master v2.10.0 - React Query Hooks for Users
+// 역할: 사용자 관리 서버 상태 (관리자 전용 CRUD)
+// 참고: 현재 로그인 사용자 상태는 @features/auth/hooks/AuthContext 사용
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../utils/api';
+import { supabase } from '@utils/api';
 
 // Query Keys
 export const usersKeys = {

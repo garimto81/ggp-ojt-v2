@@ -1,10 +1,12 @@
-// OJT Master v2.3.0 - Authentication Context
+// OJT Master v2.10.0 - Authentication Context
+// 역할: 인증 상태 및 세션 관리 (user, viewState, sessionMode)
+// 참고: 사용자 목록 조회는 @features/admin/hooks/useUsers.js (React Query) 사용
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../../utils/api';
-import { dbGetAll, dbSave } from '../../../utils/db';
-import { SecureSession, getViewStateByRole } from '../../../utils/helpers';
-import { VIEW_STATES, ROLES } from '../../../constants';
+import { supabase } from '@utils/api';
+import { dbGetAll, dbSave } from '@utils/db';
+import { SecureSession, getViewStateByRole } from '@utils/helpers';
+import { VIEW_STATES, ROLES } from '@/constants';
 
 const AuthContext = createContext(null);
 

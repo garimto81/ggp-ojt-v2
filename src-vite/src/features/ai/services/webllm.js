@@ -2,7 +2,7 @@
 // 브라우저 내 오픈소스 LLM 실행 - Service Worker 지원
 
 import * as webllm from '@mlc-ai/web-llm';
-import { WEBLLM_CONFIG } from '../../../constants';
+import { WEBLLM_CONFIG } from '@/constants';
 
 // 싱글톤 엔진 인스턴스
 let engineInstance = null;

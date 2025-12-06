@@ -1,8 +1,10 @@
-// OJT Master - React Query Hooks for Documents (Issue #58)
+// OJT Master v2.10.0 - React Query Hooks for Documents
+// 역할: 서버 상태 관리 (Supabase 데이터 fetching, 캐싱, 동기화)
+// 참고: UI 상태(selectedDoc 등)는 @contexts/DocsContext 사용
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../utils/api';
-import { dbGetAll, dbSave, dbDelete } from '../../../utils/db';
+import { supabase } from '@utils/api';
+import { dbGetAll, dbSave, dbDelete } from '@utils/db';
 
 // Query Keys
 export const docsKeys = {
