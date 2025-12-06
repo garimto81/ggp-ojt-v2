@@ -1,5 +1,5 @@
-// OJT Master - WebLLM Integration (Issue #30, #45)
-// 브라우저 내 오픈소스 LLM 실행
+// OJT Master - WebLLM Integration (Issue #30, #45, #62)
+// 브라우저 내 오픈소스 LLM 실행 - Service Worker 지원
 
 import * as webllm from '@mlc-ai/web-llm';
 import { WEBLLM_CONFIG } from '../constants';
@@ -10,13 +10,100 @@ let currentModel = null;
 let loadingProgress = 0;
 let isLoading = false;
 
+// 에러 타입 상수
+export const WEBLLM_ERROR_TYPES = {
+  WEBGPU_NOT_SUPPORTED: 'WEBGPU_NOT_SUPPORTED',
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  OUT_OF_MEMORY: 'OUT_OF_MEMORY',
+  MODEL_LOAD_FAILED: 'MODEL_LOAD_FAILED',
+  GENERATION_FAILED: 'GENERATION_FAILED',
+  UNKNOWN: 'UNKNOWN',
+};
+
 /**
- * WebLLM 엔진 초기화 (싱글톤)
+ * 에러 분류 함수
+ * @param {Error} error - 원본 에러
+ * @returns {{type: string, message: string, fallback: string}}
+ */
+export function classifyWebLLMError(error) {
+  const errorMsg = error.message?.toLowerCase() || '';
+
+  if (errorMsg.includes('webgpu') || errorMsg.includes('gpu') || errorMsg.includes('adapter')) {
+    return {
+      type: WEBLLM_ERROR_TYPES.WEBGPU_NOT_SUPPORTED,
+      message: 'WebGPU를 지원하지 않습니다.',
+      fallback: 'Chrome 113+ 또는 Edge 113+를 사용해주세요.',
+    };
+  }
+
+  if (errorMsg.includes('fetch') || errorMsg.includes('network') || errorMsg.includes('failed to load')) {
+    return {
+      type: WEBLLM_ERROR_TYPES.NETWORK_ERROR,
+      message: '네트워크 오류가 발생했습니다.',
+      fallback: '인터넷 연결을 확인해주세요.',
+    };
+  }
+
+  if (errorMsg.includes('memory') || errorMsg.includes('oom') || errorMsg.includes('out of')) {
+    return {
+      type: WEBLLM_ERROR_TYPES.OUT_OF_MEMORY,
+      message: '메모리가 부족합니다.',
+      fallback: 'Gemma 2B 모델로 전환해보세요.',
+    };
+  }
+
+  if (errorMsg.includes('model') || errorMsg.includes('load')) {
+    return {
+      type: WEBLLM_ERROR_TYPES.MODEL_LOAD_FAILED,
+      message: '모델 로드에 실패했습니다.',
+      fallback: '페이지를 새로고침하거나 다른 모델을 선택해주세요.',
+    };
+  }
+
+  return {
+    type: WEBLLM_ERROR_TYPES.UNKNOWN,
+    message: error.message || '알 수 없는 오류가 발생했습니다.',
+    fallback: '페이지를 새로고침해주세요.',
+  };
+}
+
+/**
+ * 모델 캐시 상태 확인
+ * @param {string} modelId - 모델 ID
+ * @returns {Promise<{cached: boolean, size: string}>}
+ */
+export async function checkModelCache(modelId) {
+  try {
+    // IndexedDB에서 모델 캐시 확인
+    const cacheStorage = await caches.open('webllm-models');
+    const cachedKeys = await cacheStorage.keys();
+
+    // 모델 ID가 캐시 키에 포함되어 있는지 확인
+    const isCached = cachedKeys.some((key) => key.url.includes(modelId));
+
+    // 모델 크기 정보 가져오기
+    const modelInfo = WEBLLM_CONFIG.AVAILABLE_MODELS.find((m) => m.id === modelId);
+    const size = modelInfo?.size || '알 수 없음';
+
+    return { cached: isCached, size };
+  } catch {
+    // 캐시 확인 실패 시 false 반환
+    return { cached: false, size: '알 수 없음' };
+  }
+}
+
+/**
+ * WebLLM 엔진 초기화 (싱글톤, Service Worker 지원)
  * @param {string} modelId - 사용할 모델 ID
  * @param {Function} onProgress - 로딩 진행률 콜백
+ * @param {boolean} useServiceWorker - Service Worker 사용 여부
  * @returns {Promise<webllm.MLCEngine>}
  */
-export async function initWebLLM(modelId = WEBLLM_CONFIG.DEFAULT_MODEL, onProgress = null) {
+export async function initWebLLM(
+  modelId = WEBLLM_CONFIG.DEFAULT_MODEL,
+  onProgress = null,
+  useServiceWorker = true
+) {
   // 이미 로딩 중이면 대기
   if (isLoading) {
     return new Promise((resolve) => {
@@ -53,10 +140,25 @@ export async function initWebLLM(modelId = WEBLLM_CONFIG.DEFAULT_MODEL, onProgre
       }
     };
 
-    // WebLLM 엔진 생성
-    engineInstance = await webllm.CreateMLCEngine(modelId, {
-      initProgressCallback: progressCallback,
-    });
+    // WebLLM 엔진 생성 (Service Worker 지원)
+    if (useServiceWorker && 'serviceWorker' in navigator) {
+      try {
+        engineInstance = await webllm.CreateServiceWorkerMLCEngine(modelId, {
+          initProgressCallback: progressCallback,
+        });
+      } catch (swError) {
+        // Service Worker 실패 시 일반 엔진으로 fallback
+        console.warn('Service Worker 엔진 실패, 일반 엔진으로 전환:', swError.message);
+        engineInstance = await webllm.CreateMLCEngine(modelId, {
+          initProgressCallback: progressCallback,
+        });
+      }
+    } else {
+      // Service Worker 미지원 시 일반 엔진 사용
+      engineInstance = await webllm.CreateMLCEngine(modelId, {
+        initProgressCallback: progressCallback,
+      });
+    }
 
     currentModel = modelId;
     isLoading = false;
@@ -66,7 +168,13 @@ export async function initWebLLM(modelId = WEBLLM_CONFIG.DEFAULT_MODEL, onProgre
     isLoading = false;
     engineInstance = null;
     currentModel = null;
-    throw new Error(`WebLLM 초기화 실패: ${error.message}`);
+
+    // 에러 분류
+    const classifiedError = classifyWebLLMError(error);
+    const enhancedError = new Error(`WebLLM 초기화 실패: ${classifiedError.message}`);
+    enhancedError.errorType = classifiedError.type;
+    enhancedError.fallback = classifiedError.fallback;
+    throw enhancedError;
   }
 }
 
@@ -84,13 +192,21 @@ export function getWebLLMStatus() {
 }
 
 /**
- * WebLLM으로 OJT 콘텐츠 생성
+ * WebLLM으로 OJT 콘텐츠 생성 (스트리밍 지원)
  * @param {string} contentText - 원본 텍스트
  * @param {string} title - 문서 제목
  * @param {Function} onProgress - 진행률 콜백
+ * @param {Function} onStream - 스트리밍 콜백 (실시간 텍스트 출력)
+ * @param {AbortSignal} signal - 취소 시그널
  * @returns {Promise<Object>} - 생성된 OJT 콘텐츠
  */
-export async function generateWithWebLLM(contentText, title, onProgress = null) {
+export async function generateWithWebLLM(
+  contentText,
+  title,
+  onProgress = null,
+  onStream = null,
+  signal = null
+) {
   if (!engineInstance) {
     throw new Error('WebLLM이 초기화되지 않았습니다. 먼저 initWebLLM()을 호출하세요.');
   }
@@ -125,27 +241,67 @@ ${contentText.substring(0, 6000)}
 JSON:`;
 
   try {
-    const response = await engineInstance.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      temperature: WEBLLM_CONFIG.TEMPERATURE,
-      max_tokens: WEBLLM_CONFIG.MAX_TOKENS,
-      response_format: { type: 'json_object' },
-    });
+    // 스트리밍 모드 사용 여부 결정
+    const useStreaming = !!onStream;
 
-    const responseText = response.choices[0]?.message?.content;
+    if (useStreaming) {
+      // 스트리밍 응답
+      const completion = await engineInstance.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        temperature: WEBLLM_CONFIG.TEMPERATURE,
+        max_tokens: WEBLLM_CONFIG.MAX_TOKENS,
+        stream: true,
+      });
 
-    if (!responseText) {
-      throw new Error('AI 응답이 비어있습니다.');
+      let fullResponse = '';
+
+      for await (const chunk of completion) {
+        // 취소 확인
+        if (signal?.aborted) {
+          throw new Error('생성이 취소되었습니다.');
+        }
+
+        const delta = chunk.choices[0]?.delta?.content || '';
+        fullResponse += delta;
+
+        // 스트리밍 콜백 호출
+        if (onStream) {
+          onStream(fullResponse);
+        }
+      }
+
+      // JSON 파싱
+      const result = parseWebLLMResponse(fullResponse);
+      return validateAndFillResult(result, title);
+    } else {
+      // 일반 응답 (기존 방식)
+      const response = await engineInstance.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        temperature: WEBLLM_CONFIG.TEMPERATURE,
+        max_tokens: WEBLLM_CONFIG.MAX_TOKENS,
+        response_format: { type: 'json_object' },
+      });
+
+      const responseText = response.choices[0]?.message?.content;
+
+      if (!responseText) {
+        throw new Error('AI 응답이 비어있습니다.');
+      }
+
+      // JSON 파싱
+      const result = parseWebLLMResponse(responseText);
+
+      // 퀴즈 보완
+      return validateAndFillResult(result, title);
     }
-
-    // JSON 파싱
-    const result = parseWebLLMResponse(responseText);
-
-    // 퀴즈 보완
-    return validateAndFillResult(result, title);
   } catch (error) {
+    // 에러 분류
+    const classifiedError = classifyWebLLMError(error);
+    const enhancedError = new Error(`WebLLM 생성 실패: ${classifiedError.message}`);
+    enhancedError.errorType = classifiedError.type || WEBLLM_ERROR_TYPES.GENERATION_FAILED;
+    enhancedError.fallback = classifiedError.fallback;
     console.warn('WebLLM 생성 실패:', error.message);
-    throw error;
+    throw enhancedError;
   }
 }
 
