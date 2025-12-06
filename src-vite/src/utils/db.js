@@ -1,4 +1,4 @@
-// OJT Master v2.3.0 - Database Utilities (Dexie.js)
+// OJT Master v2.10.0 - Database Utilities (Dexie.js) - Issue #60
 
 import Dexie from 'dexie';
 
@@ -10,14 +10,21 @@ localDb.version(2).stores({
   users: 'id, name, role, department',
   ojt_docs: 'id, team, step, author_id, updated_at, [team+step], [author_id+updated_at]',
   learning_records: 'id, user_id, doc_id, completed_at, [user_id+doc_id], [user_id+completed_at]',
-  sync_queue: '++id, table, action, created_at',
+  sync_queue: '++id, table, action, created_at, retries',
 });
 
 // Sync queue processing flag
 let isSyncQueueProcessing = false;
 
+// Sync configuration
+const SYNC_CONFIG = {
+  MAX_RETRIES: 3,
+  RETRY_DELAY_MS: 1000, // Base delay (multiplied by retry count)
+  QUERY_TIMEOUT_MS: 10000, // 10 seconds
+};
+
 // Default timeout for Supabase queries
-const SUPABASE_QUERY_TIMEOUT = 10000; // 10 seconds
+const SUPABASE_QUERY_TIMEOUT = SYNC_CONFIG.QUERY_TIMEOUT_MS;
 
 /**
  * Wrap a promise with a timeout
@@ -155,6 +162,9 @@ export async function dbDelete(table, id) {
 
 /**
  * Add an action to the sync queue
+ * @param {string} table - Table name
+ * @param {string} action - 'upsert' or 'delete'
+ * @param {Object} data - Data to sync
  */
 async function addToSyncQueue(table, action, data) {
   await localDb.sync_queue.add({
@@ -162,38 +172,131 @@ async function addToSyncQueue(table, action, data) {
     action,
     data,
     created_at: Date.now(),
+    retries: 0,
   });
 }
 
 /**
- * Process the sync queue
+ * Get sync queue status
+ * @returns {Promise<{pending: number, processing: boolean}>}
  */
-export async function processSyncQueue() {
+export async function getSyncQueueStatus() {
+  const count = await localDb.sync_queue.count();
+  return {
+    pending: count,
+    processing: isSyncQueueProcessing,
+  };
+}
+
+/**
+ * Process the sync queue with retry logic (Issue #60)
+ * @param {Function} onProgress - Optional callback for progress updates
+ * @returns {Promise<{success: number, failed: number}>}
+ */
+export async function processSyncQueue(onProgress) {
   // Prevent concurrent processing
-  if (isSyncQueueProcessing) return;
+  if (isSyncQueueProcessing) {
+    return { success: 0, failed: 0, skipped: true };
+  }
+
+  // Check if online
+  if (!navigator.onLine) {
+    return { success: 0, failed: 0, offline: true };
+  }
+
+  // Check if supabase is available
+  if (!window.supabase) {
+    return { success: 0, failed: 0, noSupabase: true };
+  }
+
   isSyncQueueProcessing = true;
+  let successCount = 0;
+  let failedCount = 0;
 
   try {
-    const queue = await localDb.sync_queue.toArray();
+    const queue = await localDb.sync_queue.orderBy('created_at').toArray();
 
-    for (const item of queue) {
+    if (queue.length === 0) {
+      return { success: 0, failed: 0, empty: true };
+    }
+
+    if (onProgress) {
+      onProgress({ status: 'start', total: queue.length });
+    }
+
+    for (let i = 0; i < queue.length; i++) {
+      const item = queue[i];
+      const currentRetries = item.retries || 0;
+
       try {
+        let error = null;
+
         if (item.action === 'upsert') {
-          const { error } = await window.supabase.from(item.table).upsert(item.data);
-          if (!error) {
-            await localDb.sync_queue.delete(item.id);
-          }
+          const result = await withTimeout(
+            window.supabase.from(item.table).upsert(item.data),
+            SYNC_CONFIG.QUERY_TIMEOUT_MS
+          );
+          error = result.error;
         } else if (item.action === 'delete') {
-          const { error } = await window.supabase.from(item.table).delete().eq('id', item.data.id);
-          if (!error) {
-            await localDb.sync_queue.delete(item.id);
+          const result = await withTimeout(
+            window.supabase.from(item.table).delete().eq('id', item.data.id),
+            SYNC_CONFIG.QUERY_TIMEOUT_MS
+          );
+          error = result.error;
+        }
+
+        if (!error) {
+          // Success - remove from queue
+          await localDb.sync_queue.delete(item.id);
+          successCount++;
+
+          if (onProgress) {
+            onProgress({
+              status: 'progress',
+              current: i + 1,
+              total: queue.length,
+              item: { table: item.table, action: item.action },
+            });
           }
+        } else {
+          throw error;
         }
       } catch (error) {
-        console.error('Sync queue item error:', error);
-        // Keep item in queue for retry
+        const newRetries = currentRetries + 1;
+
+        if (newRetries >= SYNC_CONFIG.MAX_RETRIES) {
+          // Max retries reached - remove from queue (per CLAUDE.md rule)
+          console.error(
+            `[SyncQueue] Failed after ${SYNC_CONFIG.MAX_RETRIES} retries:`,
+            item.table,
+            item.action,
+            error.message
+          );
+          await localDb.sync_queue.delete(item.id);
+          failedCount++;
+        } else {
+          // Update retry count
+          await localDb.sync_queue.update(item.id, { retries: newRetries });
+
+          // Exponential backoff delay
+          const delay = SYNC_CONFIG.RETRY_DELAY_MS * newRetries;
+          await new Promise((r) => setTimeout(r, delay));
+        }
       }
     }
+
+    if (onProgress) {
+      onProgress({
+        status: 'complete',
+        success: successCount,
+        failed: failedCount,
+      });
+    }
+
+    return { success: successCount, failed: failedCount };
+  } catch (error) {
+    console.error('[SyncQueue] Processing error:', error);
+    return { success: successCount, failed: failedCount, error: error.message };
   } finally {
     isSyncQueueProcessing = false;
   }
@@ -207,10 +310,47 @@ export async function clearAllCache() {
   await localDb.ojt_docs.clear();
   await localDb.learning_records.clear();
   await localDb.sync_queue.clear();
-  console.log('All cache cleared');
+  console.info('[DB] All cache cleared');
+}
+
+/**
+ * Handle online event - process sync queue with notifications
+ */
+async function handleOnlineEvent() {
+  console.info('[DB] Online detected, processing sync queue...');
+
+  const result = await processSyncQueue((progress) => {
+    if (progress.status === 'start') {
+      console.info(`[DB] Syncing ${progress.total} items...`);
+    }
+  });
+
+  // Show notification if there were items to sync
+  if (result.success > 0 || result.failed > 0) {
+    // Dispatch custom event for UI notification
+    window.dispatchEvent(
+      new CustomEvent('syncComplete', {
+        detail: {
+          success: result.success,
+          failed: result.failed,
+        },
+      })
+    );
+  }
 }
 
 // Auto-process sync queue when online
 if (typeof window !== 'undefined') {
-  window.addEventListener('online', processSyncQueue);
+  window.addEventListener('online', handleOnlineEvent);
+
+  // Also check on page load if there are pending items
+  window.addEventListener('load', async () => {
+    if (navigator.onLine) {
+      const status = await getSyncQueueStatus();
+      if (status.pending > 0) {
+        console.info(`[DB] Found ${status.pending} pending sync items on load`);
+        handleOnlineEvent();
+      }
+    }
+  });
 }
