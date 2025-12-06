@@ -1,8 +1,8 @@
 // OJT Master v2.9.4 - Header Component (WebLLM Only)
 
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useAI } from '../contexts/AIContext';
+import { useAuth } from '../features/auth/hooks/AuthContext';
+import { useAI } from '../features/ai/hooks/AIContext';
 import { ROLES } from '../constants';
 
 export default function Header() {

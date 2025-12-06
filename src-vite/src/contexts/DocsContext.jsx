@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { dbGetAll, dbSave, dbDelete } from '../utils/db';
 import { sanitizeDocData } from '../utils/helpers';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../features/auth/hooks/AuthContext';
 
 const DocsContext = createContext(null);
 

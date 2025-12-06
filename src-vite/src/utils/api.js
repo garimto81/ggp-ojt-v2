@@ -10,17 +10,15 @@ if (typeof window !== 'undefined') {
 
   // Warn if URL is empty or pointing to localhost (common misconfiguration)
   if (!supabaseUrl) {
-    console.error(
-      '[Supabase] VITE_SUPABASE_URL is not set. Please check your .env file.'
-    );
+    console.error('[Supabase] VITE_SUPABASE_URL is not set. Please check your .env file.');
   } else if (supabaseUrl.includes('localhost') || supabaseUrl.includes('127.0.0.1')) {
     console.warn(
       '[Supabase] URL is pointing to localhost:',
       supabaseUrl,
       '\nIf this is unexpected, try:\n' +
-      '1. Clear browser cache\n' +
-      '2. Delete node_modules/.vite folder\n' +
-      '3. Restart dev server with: npm run dev'
+        '1. Clear browser cache\n' +
+        '2. Delete node_modules/.vite folder\n' +
+        '3. Restart dev server with: npm run dev'
     );
   } else {
     console.info('[Supabase] Connected to:', supabaseUrl);
@@ -41,7 +39,8 @@ if (typeof window !== 'undefined') {
  */
 export async function checkAIStatus() {
   try {
-    const { getWebLLMStatus, checkWebGPUSupport } = await import('./webllm.js');
+    const { getWebLLMStatus, checkWebGPUSupport } =
+      await import('../features/ai/services/webllm.js');
     const status = getWebLLMStatus();
     const webgpuSupported = await checkWebGPUSupport();
 
@@ -76,7 +75,8 @@ export async function generateOJTContent(
   onProgress
 ) {
   try {
-    const { generateWithWebLLM, getWebLLMStatus } = await import('./webllm.js');
+    const { generateWithWebLLM, getWebLLMStatus } =
+      await import('../features/ai/services/webllm.js');
     const status = getWebLLMStatus();
 
     if (!status.loaded) {
@@ -321,7 +321,7 @@ export function validateQuizQuality(quiz) {
  */
 export async function regenerateQuizQuestions(contentText, indices, existingQuiz, onProgress) {
   try {
-    const { getWebLLMStatus } = await import('./webllm.js');
+    const { getWebLLMStatus } = await import('../features/ai/services/webllm.js');
     const status = getWebLLMStatus();
 
     if (!status.loaded) {
@@ -332,7 +332,7 @@ export async function regenerateQuizQuestions(contentText, indices, existingQuiz
     if (onProgress) onProgress('퀴즈 재생성 중...');
 
     // WebLLM으로 전체 콘텐츠 재생성 후 퀴즈만 교체
-    const { generateWithWebLLM } = await import('./webllm.js');
+    const { generateWithWebLLM } = await import('../features/ai/services/webllm.js');
     const result = await generateWithWebLLM(contentText, '퀴즈 재생성', onProgress);
 
     if (!result.quiz || result.quiz.length === 0) {

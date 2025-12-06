@@ -257,6 +257,42 @@ git log -1 --format='%h'
 
 ## Known Issues & Roadmap
 
+> **마스터 플랜**: `tasks/prds/refactoring-master-plan.md` 참조
+
+### v3.0 리팩토링 이슈
+
+| 이슈 | 제목 | 우선순위 | 상태 |
+|------|------|----------|------|
+| #55 | AdminDashboard 사용자/콘텐츠 관리 기능 개선 | P1 | PR #56 |
+| #57 | Feature-Based 폴더 구조 전환 | P1 | OPEN |
+| #58 | React Query 도입으로 서버 상태 관리 개선 | P2 | OPEN |
+| #59 | api.js 모듈 분리 (SRP 적용) | P2 | OPEN |
+| #60 | 오프라인 동기화 완성 (processSyncQueue) | P3 | OPEN |
+| #61 | pnpm workspaces 전환 (의존성 통합) | P0 | OPEN |
+| #62 | WebLLM Service Worker 활성화 및 UX 개선 | P0 | OPEN |
+
+### 이슈 의존성
+
+```
+#61 pnpm workspaces ──┐
+                      ├──→ #57 Feature-Based 구조 ──→ #59 api.js 분리
+#62 WebLLM Service ───┘                                     │
+                                                            ▼
+#55 AdminDashboard ──────────────────────────────→ #58 React Query
+                                                            │
+                                                            ▼
+                                                      #60 오프라인
+```
+
+### 기술 부채 현황
+
+| 영역 | 문제 | 심각도 |
+|------|------|--------|
+| 컴포넌트 | AdminDashboard 705줄, MentorDashboard 628줄 | HIGH |
+| API 레이어 | api.js 300줄+, 7개 책임 혼재 | HIGH |
+| 폴더 구조 | Layer-Based, 확장성 제한 | MEDIUM |
+| 테스트 | Context/컴포넌트 테스트 없음 (~10% 커버리지) | MEDIUM |
+
 ### AdminDashboard PRD 갭 (#54)
 
 PRD 요구사항 중 미구현 기능:
