@@ -20,9 +20,8 @@ export async function extractUrlText(url, onProgress) {
   if (onProgress) onProgress('URL에서 텍스트 추출 중...');
 
   // 동적 import로 순환 참조 방지
-  const { fetchWithCorsProxy, extractTextContent, extractMetadata } = await import(
-    '../../../utils/cors-proxy.js'
-  );
+  const { fetchWithCorsProxy, extractTextContent, extractMetadata } =
+    await import('../../../utils/cors-proxy.js');
 
   try {
     const html = await fetchWithCorsProxy(url);
