@@ -1,6 +1,8 @@
-// OJT Master v2.9.0 - Main Application Component (WebLLM Only)
+// OJT Master v2.10.0 - Main Application Component (WebLLM Only)
 
+import { useEffect } from 'react';
 import { useAuth } from './features/auth/hooks/AuthContext';
+import { Toast } from './contexts/ToastContext';
 import { VIEW_STATES } from './constants';
 
 // Layouts
@@ -16,8 +18,22 @@ import MenteeStudy from './features/learning/components/MenteeStudy';
 function App() {
   const { viewState, isLoading } = useAuth();
 
-  // Debug log
-  console.log('[App] Render - viewState:', viewState, ', isLoading:', isLoading);
+  // Listen for sync complete events (Issue #60)
+  useEffect(() => {
+    const handleSyncComplete = (event) => {
+      const { success, failed } = event.detail;
+      if (success > 0 && failed === 0) {
+        Toast.success(`${success}개 항목 동기화 완료`);
+      } else if (success > 0 && failed > 0) {
+        Toast.warning(`${success}개 동기화 완료, ${failed}개 실패`);
+      } else if (failed > 0) {
+        Toast.error(`${failed}개 항목 동기화 실패`);
+      }
+    };
+
+    window.addEventListener('syncComplete', handleSyncComplete);
+    return () => window.removeEventListener('syncComplete', handleSyncComplete);
+  }, []);
 
   // Loading state
   if (isLoading || viewState === VIEW_STATES.LOADING) {
