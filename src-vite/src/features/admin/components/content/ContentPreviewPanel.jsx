@@ -60,9 +60,15 @@ export default function ContentPreviewPanel({
               </a>
             )}
             {doc.source_type === 'pdf' && doc.source_file && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded">
-                📄 {doc.source_file}
-              </span>
+              <a
+                href={doc.source_file}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition"
+                aria-label="PDF 파일 열기"
+              >
+                📄 PDF 원문 보기
+              </a>
             )}
           </div>
         )}
