@@ -8,14 +8,14 @@ import { supabase } from '@utils/api';
 import { formatDate, sanitizeText } from '@utils/helpers';
 import { useDebounce } from '@hooks/useDebounce';
 import { ROLES, ROLE_COLORS } from '@/constants';
+import { useDepartments, getCombinedDepartments } from '@features/admin/hooks/useDepartments';
 import UserDetailPanel from './UserDetailPanel';
 import BulkActionsBar from './BulkActionsBar';
-
-const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 
 export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isAdmin }) {
   const { user: currentUser } = useAuth();
+  const { departments: dbDepartments } = useDepartments();
 
   // Filter & Pagination state
   const [userSearch, setUserSearch] = useState('');
@@ -167,13 +167,10 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
     }
   };
 
-  // Department options (default + existing)
+  // Department options (from DB + existing user departments)
   const departmentOptions = useMemo(() => {
-    const existingDepts = allUsers
-      .map((u) => u.department)
-      .filter((d) => d && !DEFAULT_DEPARTMENTS.includes(d));
-    return [...new Set([...DEFAULT_DEPARTMENTS, ...existingDepts])].sort();
-  }, [allUsers]);
+    return getCombinedDepartments(dbDepartments, allUsers);
+  }, [dbDepartments, allUsers]);
 
   // Filtered and paginated users
   const { filteredUsers, paginatedUsers, totalUserPages } = useMemo(() => {

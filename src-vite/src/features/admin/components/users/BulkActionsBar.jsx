@@ -5,8 +5,7 @@ import { useState } from 'react';
 import { supabase } from '@utils/api';
 import { Toast } from '@contexts/ToastContext';
 import { ROLES } from '@/constants';
-
-const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
+import { useDepartments } from '@features/admin/hooks/useDepartments';
 
 export default function BulkActionsBar({
   selectedUsers,
@@ -16,6 +15,7 @@ export default function BulkActionsBar({
   onBulkUpdate,
   isAdmin,
 }) {
+  const { departments } = useDepartments();
   const [bulkRole, setBulkRole] = useState('');
   const [bulkDepartment, setBulkDepartment] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -168,7 +168,7 @@ export default function BulkActionsBar({
             disabled={isProcessing}
           >
             <option value="">선택하세요</option>
-            {DEFAULT_DEPARTMENTS.map((dept) => (
+            {departments.map((dept) => (
               <option key={dept} value={dept}>
                 {dept}
               </option>

@@ -7,10 +7,10 @@ import { formatDate, sanitizeText } from '@utils/helpers';
 import { Toast } from '@contexts/ToastContext';
 import { ROLES } from '@/constants';
 import { Spinner } from '@components/ui';
-
-const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
+import { useDepartments } from '@features/admin/hooks/useDepartments';
 
 export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allDocs = [] }) {
+  const { departments } = useDepartments();
   const [loading, setLoading] = useState(true);
   const [learningStats, setLearningStats] = useState({
     totalRecords: 0,
@@ -210,7 +210,7 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">선택 안함</option>
-                  {DEFAULT_DEPARTMENTS.map((dept) => (
+                  {departments.map((dept) => (
                     <option key={dept} value={dept}>
                       {dept}
                     </option>

@@ -16,17 +16,16 @@ import {
   useLearningActivity,
   useTeamStats,
 } from '../hooks/useAnalytics';
+import { useDepartments, getCombinedDepartments } from '../hooks/useDepartments';
 import { ContentManagementTab } from './content';
 import { SettingsTab } from './settings';
 import { StatsTab } from './stats';
-
-// 기본 부서 목록
-const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 
 export default function AdminDashboard() {
   const { allDocs, deleteDocument, isLoading: docsLoading } = useDocs();
   const { user } = useAuth();
+  const { departments: dbDepartments } = useDepartments();
 
   const [activeTab, setActiveTab] = useState('users');
   const [allUsers, setAllUsers] = useState([]);
@@ -219,13 +218,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // 부서 목록 (기본 + 기존 사용자 부서)
+  // 부서 목록 (DB 설정 + 기존 사용자 부서)
   const departmentOptions = useMemo(() => {
-    const existingDepts = allUsers
-      .map((u) => u.department)
-      .filter((d) => d && !DEFAULT_DEPARTMENTS.includes(d));
-    return [...new Set([...DEFAULT_DEPARTMENTS, ...existingDepts])].sort();
-  }, [allUsers]);
+    return getCombinedDepartments(dbDepartments, allUsers);
+  }, [dbDepartments, allUsers]);
 
   // Filtered and paginated users
   const { filteredUsers, paginatedUsers, totalUserPages } = useMemo(() => {

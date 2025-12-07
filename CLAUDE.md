@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.12.2)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.12.3)
 
 ## Tech Stack
 
@@ -227,7 +227,7 @@ learning_progress (id UUID PK, user_id FK, doc_id FK, status, current_section,
 teams (id UUID PK, name, slug, display_order, is_active)
 ```
 
-RLS 정책: `database/migrations/supabase_schema.sql`, `database/fixes/supabase_fix_rls.sql` 참조
+RLS 정책: `database/fixes/supabase_complete_permissions.sql` (권장) 또는 개별 파일 참조
 
 ### Database Migrations
 
@@ -242,15 +242,38 @@ database/
 │   ├── supabase_source_columns.sql     # 4. source_type/url/file 컬럼
 │   └── 20251207_admin_page_redesign.sql # 5. Admin 리디자인 관련
 └── fixes/                              # RLS 및 성능 수정
+    ├── supabase_complete_permissions.sql # ⭐ 전체 권한 설정 (권장 - Issue #93)
+    ├── VERIFICATION_CHECKLIST.md       # ⭐ 권한 검증 체크리스트
+    ├── check_admin_rls.sql             # 권한 검증 쿼리
     ├── supabase_fix_rls.sql            # RLS 정책 수정
-    ├── supabase_rls_admin_update.sql   # Admin RLS 업데이트
-    ├── supabase_fix_role_update.sql    # 역할 업데이트 수정
-    ├── supabase_fix_admin_rls.sql      # Admin 테이블 RLS 픽스 (Issue #93)
+    ├── supabase_fix_admin_rls.sql      # Admin 테이블 RLS 픽스
     ├── supabase_performance.sql        # 성능 최적화 인덱스
     └── supabase_audit_logs.sql         # 감사 로그 테이블
 ```
 
 **적용 방법**: Supabase Dashboard → SQL Editor에서 순서대로 실행
+
+### Supabase 권한 체계 (중요!)
+
+PostgreSQL 접근 제어는 2단계로 동작:
+
+```
+GRANT (테이블 레벨) → RLS (행 레벨)
+```
+
+**핵심**: GRANT 없으면 RLS 검사 전에 "permission denied" 발생!
+
+| 테이블 | GRANT (authenticated) | RLS 요약 |
+|--------|----------------------|----------|
+| users | SELECT, INSERT, UPDATE | 본인 or Admin |
+| ojt_docs | SELECT, INSERT, UPDATE, DELETE | 모두 조회, Mentor/Admin 생성 |
+| learning_records | SELECT, INSERT, UPDATE | 본인 or Admin |
+| content_reports | SELECT, INSERT, UPDATE | 본인 생성, Admin 관리 |
+| admin_settings | SELECT, INSERT, UPDATE | 모두 조회, Admin 수정 |
+| admin_logs | SELECT, INSERT | Admin만 |
+
+**403 에러 발생 시**: `database/fixes/supabase_complete_permissions.sql` 실행
+**검증**: `database/fixes/VERIFICATION_CHECKLIST.md` 참조
 
 ### Dexie.js (로컬 캐시)
 
