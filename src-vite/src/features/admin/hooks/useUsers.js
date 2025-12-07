@@ -36,6 +36,12 @@ export const usersKeys = {
 
 /**
  * Fetch all users from Supabase
+ *
+ * SECURITY NOTE (Issue #78):
+ * - Supabase RLS 정책으로 권한 검증 (database/migrations/supabase_schema.sql:91-99)
+ * - Admin만 모든 사용자 조회 가능 ("Admins can view all users" 정책)
+ * - 일반 사용자는 자신의 프로필만 조회 가능 ("Users can view own profile" 정책)
+ * - 프론트엔드 권한 체크는 UX용, 실제 보안은 RLS에서 처리
  */
 async function fetchUsers(filters = {}) {
   let query = supabase.from('users').select('*');
@@ -55,6 +61,10 @@ async function fetchUsers(filters = {}) {
 
 /**
  * Update user role
+ *
+ * SECURITY NOTE (Issue #78):
+ * - Supabase RLS 정책 "Admins can update user roles" (schema.sql:96-99)으로 보호
+ * - Admin 아닌 사용자가 호출 시 RLS가 자동으로 차단
  */
 async function updateUserRole({ userId, newRole }) {
   const { data, error } = await supabase
@@ -70,6 +80,10 @@ async function updateUserRole({ userId, newRole }) {
 
 /**
  * Update user department
+ *
+ * SECURITY NOTE (Issue #78):
+ * - Supabase RLS 정책 "Admins can update user roles" (schema.sql:96-99)으로 보호
+ * - Admin 아닌 사용자가 호출 시 RLS가 자동으로 차단
  */
 async function updateUserDepartment({ userId, newDepartment }) {
   const { data, error } = await supabase
@@ -85,6 +99,10 @@ async function updateUserDepartment({ userId, newDepartment }) {
 
 /**
  * Toggle user active status
+ *
+ * SECURITY NOTE (Issue #78):
+ * - Supabase RLS 정책 "Admins can update user roles" (schema.sql:96-99)으로 보호
+ * - Admin 아닌 사용자가 호출 시 RLS가 자동으로 차단
  */
 async function toggleUserActive({ userId, isActive }) {
   const { data, error } = await supabase
@@ -100,6 +118,12 @@ async function toggleUserActive({ userId, isActive }) {
 
 /**
  * Delete a user
+ *
+ * SECURITY NOTE (Issue #78):
+ * - Supabase RLS 정책으로 보호 (Admin만 가능)
+ * - 프론트엔드에서 2단계 확인 (AdminDashboard.jsx:198-207)
+ *   1. window.confirm() 경고
+ *   2. 사용자 이름 입력 확인 (CSRF-like protection)
  */
 async function deleteUser(userId) {
   const { error } = await supabase.from('users').delete().eq('id', userId);

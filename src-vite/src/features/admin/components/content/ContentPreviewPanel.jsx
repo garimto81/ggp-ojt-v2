@@ -1,8 +1,9 @@
 // ContentPreviewPanel.jsx - 콘텐츠 미리보기 패널 (Split View 오른쪽)
 
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import ContentStatusBadge from './ContentStatusBadge';
-import { formatDate } from '@utils/helpers';
+import { formatDate, sanitizeText } from '@utils/helpers';
 
 export default function ContentPreviewPanel({
   doc,
@@ -36,11 +37,11 @@ export default function ContentPreviewPanel({
     >
       {/* Header */}
       <div className="p-4 border-b">
-        <h2 className="text-lg font-bold text-gray-900 mb-2">{doc.title}</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-2">{sanitizeText(doc.title)}</h2>
         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-          <span>작성자: {doc.author_name}</span>
+          <span>작성자: {sanitizeText(doc.author_name)}</span>
           <span>·</span>
-          <span>팀: {doc.team}</span>
+          <span>팀: {sanitizeText(doc.team)}</span>
           <span>·</span>
           <span>생성일: {formatDate(doc.created_at)}</span>
         </div>
@@ -134,11 +135,29 @@ export default function ContentPreviewPanel({
               sections.map((section, index) => (
                 <div key={index} className="border rounded-lg p-4">
                   <h3 className="font-medium text-gray-900 mb-2">
-                    {index + 1}. {section.title}
+                    {index + 1}. {sanitizeText(section.title)}
                   </h3>
                   <div
                     className="text-sm text-gray-600 prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: section.content }}
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(section.content, {
+                        ALLOWED_TAGS: [
+                          'p',
+                          'br',
+                          'strong',
+                          'em',
+                          'u',
+                          'h1',
+                          'h2',
+                          'h3',
+                          'ul',
+                          'ol',
+                          'li',
+                          'a',
+                        ],
+                        ALLOWED_ATTR: ['href', 'target', 'rel'],
+                      }),
+                    }}
                   />
                 </div>
               ))
@@ -155,7 +174,7 @@ export default function ContentPreviewPanel({
               quiz.map((q, index) => (
                 <div key={index} className="border rounded-lg p-4">
                   <p className="font-medium text-gray-900 mb-3">
-                    Q{index + 1}. {q.question}
+                    Q{index + 1}. {sanitizeText(q.question)}
                   </p>
                   <ul className="space-y-1">
                     {q.options?.map((opt, optIndex) => (
@@ -167,7 +186,7 @@ export default function ContentPreviewPanel({
                             : 'text-gray-600'
                         }`}
                       >
-                        {String.fromCharCode(65 + optIndex)}. {opt}
+                        {String.fromCharCode(65 + optIndex)}. {sanitizeText(opt)}
                         {optIndex === q.correctAnswer && ' ✓'}
                       </li>
                     ))}
@@ -197,10 +216,11 @@ export default function ContentPreviewPanel({
                         {getReasonLabel(report.reason)}
                       </span>
                       <p className="text-xs text-gray-500 mt-1">
-                        신고자: {report.reporter_name || '익명'} · {formatDate(report.created_at)}
+                        신고자: {sanitizeText(report.reporter_name || '익명')} ·{' '}
+                        {formatDate(report.created_at)}
                       </p>
                       {report.description && (
-                        <p className="text-sm text-gray-600 mt-2">{report.description}</p>
+                        <p className="text-sm text-gray-600 mt-2">{sanitizeText(report.description)}</p>
                       )}
                     </div>
                     {report.status === 'pending' && onResolveReport && (
@@ -266,9 +286,10 @@ export default function ContentPreviewPanel({
         )}
         <button
           onClick={() => {
-            if (window.confirm(`"${doc.title}" 문서를 삭제하시겠습니까?`)) {
-              const input = prompt(`삭제하려면 제목을 입력하세요:\n"${doc.title}"`);
-              if (input === doc.title) {
+            const safeTitle = sanitizeText(doc.title);
+            if (window.confirm(`"${safeTitle}" 문서를 삭제하시겠습니까?`)) {
+              const input = prompt(`삭제하려면 제목을 입력하세요:\n"${safeTitle}"`);
+              if (input === safeTitle) {
                 onDelete(doc.id);
               }
             }
