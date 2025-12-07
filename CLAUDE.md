@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.11.2)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.11.3)
 
 ## Tech Stack
 
@@ -313,28 +313,15 @@ Vercel Dashboard → Settings → Environment Variables:
 git log -1 --format='%h'
 ```
 
-## Known Issues & Roadmap
-
-> **마스터 플랜**: `tasks/prds/refactoring-master-plan.md` 참조
-
-### v3.0 리팩토링 이슈
-
-| 이슈 | 제목 | 우선순위 | 상태 |
-|------|------|----------|------|
-| #54 | AdminDashboard 분석 차트 추가 | P1 | ✅ 완료 |
-| #57 | Feature-Based 폴더 구조 전환 | P1 | ✅ 완료 |
-| #58 | React Query 도입 | P2 | ✅ 완료 |
-| #59 | api.js 모듈 분리 (SRP 적용) | P2 | ✅ 완료 |
-| #60 | 오프라인 동기화 완성 | P3 | ✅ 완료 |
-| #61 | pnpm workspaces 전환 | P0 | ✅ 완료 |
-
-### 기술 부채 현황
+## Technical Debt
 
 | 영역 | 문제 | 심각도 |
 |------|------|--------|
 | 테스트 | Context/컴포넌트 테스트 부족 (~10% 커버리지) | MEDIUM |
 
-> api.js는 re-export hub로 리팩토링 완료됨 (실제 로직은 features/*/services/에 분리)
+> **Note**: api.js는 re-export hub로 리팩토링 완료됨 (실제 로직은 features/*/services/에 분리)
+>
+> **마스터 플랜**: `tasks/prds/refactoring-master-plan.md` 참조
 
 ## 작업 시 주의사항
 
