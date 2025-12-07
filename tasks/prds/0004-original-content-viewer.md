@@ -1,6 +1,6 @@
 # PRD-0004: 원문 뷰어 + 퀴즈 출제 시스템
 
-**상태**: ✅ 구현 완료 (v2.10.0)
+**상태**: ✅ 구현 완료 (v2.10.0 → v2.11.0)
 **최종 업데이트**: 2025-12-07
 **관련 이슈**: #81, #34
 
@@ -524,23 +524,26 @@ const MAX_FILE_SIZE = {
 | Phase 3 | Mentor UI 변경 (MentorDashboard) | ✅ 완료 | #79 |
 | Phase 4 | Mentee 원문 뷰어 (MenteeStudy) | ✅ 완료 | #81 |
 | Phase 5 | Admin 콘텐츠 미리보기 (ContentPreviewPanel) | ✅ 완료 | #81 |
-| Phase 6 | PDF 업로드 UI (MentorDashboard) | 🟡 스텁 | - |
+| Phase 6 | PDF 업로드 UI (MentorDashboard) | ✅ 완료 | #81 |
 
-### 7.1 Phase 6 구현 계획 (PDF 업로드 UI)
+### 7.1 Phase 6 구현 완료 (PDF 업로드 UI)
 
-**목표**: MentorDashboard에 PDF 업로드 탭 추가
+**목표**: MentorDashboard에 PDF 업로드 탭 추가 ✅
 
 **구현 항목**:
-1. 입력 모드 탭 UI (텍스트 / URL / PDF)
-2. PDF 파일 선택 컴포넌트 (드래그 앤 드롭 지원)
-3. R2 업로드 함수 호출 (`uploadImageToR2` 확장)
-4. PDF 텍스트 추출 (`pdfjs-dist`)
-5. WebLLM 퀴즈 생성 연동
-6. 생성 진행 상태 표시
+1. ✅ 입력 모드 탭 UI (텍스트 / URL / PDF)
+2. ✅ PDF 파일 선택 컴포넌트 (드래그 앤 드롭 지원)
+3. ✅ R2 업로드 함수 호출 (`uploadFileToR2` 추가)
+4. ✅ PDF 텍스트 추출 (`pdfjs-dist` 동적 import)
+5. ✅ WebLLM 퀴즈 생성 연동
+6. ✅ 생성 진행 상태 표시 (업로드 → 텍스트 추출 → AI 분석)
 
 **UI 참조**: `docs/design/UI_MOCKUP_DESIGN.md` 섹션 6.7
 
-**예상 작업량**: Medium (3-5시간)
+**수정된 파일**:
+- `src-vite/src/features/docs/components/MentorDashboard.jsx` - PDF 업로드 UI 추가
+- `src-vite/src/utils/api.js` - `uploadFileToR2`, `extractPdfText` 함수 추가
+- `src-vite/src/constants.js` - R2_CONFIG에 PDF 타입 추가
 
 ---
 
@@ -589,6 +592,7 @@ const MAX_FILE_SIZE = {
 | 2025-12-07 | 2.0 | WebLLM으로 전환, 구현 완료 반영 |
 | 2025-12-07 | 2.1 | Phase 6 구현 계획 추가, UI 목업 문서 참조 연결 |
 | 2025-12-07 | 2.2 | 섹션 3.4 UI 목업 디자인 추가 (Mentee/Admin/Mentor 화면) |
+| 2025-12-07 | 3.0 | Phase 6 완료 - PDF 업로드 기능 구현 완성 |
 
 ---
 

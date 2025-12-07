@@ -1,6 +1,6 @@
 // OJT Master v2.10.0 - Mentor Dashboard Component (WebLLM Only)
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useDocs } from '@contexts/DocsContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { useAI } from '@features/ai/hooks/AIContext';
@@ -10,6 +10,8 @@ import {
   validateQuizQuality,
   regenerateQuizQuestions,
   extractUrlText,
+  uploadFileToR2,
+  extractPdfText,
 } from '@utils/api';
 import {
   estimateReadingTime,
@@ -32,6 +34,11 @@ export default function MentorDashboard() {
   const [inputTitle, setInputTitle] = useState('');
   const [autoSplit, setAutoSplit] = useState(true);
 
+  // PDF upload states
+  const [pdfFile, setPdfFile] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+
   // Processing states
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
@@ -52,6 +59,59 @@ export default function MentorDashboard() {
   const estimatedTime = rawInput ? estimateReadingTime(rawInput) : 0;
   const requiredSteps = rawInput ? calculateRequiredSteps(rawInput) : 1;
 
+  // PDF file handlers
+  const handlePdfSelect = (file) => {
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      Toast.error('PDF 파일만 업로드 가능합니다.');
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      Toast.error('파일 크기는 10MB를 초과할 수 없습니다.');
+      return;
+    }
+
+    setPdfFile(file);
+    // Auto-fill title from filename
+    if (!inputTitle) {
+      const nameWithoutExt = file.name.replace(/\.pdf$/i, '');
+      setInputTitle(nameWithoutExt);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    handlePdfSelect(file);
+  };
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files[0];
+    handlePdfSelect(file);
+  };
+
+  const removePdfFile = () => {
+    setPdfFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   // Handle content generation
   const handleGenerate = async () => {
     // Validate input based on type
@@ -63,19 +123,49 @@ export default function MentorDashboard() {
       Toast.warning('URL을 입력해주세요.');
       return;
     }
+    if (inputType === 'pdf' && !pdfFile) {
+      Toast.warning('PDF 파일을 선택해주세요.');
+      return;
+    }
 
     setIsProcessing(true);
     setProcessingStatus('콘텐츠 분석 중...');
 
     try {
       let contentText = rawInput;
+      let pdfR2Url = null;
 
       // Determine source info based on input type (local variable, not state)
       const currentSourceInfo = {
         type: inputType === 'url' ? 'url' : inputType === 'pdf' ? 'pdf' : 'manual',
         url: inputType === 'url' ? urlInput.trim() : null,
-        file: null, // PDF file URL will be set when PDF upload is implemented
+        file: null, // Will be set after PDF upload
       };
+
+      // Handle PDF input - upload and extract text
+      if (inputType === 'pdf' && pdfFile) {
+        try {
+          // Step 1: Upload PDF to R2
+          setProcessingStatus('PDF 업로드 중...');
+          pdfR2Url = await uploadFileToR2(pdfFile, 'pdf');
+          currentSourceInfo.file = pdfR2Url;
+
+          // Step 2: Extract text from PDF
+          setProcessingStatus('PDF 텍스트 추출 중...');
+          const extractedText = await extractPdfText(pdfFile);
+          contentText = extractedText;
+          setRawInput(contentText);
+
+          if (contentText.length < 100) {
+            Toast.warning('PDF에서 추출된 텍스트가 너무 짧습니다. 이미지 기반 PDF일 수 있습니다.');
+          }
+        } catch (pdfError) {
+          console.error('PDF 처리 오류:', pdfError);
+          Toast.error('PDF 처리 중 오류가 발생했습니다: ' + pdfError.message);
+          setIsProcessing(false);
+          return;
+        }
+      }
 
       // Handle URL input - extract text first
       if (inputType === 'url') {
@@ -327,8 +417,49 @@ export default function MentorDashboard() {
           )}
 
           {inputType === 'pdf' && (
-            <div className="border-2 border-dashed rounded-lg p-8 text-center text-gray-500">
-              PDF 업로드 (구현 예정)
+            <div className="space-y-4">
+              {!pdfFile ? (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
+                    isDragging
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                  <div className="text-4xl mb-2">📁</div>
+                  <p className="text-gray-600 font-medium">파일 선택 또는 드래그</p>
+                  <p className="text-sm text-gray-400 mt-1">지원 형식: PDF (최대 10MB)</p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">✅</span>
+                    <div>
+                      <p className="font-medium text-gray-800">{pdfFile.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {(pdfFile.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={removePdfFile}
+                    className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition"
+                  >
+                    ✕ 제거
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

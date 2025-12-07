@@ -33,7 +33,7 @@ export const SUPABASE_CONFIG = {
 // R2 Upload configuration
 export const R2_CONFIG = {
   WORKER_URL: import.meta.env.VITE_R2_WORKER_URL || 'https://ojt-r2-upload.your-worker.workers.dev',
-  ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'],
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
 };
 
