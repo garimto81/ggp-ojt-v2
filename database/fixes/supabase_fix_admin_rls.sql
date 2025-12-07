@@ -1,15 +1,25 @@
 -- ======================================
 -- Admin Tables RLS Fix
 -- Issue: #93 - admin_settings, admin_logs 403 오류
--- Date: 2025-12-08
+-- Date: 2025-12-08 (Updated)
 -- ======================================
 --
--- 문제: admin_logs, admin_settings RLS 정책에서 직접 서브쿼리 사용 시
---       users 테이블의 RLS에 의해 차단됨
--- 해결: SECURITY DEFINER로 정의된 is_admin() 함수 사용
+-- 문제 1: authenticated 역할에 테이블 GRANT 권한 없음 (핵심!)
+-- 문제 2: RLS 정책에서 users 테이블 조회 시 순환 차단
+-- 해결: GRANT 권한 부여 + SECURITY DEFINER 함수 사용
 --
 -- 실행 방법: Supabase Dashboard > SQL Editor에서 실행
 -- ======================================
+
+
+-- ======================================
+-- 0. 테이블 권한 부여 (핵심! - 이게 없으면 RLS 이전에 차단됨)
+-- ======================================
+
+GRANT SELECT ON admin_settings TO authenticated;
+GRANT SELECT, INSERT ON admin_logs TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON content_reports TO authenticated;
+
 
 -- ======================================
 -- 1. is_admin() 함수 생성/재정의
