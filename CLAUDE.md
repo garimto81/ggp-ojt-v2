@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.10.0)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.11.0)
 
 ## Tech Stack
 
@@ -300,8 +300,12 @@ Vercel Dashboard → Settings → Environment Variables:
 
 ### 버전 업데이트 규칙
 
-1. **버전 파일**: `package.json`, `src-vite/package.json`, `CLAUDE.md`
-2. **버전 규칙**: MAJOR.MINOR.PATCH (버그=PATCH, 기능=MINOR, 큰변경=MAJOR)
+1. **Single Source of Truth**: `src-vite/src/version.js` (UI 표시용 중앙 버전)
+2. **동기화 필요 파일**:
+   - `src-vite/src/version.js` (핵심 - APP_VERSION 상수)
+   - `package.json`, `src-vite/package.json`
+   - `CLAUDE.md` (Project Overview)
+3. **버전 규칙**: MAJOR.MINOR.PATCH (버그=PATCH, 기능=MINOR, 큰변경=MAJOR)
 
 ```bash
 # 최신 커밋 해시 확인

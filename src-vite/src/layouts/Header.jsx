@@ -1,10 +1,11 @@
-// OJT Master v2.10.0 - Header Component (WebLLM Only)
+// OJT Master - Header Component (WebLLM Only)
 
 import { useState } from 'react';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { useAI } from '@features/ai/hooks/AIContext';
 import { ROLES } from '@/constants';
 import { sanitizeText } from '@utils/helpers';
+import { getVersionString } from '@/version';
 
 export default function Header() {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();
@@ -36,7 +37,7 @@ export default function Header() {
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
               <p className="text-xs text-gray-500">
-                {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.10.0 (WebLLM)'}
+                {isTempMentorMode ? 'MENTOR MODE (임시)' : getVersionString()}
               </p>
             </div>
           </div>
