@@ -1,9 +1,9 @@
 // OJT Master v2.3.0 - Mentee List Component
 
 import { useState, useMemo } from 'react';
-import { useDocs } from '../../../contexts/DocsContext';
-import { useAuth } from '../../auth/hooks/AuthContext';
-import { VIEW_STATES } from '../../../constants';
+import { useDocs } from '@contexts/DocsContext';
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { VIEW_STATES } from '@/constants';
 
 export default function MenteeList() {
   const { allDocs, availableTeams, setSelectedDoc, isLoading } = useDocs();

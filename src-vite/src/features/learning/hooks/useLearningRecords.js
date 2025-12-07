@@ -1,7 +1,7 @@
 // OJT Master - React Query Hooks for Learning Records (Issue #58)
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../../utils/api';
+import { supabase } from '@utils/api';
 
 // Query Keys
 export const learningKeys = {

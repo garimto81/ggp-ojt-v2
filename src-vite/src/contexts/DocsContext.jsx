@@ -1,9 +1,9 @@
 // OJT Master v2.3.0 - Documents Context
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { dbGetAll, dbSave, dbDelete } from '../utils/db';
-import { sanitizeDocData } from '../utils/helpers';
-import { useAuth } from '../features/auth/hooks/AuthContext';
+import { dbGetAll, dbSave, dbDelete } from '@utils/db';
+import { sanitizeDocData } from '@utils/helpers';
+import { useAuth } from '@features/auth/hooks/AuthContext';
 
 const DocsContext = createContext(null);
 
@@ -98,23 +98,17 @@ export function DocsProvider({ children }) {
   );
 
   // Delete document
-  const deleteDocument = useCallback(
-    async (docId) => {
-      await dbDelete('ojt_docs', docId);
+  const deleteDocument = useCallback(async (docId) => {
+    await dbDelete('ojt_docs', docId);
 
-      // Update local state
-      setAllDocs((prev) => prev.filter((d) => d.id !== docId));
-      setMyDocs((prev) => prev.filter((d) => d.id !== docId));
+    // Update local state
+    setAllDocs((prev) => prev.filter((d) => d.id !== docId));
+    setMyDocs((prev) => prev.filter((d) => d.id !== docId));
 
-      if (selectedDoc?.id === docId) {
-        setSelectedDoc(null);
-      }
-      if (editingDoc?.id === docId) {
-        setEditingDoc(null);
-      }
-    },
-    [selectedDoc?.id, editingDoc?.id]
-  );
+    // Clear selected/editing if deleted
+    setSelectedDoc((prev) => (prev?.id === docId ? null : prev));
+    setEditingDoc((prev) => (prev?.id === docId ? null : prev));
+  }, []);
 
   // Get documents by team
   const getDocsByTeam = useCallback(

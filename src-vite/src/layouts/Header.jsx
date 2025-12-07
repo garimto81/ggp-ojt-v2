@@ -1,9 +1,10 @@
-// OJT Master v2.9.4 - Header Component (WebLLM Only)
+// OJT Master v2.10.0 - Header Component (WebLLM Only)
 
 import { useState } from 'react';
-import { useAuth } from '../features/auth/hooks/AuthContext';
-import { useAI } from '../features/ai/hooks/AIContext';
-import { ROLES } from '../constants';
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { useAI } from '@features/ai/hooks/AIContext';
+import { ROLES } from '@/constants';
+import { sanitizeText } from '@utils/helpers';
 
 export default function Header() {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();
@@ -98,12 +99,12 @@ export default function Header() {
             {user && (
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-sm font-medium text-gray-800">{user.name}</p>
+                  <p className="text-sm font-medium text-gray-800">{sanitizeText(user.name)}</p>
                   <p className="text-xs text-gray-500 capitalize">
                     {isTempMentorMode ? (
                       <span className="text-amber-600">Mentor (임시)</span>
                     ) : (
-                      displayRole
+                      sanitizeText(displayRole)
                     )}
                   </p>
                 </div>

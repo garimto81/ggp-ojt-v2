@@ -1,12 +1,12 @@
 // OJT Master v2.5.0 - Mentee Study Component
 
 import { useState, useMemo, useEffect } from 'react';
-import { useDocs } from '../../../contexts/DocsContext';
-import { useAuth } from '../../auth/hooks/AuthContext';
-import { Toast } from '../../../contexts/ToastContext';
-import { supabase } from '../../../utils/api';
-import { sanitizeHtml, shuffleArray } from '../../../utils/helpers';
-import { CONFIG, VIEW_STATES } from '../../../constants';
+import { useDocs } from '@contexts/DocsContext';
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { Toast } from '@contexts/ToastContext';
+import { supabase } from '@utils/api';
+import { sanitizeHtml, shuffleArray } from '@utils/helpers';
+import { CONFIG, VIEW_STATES } from '@/constants';
 
 export default function MenteeStudy() {
   const { selectedDoc, setSelectedDoc } = useDocs();
@@ -99,7 +99,7 @@ export default function MenteeStudy() {
           score: score,
           total_questions: quizQuestions.length,
           passed: passed,
-          completed_at: Date.now(),
+          completed_at: new Date().toISOString(),
         });
 
         if (passed) {
