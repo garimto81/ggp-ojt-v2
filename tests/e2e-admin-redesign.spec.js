@@ -231,9 +231,10 @@ test.describe('Admin Page Redesign - E2E Tests', () => {
       const logCount = await logViewer.count();
       console.log(`Log viewer found: ${logCount > 0}`);
 
-      // Check for log entries
-      const logEntries = page.locator('[class*="log"], text=/INFO|WARN|ERROR/i');
-      const entryCount = await logEntries.count();
+      // Check for log entries (separate locators to avoid CSS parsing errors)
+      const logEntriesClass = page.locator('[class*="log"]');
+      const logEntriesText = page.locator('text=/INFO|WARN|ERROR/i');
+      const entryCount = (await logEntriesClass.count()) + (await logEntriesText.count());
       console.log(`Log entry count: ${entryCount}`);
 
       await page.screenshot({

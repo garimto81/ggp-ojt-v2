@@ -24,30 +24,35 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 ## Commands
 
 ```bash
-# === Vite 앱 (src-vite/) ===
+# === 루트에서 실행 (pnpm workspace) ===
+pnpm dev                        # 개발 서버 (http://localhost:5173)
+pnpm build                      # 프로덕션 빌드
+pnpm lint                       # ESLint 검사
+pnpm test:vite                  # Vitest 단위 테스트 (1회 실행)
+pnpm test:worker                # R2 Worker 테스트
+
+# === Vite 앱 상세 (src-vite/) ===
 cd src-vite
-npm run dev                     # 개발 서버 (http://localhost:5173)
-npm run build                   # 프로덕션 빌드
-npm run lint                    # ESLint 검사
+npm run dev                     # 개발 서버
 npm run lint:fix                # ESLint 자동 수정
 npm run format                  # Prettier 포맷팅
+npm run format:check            # 포맷 검사 (수정 없이)
 
-# 단위 테스트 (Vitest)
+# 단위 테스트 (Vitest) - src-vite/src/**/*.test.{js,jsx}
 npm run test                    # Watch 모드
 npm run test:run                # 1회 실행
 npm run test:coverage           # 커버리지 리포트
-npm run format:check            # 포맷 검사 (수정 없이)
 npx vitest run src/utils/api.test.js              # 단일 파일
 npx vitest run -t "checkAIStatus"                 # 특정 테스트명 매칭
 
 # === E2E 테스트 (Playwright) - 루트에서 실행 ===
+# 테스트 파일: tests/*.spec.js
 # 기본 baseURL: https://ggp-ojt-v2.vercel.app (프로덕션)
 # 로컬 테스트: playwright.config.js 17행 주석 해제, 16행 주석 처리
-# 로컬 서버: cd src-vite && npm run dev 후 포트 확인
-npm test                        # 전체 테스트
-npm run test:headed             # 브라우저 화면 표시
-npm run test:ui                 # Playwright UI 모드
-npm run test:report             # HTML 리포트 열기
+pnpm test                       # 전체 테스트
+pnpm test:headed                # 브라우저 화면 표시
+pnpm test:ui                    # Playwright UI 모드
+pnpm test:report                # HTML 리포트 열기
 npx playwright test tests/e2e-homepage.spec.js   # 단일 파일
 npx playwright test -g "로그인"                   # 테스트명 매칭
 
@@ -67,6 +72,26 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_R2_WORKER_URL=https://ojt-r2-upload.your-worker.workers.dev
 
 # Note: No AI API keys required! WebLLM runs entirely in the browser.
+```
+
+## Path Aliases
+
+vite.config.js에 정의된 import alias:
+
+| Alias | 경로 |
+|-------|------|
+| `@` | `src/` |
+| `@features` | `src/features/` |
+| `@utils` | `src/utils/` |
+| `@contexts` | `src/contexts/` |
+| `@hooks` | `src/hooks/` |
+| `@layouts` | `src/layouts/` |
+| `@components` | `src/components/` |
+
+```javascript
+// 사용 예시
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { CONFIG } from '@/constants';
 ```
 
 ## Architecture
@@ -294,7 +319,7 @@ git log -1 --format='%h'
 | #54 | AdminDashboard 분석 차트 추가 | P1 | ✅ 완료 |
 | #57 | Feature-Based 폴더 구조 전환 | P1 | ✅ 완료 |
 | #58 | React Query 도입 | P2 | ✅ 완료 |
-| #59 | api.js 모듈 분리 (SRP 적용) | P2 | OPEN |
+| #59 | api.js 모듈 분리 (SRP 적용) | P2 | ✅ 완료 |
 | #60 | 오프라인 동기화 완성 | P3 | ✅ 완료 |
 | #61 | pnpm workspaces 전환 | P0 | ✅ 완료 |
 
@@ -302,8 +327,9 @@ git log -1 --format='%h'
 
 | 영역 | 문제 | 심각도 |
 |------|------|--------|
-| API 레이어 | api.js 300줄+, 책임 혼재 | HIGH |
 | 테스트 | Context/컴포넌트 테스트 부족 (~10% 커버리지) | MEDIUM |
+
+> api.js는 re-export hub로 리팩토링 완료됨 (실제 로직은 features/*/services/에 분리)
 
 ## 작업 시 주의사항
 

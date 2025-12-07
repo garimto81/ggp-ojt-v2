@@ -350,20 +350,34 @@ export default function MenteeStudy() {
           <p className="text-sm text-gray-500">예상 학습 시간: {selectedDoc.estimated_minutes}분</p>
         )}
 
-        {/* 원문 보기 버튼 */}
-        {selectedDoc.source_url && (
-          <a
-            href={selectedDoc.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm"
-          >
-            <span>🔗</span>
-            <span>원문 보기</span>
-            <span className="text-xs text-blue-400">
-              ({selectedDoc.source_type === 'url' ? 'URL' : 'PDF'})
-            </span>
-          </a>
+        {/* 원문 보기 버튼 - URL 또는 PDF */}
+        {selectedDoc.source_type && selectedDoc.source_type !== 'text' && (
+          <div className="flex items-center gap-2 mt-3">
+            {selectedDoc.source_type === 'url' && selectedDoc.source_url && (
+              <a
+                href={selectedDoc.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm"
+                aria-label="원문 URL 열기"
+              >
+                <span>🔗</span>
+                <span>원문 보기</span>
+              </a>
+            )}
+            {selectedDoc.source_type === 'pdf' && selectedDoc.source_file && (
+              <a
+                href={selectedDoc.source_file}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm"
+                aria-label="PDF 파일 열기"
+              >
+                <span>📄</span>
+                <span>PDF 원문 보기</span>
+              </a>
+            )}
+          </div>
         )}
 
         {/* Section Progress */}

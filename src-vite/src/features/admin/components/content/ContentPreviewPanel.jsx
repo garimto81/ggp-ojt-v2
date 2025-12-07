@@ -44,6 +44,29 @@ export default function ContentPreviewPanel({
           <span>·</span>
           <span>생성일: {formatDate(doc.created_at)}</span>
         </div>
+
+        {/* Source Info */}
+        {doc.source_type && doc.source_type !== 'text' && (
+          <div className="flex items-center gap-2 mt-2 text-sm">
+            {doc.source_type === 'url' && doc.source_url && (
+              <a
+                href={doc.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition"
+                aria-label="원문 URL 열기"
+              >
+                🔗 원문 보기
+              </a>
+            )}
+            {doc.source_type === 'pdf' && doc.source_file && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                📄 {doc.source_file}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-3 mt-3">
           <ContentStatusBadge status={doc.status || 'published'} showIcon />
           {doc.report_count > 0 && (
