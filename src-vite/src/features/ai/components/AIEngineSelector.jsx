@@ -83,7 +83,14 @@ export default function AIEngineSelector() {
         ) : webllmStatus.loading ? (
           <div>
             <span className="text-amber-600">모델 로딩 중... {webllmStatus.progress}%</span>
-            <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={webllmStatus.progress} aria-valuemin="0" aria-valuemax="100" aria-label="모델 로딩 진행률">
+            <div
+              className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"
+              role="progressbar"
+              aria-valuenow={webllmStatus.progress}
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-label="모델 로딩 진행률"
+            >
               <div
                 className="h-full bg-green-500 transition-all duration-300"
                 style={{ width: `${webllmStatus.progress}%` }}

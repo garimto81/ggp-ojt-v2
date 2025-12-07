@@ -55,7 +55,11 @@ export default function PdfViewer({ file, url, onError }) {
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 bg-white border-b">
         {/* Page Navigation */}
-        <div className="flex items-center gap-2" role="navigation" aria-label="PDF 페이지 네비게이션">
+        <div
+          className="flex items-center gap-2"
+          role="navigation"
+          aria-label="PDF 페이지 네비게이션"
+        >
           <button
             onClick={goToPrevPage}
             disabled={pageNumber <= 1}
@@ -63,7 +67,13 @@ export default function PdfViewer({ file, url, onError }) {
             title="이전 페이지"
             aria-label="이전 페이지로 이동"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -97,7 +107,13 @@ export default function PdfViewer({ file, url, onError }) {
             title="다음 페이지"
             aria-label="다음 페이지로 이동"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -112,7 +128,13 @@ export default function PdfViewer({ file, url, onError }) {
             title="축소"
             aria-label="PDF 축소"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
             </svg>
           </button>
@@ -131,7 +153,13 @@ export default function PdfViewer({ file, url, onError }) {
             title="확대"
             aria-label="PDF 확대"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -152,8 +180,17 @@ export default function PdfViewer({ file, url, onError }) {
         )}
 
         {error && (
-          <div className="flex flex-col items-center justify-center h-full text-red-500" role="alert">
-            <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <div
+            className="flex flex-col items-center justify-center h-full text-red-500"
+            role="alert"
+          >
+            <svg
+              className="w-12 h-12 mb-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

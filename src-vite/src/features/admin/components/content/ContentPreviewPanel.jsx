@@ -220,7 +220,9 @@ export default function ContentPreviewPanel({
                         {formatDate(report.created_at)}
                       </p>
                       {report.description && (
-                        <p className="text-sm text-gray-600 mt-2">{sanitizeText(report.description)}</p>
+                        <p className="text-sm text-gray-600 mt-2">
+                          {sanitizeText(report.description)}
+                        </p>
                       )}
                     </div>
                     {report.status === 'pending' && onResolveReport && (

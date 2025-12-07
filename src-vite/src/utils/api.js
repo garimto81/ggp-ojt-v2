@@ -6,10 +6,7 @@ export { supabase } from './supabaseClient';
 
 // AI Services
 export { checkAIStatus, generateOJTContent } from '@features/ai/services/contentGenerator';
-export {
-  validateQuizQuality,
-  regenerateQuizQuestions,
-} from '@features/ai/services/quizValidator';
+export { validateQuizQuality, regenerateQuizQuestions } from '@features/ai/services/quizValidator';
 export {
   createFallbackContent,
   createPlaceholderQuiz,

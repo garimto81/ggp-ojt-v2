@@ -28,7 +28,11 @@ export default function Header() {
   return (
     <header className="bg-white shadow-sm border-b" role="banner">
       <div className="container mx-auto px-4 py-3">
-        <nav className="flex items-center justify-between" role="navigation" aria-label="메인 네비게이션">
+        <nav
+          className="flex items-center justify-between"
+          role="navigation"
+          aria-label="메인 네비게이션"
+        >
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
             <div
@@ -48,7 +52,12 @@ export default function Header() {
           {/* Right side */}
           <div className="flex items-center gap-4">
             {/* AI Status */}
-            <div className="flex items-center gap-2" role="status" aria-live="polite" aria-label="AI 모델 상태">
+            <div
+              className="flex items-center gap-2"
+              role="status"
+              aria-live="polite"
+              aria-label="AI 모델 상태"
+            >
               <span
                 className={`w-2 h-2 rounded-full ${
                   isAIReady
@@ -75,7 +84,10 @@ export default function Header() {
                   모드
                 </button>
                 {showModeMenu && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border z-50" role="menu">
+                  <div
+                    className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border z-50"
+                    role="menu"
+                  >
                     <button
                       onClick={() => {
                         handleModeSwitch('admin');
@@ -119,7 +131,8 @@ export default function Header() {
                   ) : (
                     <span
                       className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border capitalize ${
-                        ROLE_COLORS[displayRole]?.badge || 'bg-gray-100 text-gray-700 border-gray-200'
+                        ROLE_COLORS[displayRole]?.badge ||
+                        'bg-gray-100 text-gray-700 border-gray-200'
                       }`}
                     >
                       {sanitizeText(displayRole)}

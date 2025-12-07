@@ -116,7 +116,10 @@ export function useUserProfile(session) {
    * - object: 로그인 상태 → 프로필 로딩
    */
   const loadProfile = useCallback(async () => {
-    console.log('[useUserProfile] loadProfile 호출, session:', session === undefined ? 'undefined' : session === null ? 'null' : '세션 객체');
+    console.log(
+      '[useUserProfile] loadProfile 호출, session:',
+      session === undefined ? 'undefined' : session === null ? 'null' : '세션 객체'
+    );
 
     // undefined = 아직 세션 확인 중 (초기화 중) → LOADING 상태 유지
     if (session === undefined) {

@@ -85,12 +85,28 @@ export const WEBLLM_CONFIG = {
   ],
 };
 
-// AI Engine configuration (WebLLM Only)
+// AI Engine configuration (Hybrid: Chrome AI + WebLLM, Issue #96)
 export const AI_ENGINE_CONFIG = {
-  // WebLLM 전용
-  DEFAULT_ENGINE: 'webllm',
+  // 엔진 우선순위: chromeai > webllm
+  ENGINES: {
+    CHROME_AI: 'chromeai', // Chrome 138+ Gemini Nano (최우선)
+    WEBLLM: 'webllm', // WebLLM fallback
+  },
+  // 기본 엔진 (자동 선택)
+  DEFAULT_ENGINE: 'auto',
   // 로컬 스토리지 키
   STORAGE_KEY: 'ojt_ai_engine',
+};
+
+// Chrome AI configuration (Issue #96)
+export const CHROME_AI_CONFIG = {
+  // 생성 파라미터
+  TEMPERATURE: 0.3,
+  TOP_K: 40,
+  // 최소 지원 Chrome 버전
+  MIN_CHROME_VERSION: 138,
+  // 모델 이름
+  MODEL_NAME: 'Gemini Nano',
 };
 
 // PDF Viewer configuration (FR-802)
