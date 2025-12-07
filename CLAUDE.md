@@ -39,14 +39,21 @@ npm run format                  # Prettier 포맷팅
 npm run format:check            # 포맷 검사 (수정 없이)
 
 # 단위 테스트 (Vitest) - src-vite/src/**/*.test.{js,jsx}
+# 환경: jsdom, Setup: src/test/setup.js
 npm run test                    # Watch 모드
 npm run test:run                # 1회 실행
-npm run test:coverage           # 커버리지 리포트
+npm run test:coverage           # 커버리지 리포트 (v8 provider)
 npx vitest run src/utils/api.test.js              # 단일 파일
 npx vitest run -t "checkAIStatus"                 # 특정 테스트명 매칭
 
 # === E2E 테스트 (Playwright) - 루트에서 실행 ===
-# 테스트 파일: tests/*.spec.js
+# 테스트 파일: tests/*.spec.js (6개)
+#   - e2e-homepage.spec.js      # 홈페이지 기본 동작
+#   - e2e-admin-mode.spec.js    # Admin 모드 전환
+#   - e2e-admin-redesign.spec.js # Admin 대시보드 리디자인
+#   - e2e-issue34-source-field.spec.js # 소스 필드 검증
+#   - performance.spec.js       # 성능 테스트
+#   - debug-console.spec.js     # 콘솔 디버그
 # 기본 baseURL: https://ggp-ojt-v2.vercel.app (프로덕션)
 # 로컬 테스트: playwright.config.js 17행 주석 해제, 16행 주석 처리
 pnpm test                       # 전체 테스트
@@ -221,6 +228,29 @@ teams (id UUID PK, name, slug, display_order, is_active)
 ```
 
 RLS 정책: `database/migrations/supabase_schema.sql`, `database/fixes/supabase_fix_rls.sql` 참조
+
+### Database Migrations
+
+마이그레이션 파일은 `database/` 디렉토리에 위치:
+
+```
+database/
+├── migrations/                         # 스키마 마이그레이션 (순서대로 적용)
+│   ├── supabase_schema.sql             # 1. 기본 스키마 (users, ojt_docs, learning_records)
+│   ├── supabase_phase2_learning_progress.sql  # 2. learning_progress 테이블
+│   ├── supabase_phase3_teams.sql       # 3. teams 테이블
+│   ├── supabase_source_columns.sql     # 4. source_type/url/file 컬럼
+│   └── 20251207_admin_page_redesign.sql # 5. Admin 리디자인 관련
+└── fixes/                              # RLS 및 성능 수정
+    ├── supabase_fix_rls.sql            # RLS 정책 수정
+    ├── supabase_rls_admin_update.sql   # Admin RLS 업데이트
+    ├── supabase_fix_role_update.sql    # 역할 업데이트 수정
+    ├── supabase_fix_admin_rls.sql      # Admin 테이블 RLS 픽스 (Issue #93)
+    ├── supabase_performance.sql        # 성능 최적화 인덱스
+    └── supabase_audit_logs.sql         # 감사 로그 테이블
+```
+
+**적용 방법**: Supabase Dashboard → SQL Editor에서 순서대로 실행
 
 ### Dexie.js (로컬 캐시)
 
