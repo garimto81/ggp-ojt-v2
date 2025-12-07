@@ -1,12 +1,13 @@
-// OJT Master v2.10.0 - Admin Dashboard Component (Issue #54)
+// OJT Master v2.10.0 - Admin Dashboard Component (Issue #54, #78, Admin Redesign)
 
 import { useState, useEffect, useMemo } from 'react';
-import { useDocs } from '../../../contexts/DocsContext';
-import { useAuth } from '../../auth/hooks/AuthContext';
-import { Toast } from '../../../contexts/ToastContext';
-import { supabase } from '../../../utils/api';
-import { confirmDeleteWithCSRF, formatDate } from '../../../utils/helpers';
-import { useDebounce } from '../../../hooks/useDebounce';
+import { useDocs } from '@contexts/DocsContext';
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { Toast } from '@contexts/ToastContext';
+import { supabase } from '@utils/api';
+import { formatDate, sanitizeText } from '@utils/helpers';
+import { useDebounce } from '@hooks/useDebounce';
+import { ROLES } from '@/constants';
 import {
   useMentorContribution,
   useLearningProgress,
@@ -14,13 +15,9 @@ import {
   useLearningActivity,
   useTeamStats,
 } from '../hooks/useAnalytics';
-import {
-  ActivityChart,
-  TeamStatsChart,
-  PassRateChart,
-  MentorContributionChart,
-  ProgressDistributionChart,
-} from './AnalyticsCharts';
+import { ContentManagementTab } from './content';
+import { SettingsTab } from './settings';
+import { StatsTab } from './stats';
 
 // 기본 부서 목록
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
@@ -43,20 +40,21 @@ export default function AdminDashboard() {
   const [userItemsPerPage, setUserItemsPerPage] = useState(20);
   const [userSort, setUserSort] = useState({ field: 'created_at', order: 'desc' });
 
-  // Docs tab state
-  const [docSearch, setDocSearch] = useState('');
-  const [docTeamFilter, setDocTeamFilter] = useState('');
-  const [docAuthorFilter, setDocAuthorFilter] = useState('');
-  const [docPage, setDocPage] = useState(1);
-  const [docItemsPerPage, setDocItemsPerPage] = useState(20);
-
   // Debounced search values
   const debouncedUserSearch = useDebounce(userSearch, 300);
-  const debouncedDocSearch = useDebounce(docSearch, 300);
+
+  // Security: Verify admin role before loading data (Issue #78)
+  const isAdmin = user?.role === ROLES.ADMIN;
 
   // Load admin data
   useEffect(() => {
     const loadAdminData = async () => {
+      // Security check: Only admins can access this data
+      if (!isAdmin) {
+        Toast.error('관리자 권한이 필요합니다.');
+        return;
+      }
+
       setIsLoading(true);
       try {
         const { data: users, error: usersError } = await supabase
@@ -81,19 +79,30 @@ export default function AdminDashboard() {
     };
 
     loadAdminData();
-  }, []);
+  }, [isAdmin]);
 
   // Reset page when filters change
   useEffect(() => {
     setUserPage(1);
   }, [debouncedUserSearch, userRoleFilter, userDeptFilter, userItemsPerPage]);
 
-  useEffect(() => {
-    setDocPage(1);
-  }, [debouncedDocSearch, docTeamFilter, docAuthorFilter, docItemsPerPage]);
-
-  // Change user role
+  // Change user role (Issue #78: Added confirmation)
   const handleRoleChange = async (userId, newRole) => {
+    // Security: Require admin role
+    if (!isAdmin) {
+      Toast.error('관리자 권한이 필요합니다.');
+      return;
+    }
+
+    const targetUser = allUsers.find((u) => u.id === userId);
+    if (
+      !window.confirm(
+        `${sanitizeText(targetUser?.name)}님의 역할을 ${newRole}(으)로 변경하시겠습니까?`
+      )
+    ) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('users')
@@ -110,8 +119,14 @@ export default function AdminDashboard() {
     }
   };
 
-  // Change user department
+  // Change user department (Issue #78: Added security check)
   const handleDepartmentChange = async (userId, newDepartment) => {
+    // Security: Require admin role
+    if (!isAdmin) {
+      Toast.error('관리자 권한이 필요합니다.');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('users')
@@ -130,12 +145,22 @@ export default function AdminDashboard() {
     }
   };
 
-  // Toggle user active status
+  // Toggle user active status (Issue #78: Added security check)
   const handleToggleActive = async (userId, currentStatus) => {
+    // Security: Require admin role
+    if (!isAdmin) {
+      Toast.error('관리자 권한이 필요합니다.');
+      return;
+    }
+
     const newStatus = !currentStatus;
     const targetUser = allUsers.find((u) => u.id === userId);
 
-    if (!window.confirm(`${targetUser?.name}님을 ${newStatus ? '활성화' : '정지'}하시겠습니까?`)) {
+    if (
+      !window.confirm(
+        `${sanitizeText(targetUser?.name)}님을 ${newStatus ? '활성화' : '정지'}하시겠습니까?`
+      )
+    ) {
       return;
     }
 
@@ -157,15 +182,26 @@ export default function AdminDashboard() {
     }
   };
 
-  // Delete user
+  // Delete user (Issue #78: Added 2-step CSRF-like confirmation)
   const handleDeleteUser = async (userId) => {
-    const targetUser = allUsers.find((u) => u.id === userId);
+    // Security: Require admin role
+    if (!isAdmin) {
+      Toast.error('관리자 권한이 필요합니다.');
+      return;
+    }
 
-    if (
-      !window.confirm(
-        `정말 ${targetUser?.name}님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
-      )
-    ) {
+    const targetUser = allUsers.find((u) => u.id === userId);
+    const userName = sanitizeText(targetUser?.name) || '사용자';
+
+    // Step 1: First confirmation
+    if (!window.confirm(`정말 ${userName}님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+
+    // Step 2: Name input confirmation (CSRF-like protection)
+    const userInput = prompt(`삭제하려면 사용자 이름을 정확히 입력하세요:\n"${userName}"`);
+    if (userInput !== userName) {
+      Toast.warning('이름이 일치하지 않습니다. 삭제가 취소되었습니다.');
       return;
     }
 
@@ -189,21 +225,6 @@ export default function AdminDashboard() {
       .filter((d) => d && !DEFAULT_DEPARTMENTS.includes(d));
     return [...new Set([...DEFAULT_DEPARTMENTS, ...existingDepts])].sort();
   }, [allUsers]);
-
-  // 팀 목록 (문서에서 추출)
-  const teamOptions = useMemo(() => {
-    const teams = allDocs.map((d) => d.team).filter(Boolean);
-    return [...new Set(teams)].sort();
-  }, [allDocs]);
-
-  // 작성자 목록 (문서에서 추출)
-  const authorOptions = useMemo(() => {
-    const authors = allDocs
-      .map((d) => ({ id: d.author_id, name: d.author_name }))
-      .filter((a) => a.id && a.name);
-    const uniqueAuthors = Array.from(new Map(authors.map((a) => [a.id, a])).values());
-    return uniqueAuthors.sort((a, b) => a.name.localeCompare(b.name));
-  }, [allDocs]);
 
   // Filtered and paginated users
   const { filteredUsers, paginatedUsers, totalUserPages } = useMemo(() => {
@@ -247,52 +268,6 @@ export default function AdminDashboard() {
     userPage,
     userItemsPerPage,
   ]);
-
-  // Filtered and paginated docs
-  const { filteredDocs, paginatedDocs, totalDocPages } = useMemo(() => {
-    let filtered = [...allDocs];
-
-    // Search filter
-    if (debouncedDocSearch) {
-      const search = debouncedDocSearch.toLowerCase();
-      filtered = filtered.filter((d) => d.title?.toLowerCase().includes(search));
-    }
-
-    // Team filter
-    if (docTeamFilter) {
-      filtered = filtered.filter((d) => d.team === docTeamFilter);
-    }
-
-    // Author filter
-    if (docAuthorFilter) {
-      filtered = filtered.filter((d) => d.author_id === docAuthorFilter);
-    }
-
-    const totalPages = Math.ceil(filtered.length / docItemsPerPage);
-    const startIndex = (docPage - 1) * docItemsPerPage;
-    const paginated = filtered.slice(startIndex, startIndex + docItemsPerPage);
-
-    return { filteredDocs: filtered, paginatedDocs: paginated, totalDocPages: totalPages };
-  }, [allDocs, debouncedDocSearch, docTeamFilter, docAuthorFilter, docPage, docItemsPerPage]);
-
-  // Delete document
-  const handleDeleteDoc = async (docId) => {
-    const doc = allDocs.find((d) => d.id === docId);
-    if (!doc) return;
-
-    if (!confirmDeleteWithCSRF(doc.title)) {
-      Toast.warning('제목이 일치하지 않습니다. 삭제가 취소되었습니다.');
-      return;
-    }
-
-    try {
-      await deleteDocument(docId);
-      Toast.success('문서가 삭제되었습니다.');
-    } catch (e) {
-      console.error('Delete doc error:', e);
-      Toast.error('문서 삭제에 실패했습니다: ' + e.message);
-    }
-  };
 
   // Handle sort change
   const handleUserSort = (field) => {
@@ -349,13 +324,17 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs (Issue #77: Added a11y) */}
       <div className="bg-white rounded-xl shadow-sm">
-        <div className="border-b flex">
-          {['users', 'docs', 'stats'].map((tab) => (
+        <div className="border-b flex" role="tablist" aria-label="관리자 대시보드 탭">
+          {['users', 'docs', 'stats', 'settings'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
+              role="tab"
+              aria-selected={activeTab === tab}
+              aria-controls={`tabpanel-${tab}`}
+              id={`tab-${tab}`}
               className={`px-6 py-3 font-medium transition ${
                 activeTab === tab
                   ? 'text-blue-600 border-b-2 border-blue-600'
@@ -365,6 +344,7 @@ export default function AdminDashboard() {
               {tab === 'users' && '사용자 관리'}
               {tab === 'docs' && '콘텐츠 관리'}
               {tab === 'stats' && '통계'}
+              {tab === 'settings' && '설정'}
             </button>
           ))}
         </div>
@@ -372,426 +352,198 @@ export default function AdminDashboard() {
         <div className="p-6">
           {/* Users Tab */}
           {activeTab === 'users' && (
-            <div className="space-y-4">
-              {/* Filters */}
-              <div className="flex flex-wrap gap-3">
-                <input
-                  type="text"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="이름 검색..."
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <select
-                  value={userRoleFilter}
-                  onChange={(e) => setUserRoleFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">모든 역할</option>
-                  <option value="admin">Admin</option>
-                  <option value="mentor">Mentor</option>
-                  <option value="mentee">Mentee</option>
-                </select>
-                <select
-                  value={userDeptFilter}
-                  onChange={(e) => setUserDeptFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">모든 부서</option>
-                  {departmentOptions.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={userItemsPerPage}
-                  onChange={(e) => setUserItemsPerPage(Number(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {ITEMS_PER_PAGE_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}개씩
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div role="tabpanel" id="tabpanel-users" aria-labelledby="tab-users">
+              <div className="space-y-4">
+                {/* Filters */}
+                <div className="flex flex-wrap gap-3">
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="이름 검색..."
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <select
+                    value={userRoleFilter}
+                    onChange={(e) => setUserRoleFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">모든 역할</option>
+                    <option value="admin">Admin</option>
+                    <option value="mentor">Mentor</option>
+                    <option value="mentee">Mentee</option>
+                  </select>
+                  <select
+                    value={userDeptFilter}
+                    onChange={(e) => setUserDeptFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">모든 부서</option>
+                    {departmentOptions.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={userItemsPerPage}
+                    onChange={(e) => setUserItemsPerPage(Number(e.target.value))}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {ITEMS_PER_PAGE_OPTIONS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}개씩
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Results count */}
-              <p className="text-sm text-gray-500">
-                {filteredUsers.length}명 중 {paginatedUsers.length}명 표시
-              </p>
+                {/* Results count */}
+                <p className="text-sm text-gray-500">
+                  {filteredUsers.length}명 중 {paginatedUsers.length}명 표시
+                </p>
 
-              {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-sm text-gray-500 border-b">
-                      <th
-                        className="pb-3 font-medium cursor-pointer hover:text-gray-700"
-                        onClick={() => handleUserSort('name')}
-                      >
-                        이름 {userSort.field === 'name' && (userSort.order === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="pb-3 font-medium">역할</th>
-                      <th className="pb-3 font-medium">부서</th>
-                      <th
-                        className="pb-3 font-medium cursor-pointer hover:text-gray-700"
-                        onClick={() => handleUserSort('created_at')}
-                      >
-                        가입일{' '}
-                        {userSort.field === 'created_at' && (userSort.order === 'asc' ? '↑' : '↓')}
-                      </th>
-                      <th className="pb-3 font-medium">액션</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedUsers.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-500">
-                          검색 결과가 없습니다.
-                        </td>
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-sm text-gray-500 border-b">
+                        <th
+                          className="pb-3 font-medium cursor-pointer hover:text-gray-700"
+                          onClick={() => handleUserSort('name')}
+                        >
+                          이름 {userSort.field === 'name' && (userSort.order === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th className="pb-3 font-medium">역할</th>
+                        <th className="pb-3 font-medium">부서</th>
+                        <th
+                          className="pb-3 font-medium cursor-pointer hover:text-gray-700"
+                          onClick={() => handleUserSort('created_at')}
+                        >
+                          가입일{' '}
+                          {userSort.field === 'created_at' &&
+                            (userSort.order === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th className="pb-3 font-medium">액션</th>
                       </tr>
-                    ) : (
-                      paginatedUsers.map((u) => (
-                        <tr key={u.id} className="border-b last:border-0">
-                          <td className="py-3">
-                            {u.name}
-                            {u.is_active === false && (
-                              <span className="ml-2 text-xs text-red-500">(정지됨)</span>
-                            )}
-                          </td>
-                          <td className="py-3">
-                            <select
-                              value={u.role || ''}
-                              onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                              className="px-2 py-1 border rounded text-sm"
-                              disabled={u.id === user?.id}
-                            >
-                              <option value="admin">Admin</option>
-                              <option value="mentor">Mentor</option>
-                              <option value="mentee">Mentee</option>
-                            </select>
-                          </td>
-                          <td className="py-3">
-                            <select
-                              value={u.department || ''}
-                              onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
-                              className="px-2 py-1 border rounded text-sm"
-                            >
-                              <option value="">선택 안함</option>
-                              {departmentOptions.map((dept) => (
-                                <option key={dept} value={dept}>
-                                  {dept}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="py-3 text-sm text-gray-500">{formatDate(u.created_at)}</td>
-                          <td className="py-3">
-                            {u.id === user?.id ? (
-                              <span className="text-xs text-gray-400">(본인)</span>
-                            ) : (
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => handleToggleActive(u.id, u.is_active !== false)}
-                                  className={`text-xs px-2 py-1 rounded ${
-                                    u.is_active === false
-                                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                      : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                                  }`}
-                                >
-                                  {u.is_active === false ? '활성화' : '정지'}
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(u.id)}
-                                  className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
-                                >
-                                  삭제
-                                </button>
-                              </div>
-                            )}
+                    </thead>
+                    <tbody>
+                      {paginatedUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-gray-500">
+                            검색 결과가 없습니다.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              {totalUserPages > 1 && (
-                <Pagination
-                  currentPage={userPage}
-                  totalPages={totalUserPages}
-                  onPageChange={setUserPage}
-                />
-              )}
-            </div>
-          )}
-
-          {/* Docs Tab */}
-          {activeTab === 'docs' && (
-            <div className="space-y-4">
-              {/* Filters */}
-              <div className="flex flex-wrap gap-3">
-                <input
-                  type="text"
-                  value={docSearch}
-                  onChange={(e) => setDocSearch(e.target.value)}
-                  placeholder="제목 검색..."
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <select
-                  value={docTeamFilter}
-                  onChange={(e) => setDocTeamFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">모든 팀</option>
-                  {teamOptions.map((team) => (
-                    <option key={team} value={team}>
-                      {team}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={docAuthorFilter}
-                  onChange={(e) => setDocAuthorFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">모든 작성자</option>
-                  {authorOptions.map((author) => (
-                    <option key={author.id} value={author.id}>
-                      {author.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={docItemsPerPage}
-                  onChange={(e) => setDocItemsPerPage(Number(e.target.value))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {ITEMS_PER_PAGE_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}개씩
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Results count */}
-              <p className="text-sm text-gray-500">
-                {filteredDocs.length}개 중 {paginatedDocs.length}개 표시
-              </p>
-
-              {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-sm text-gray-500 border-b">
-                      <th className="pb-3 font-medium">제목</th>
-                      <th className="pb-3 font-medium">팀</th>
-                      <th className="pb-3 font-medium">작성자</th>
-                      <th className="pb-3 font-medium">생성일</th>
-                      <th className="pb-3 font-medium">액션</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedDocs.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-500">
-                          검색 결과가 없습니다.
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedDocs.map((doc) => (
-                        <tr key={doc.id} className="border-b last:border-0">
-                          <td className="py-3">{doc.title}</td>
-                          <td className="py-3 text-sm">{doc.team}</td>
-                          <td className="py-3 text-sm">{doc.author_name}</td>
-                          <td className="py-3 text-sm text-gray-500">
-                            {formatDate(doc.created_at)}
-                          </td>
-                          <td className="py-3">
-                            <button
-                              onClick={() => handleDeleteDoc(doc.id)}
-                              className="text-red-500 hover:text-red-700 text-sm"
-                            >
-                              삭제
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              {totalDocPages > 1 && (
-                <Pagination
-                  currentPage={docPage}
-                  totalPages={totalDocPages}
-                  onPageChange={setDocPage}
-                />
-              )}
-            </div>
-          )}
-
-          {/* Stats Tab (Issue #54) */}
-          {activeTab === 'stats' && (
-            <div className="space-y-6">
-              {/* Overview Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-blue-600">총 멘티</p>
-                  <p className="text-xl font-bold text-blue-800">{overallStats.totalMentees}명</p>
-                </div>
-                <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-sm text-green-600">활동 멘티</p>
-                  <p className="text-xl font-bold text-green-800">{overallStats.activeMentees}명</p>
-                </div>
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <p className="text-sm text-purple-600">전체 완료</p>
-                  <p className="text-xl font-bold text-purple-800">
-                    {overallStats.completedAllMentees}명
-                  </p>
-                </div>
-                <div className="bg-orange-50 rounded-lg p-4">
-                  <p className="text-sm text-orange-600">평균 진도</p>
-                  <p className="text-xl font-bold text-orange-800">
-                    {overallStats.avgProgressPercent}%
-                  </p>
-                </div>
-              </div>
-
-              {/* Charts Row 1 */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white border rounded-lg p-4">
-                  <ActivityChart data={last7Days} title="최근 7일 학습 활동" />
-                </div>
-                <div className="bg-white border rounded-lg p-4">
-                  <PassRateChart passRate={stats.passRate} />
-                </div>
-              </div>
-
-              {/* Charts Row 2 */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white border rounded-lg p-4">
-                  <MentorContributionChart data={mentorContribution} />
-                </div>
-                <div className="bg-white border rounded-lg p-4">
-                  <ProgressDistributionChart userProgress={userProgress} />
-                </div>
-              </div>
-
-              {/* Team Stats Chart */}
-              {teamStats.length > 0 && (
-                <div className="bg-white border rounded-lg p-4">
-                  <TeamStatsChart data={teamStats} />
-                </div>
-              )}
-
-              {/* Weakness Table */}
-              {quizWeakness.length > 0 && (
-                <div className="bg-white border rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-gray-700 mb-4">
-                    취약 파트 분석 (실패율 높은 문서)
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-gray-500 border-b">
-                          <th className="pb-2">문서</th>
-                          <th className="pb-2">팀</th>
-                          <th className="pb-2">시도</th>
-                          <th className="pb-2">실패율</th>
-                          <th className="pb-2">평균 점수</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {quizWeakness.map((item) => (
-                          <tr key={item.docId} className="border-b last:border-0">
-                            <td className="py-2">{item.title}</td>
-                            <td className="py-2 text-gray-500">{item.team}</td>
-                            <td className="py-2">{item.attempts}</td>
-                            <td className="py-2">
-                              <span
-                                className={`px-2 py-1 rounded text-xs ${
-                                  item.failRate >= 50
-                                    ? 'bg-red-100 text-red-700'
-                                    : item.failRate >= 30
-                                      ? 'bg-yellow-100 text-yellow-700'
-                                      : 'bg-green-100 text-green-700'
-                                }`}
+                      ) : (
+                        paginatedUsers.map((u) => (
+                          <tr key={u.id} className="border-b last:border-0">
+                            <td className="py-3">
+                              {u.name}
+                              {u.is_active === false && (
+                                <span className="ml-2 text-xs text-red-500">(정지됨)</span>
+                              )}
+                            </td>
+                            <td className="py-3">
+                              <select
+                                value={u.role || ''}
+                                onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                                className="px-2 py-1 border rounded text-sm"
+                                disabled={u.id === user?.id}
                               >
-                                {item.failRate}%
-                              </span>
+                                <option value="admin">Admin</option>
+                                <option value="mentor">Mentor</option>
+                                <option value="mentee">Mentee</option>
+                              </select>
                             </td>
-                            <td className="py-2">{item.avgScore}점</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Mentee Progress Table */}
-              {userProgress.length > 0 && (
-                <div className="bg-white border rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-gray-700 mb-4">멘티별 진도 현황</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-left text-gray-500 border-b">
-                          <th className="pb-2">이름</th>
-                          <th className="pb-2">부서</th>
-                          <th className="pb-2">완료/전체</th>
-                          <th className="pb-2">진도율</th>
-                          <th className="pb-2">평균 점수</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {userProgress.slice(0, 10).map((user) => (
-                          <tr key={user.id} className="border-b last:border-0">
-                            <td className="py-2">{user.name}</td>
-                            <td className="py-2 text-gray-500">{user.department || '-'}</td>
-                            <td className="py-2">
-                              {user.passedCount}/{user.totalDocs}
+                            <td className="py-3">
+                              <select
+                                value={u.department || ''}
+                                onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
+                                className="px-2 py-1 border rounded text-sm"
+                              >
+                                <option value="">선택 안함</option>
+                                {departmentOptions.map((dept) => (
+                                  <option key={dept} value={dept}>
+                                    {dept}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
-                            <td className="py-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${
-                                      user.progressPercent === 100
-                                        ? 'bg-green-500'
-                                        : user.progressPercent >= 50
-                                          ? 'bg-blue-500'
-                                          : 'bg-orange-500'
+                            <td className="py-3 text-sm text-gray-500">
+                              {formatDate(u.created_at)}
+                            </td>
+                            <td className="py-3">
+                              {u.id === user?.id ? (
+                                <span className="text-xs text-gray-400">(본인)</span>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleToggleActive(u.id, u.is_active !== false)}
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      u.is_active === false
+                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                        : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                                     }`}
-                                    style={{ width: `${user.progressPercent}%` }}
-                                  />
+                                  >
+                                    {u.is_active === false ? '활성화' : '정지'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
+                                  >
+                                    삭제
+                                  </button>
                                 </div>
-                                <span className="text-xs">{user.progressPercent}%</span>
-                              </div>
+                              )}
                             </td>
-                            <td className="py-2">{user.avgScore}점</td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {userProgress.length > 10 && (
-                      <p className="text-xs text-gray-400 mt-2 text-center">
-                        상위 10명 표시 (전체 {userProgress.length}명)
-                      </p>
-                    )}
-                  </div>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              )}
+
+                {/* Pagination */}
+                {totalUserPages > 1 && (
+                  <Pagination
+                    currentPage={userPage}
+                    totalPages={totalUserPages}
+                    onPageChange={setUserPage}
+                  />
+                )}
+              </div>
             </div>
           )}
+
+          {/* Docs Tab - Split View Content Management */}
+          {activeTab === 'docs' && (
+            <div role="tabpanel" id="tabpanel-docs" aria-labelledby="tab-docs">
+              <ContentManagementTab
+                docs={allDocs}
+                onDocDeleted={deleteDocument}
+                isAdmin={isAdmin}
+              />
+            </div>
+          )}
+
+          {/* Stats Tab (Issue #54, Phase 6: Export) */}
+          {activeTab === 'stats' && (
+            <StatsTab
+              stats={stats}
+              overallStats={overallStats}
+              last7Days={last7Days}
+              mentorContribution={mentorContribution}
+              userProgress={userProgress}
+              teamStats={teamStats}
+              quizWeakness={quizWeakness}
+              allRecords={allRecords}
+              allUsers={allUsers}
+              allDocs={allDocs}
+            />
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === 'settings' && <SettingsTab />}
         </div>
       </div>
     </div>

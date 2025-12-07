@@ -1,24 +1,24 @@
 // OJT Master v2.9.0 - Mentor Dashboard Component (WebLLM Only)
 
 import { useState } from 'react';
-import { useDocs } from '../../../contexts/DocsContext';
-import { useAuth } from '../../auth/hooks/AuthContext';
-import { useAI } from '../../ai/hooks/AIContext';
-import { Toast } from '../../../contexts/ToastContext';
+import { useDocs } from '@contexts/DocsContext';
+import { useAuth } from '@features/auth/hooks/AuthContext';
+import { useAI } from '@features/ai/hooks/AIContext';
+import { Toast } from '@contexts/ToastContext';
 import {
   generateOJTContent,
   validateQuizQuality,
   regenerateQuizQuestions,
   extractUrlText,
-} from '../../../utils/api';
+} from '@utils/api';
 import {
   estimateReadingTime,
   calculateRequiredSteps,
   splitContentForSteps,
   confirmDeleteWithCSRF,
   formatDate,
-} from '../../../utils/helpers';
-import AIEngineSelector from '../../ai/components/AIEngineSelector';
+} from '@utils/helpers';
+import AIEngineSelector from '@features/ai/components/AIEngineSelector';
 
 export default function MentorDashboard() {
   const { myDocs, saveDocument, deleteDocument, loadMyDocs } = useDocs();
