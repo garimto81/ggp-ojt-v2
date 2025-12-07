@@ -34,10 +34,13 @@ import { useUserProfile } from './useUserProfile';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(null);
+  // undefined: 초기화 전, null: 로그아웃, object: 로그인
+  const [session, setSession] = useState(undefined);
   const [sessionInitialized, setSessionInitialized] = useState(false);
 
   // useUserProfile Hook으로 프로필 로딩 로직 위임
+  // sessionInitialized가 false면 undefined 전달 (초기화 중)
+  // sessionInitialized가 true면 실제 session 값 전달 (null 또는 세션 객체)
   const { user, setUser, viewState, setViewState, sessionMode, setSessionMode, isLoading } =
     useUserProfile(sessionInitialized ? session : undefined);
 
@@ -45,42 +48,63 @@ export function AuthProvider({ children }) {
   const displayRole = sessionMode || user?.role;
 
   // Initialize auth state (runs only on mount)
+  // Supabase 권장 패턴: onAuthStateChange를 먼저 등록 후 getSession() 호출
+  // https://supabase.com/docs/reference/javascript/auth-onauthstatechange
   useEffect(() => {
     let isMounted = true;
+    let initialSessionHandled = false; // 초기 세션 처리 완료 플래그
 
-    // Safety timeout to prevent infinite loading
+    console.log('[Auth] useEffect 시작 - 세션 초기화');
+
+    // Safety timeout to prevent infinite loading (네트워크 실패 시)
     const loadingTimeout = setTimeout(() => {
-      if (isMounted) {
-        console.warn('[Auth] Session loading timeout - forcing role select view');
-        setSessionInitialized(true);
+      if (isMounted && !initialSessionHandled) {
+        console.warn('[Auth] Session loading timeout (15s) - 세션 확인 미완료, 로컬 캐시 폴백');
+        initialSessionHandled = true;
+        // 타임아웃 시에도 session은 undefined로 유지하지 않음 - null로 설정하여 처리 진행
         setSession(null);
-      }
-    }, 15000); // 15 second max loading time
-
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (isMounted) {
-        setSession(currentSession);
         setSessionInitialized(true);
       }
-    });
+    }, 15000);
 
-    // Listen for auth changes
+    // 1. 먼저 onAuthStateChange 리스너 등록
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (isMounted) {
-        setSession(newSession);
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('[Auth] onAuthStateChange:', event, newSession ? '세션 있음' : '세션 없음');
+
+      if (!isMounted) return;
+
+      // INITIAL_SESSION 이벤트가 초기 세션을 제공 (getSession 대신)
+      if (event === 'INITIAL_SESSION') {
+        console.log('[Auth] INITIAL_SESSION 처리');
+        initialSessionHandled = true;
+        clearTimeout(loadingTimeout);
+      }
+
+      setSession(newSession);
+      setSessionInitialized(true);
+    });
+
+    // 2. getSession()은 onAuthStateChange가 INITIAL_SESSION을 발생시키도록 트리거
+    // Supabase v2에서는 getSession() 호출 시 onAuthStateChange(INITIAL_SESSION)가 발생함
+    console.log('[Auth] getSession() 호출 - INITIAL_SESSION 트리거');
+    supabase.auth.getSession().catch((error) => {
+      console.error('[Auth] getSession() 에러:', error);
+      if (isMounted && !initialSessionHandled) {
+        initialSessionHandled = true;
+        clearTimeout(loadingTimeout);
+        setSession(null);
         setSessionInitialized(true);
       }
     });
 
     return () => {
+      console.log('[Auth] useEffect cleanup');
       isMounted = false;
       clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Intentionally empty - only run on mount
 
   // Google login
