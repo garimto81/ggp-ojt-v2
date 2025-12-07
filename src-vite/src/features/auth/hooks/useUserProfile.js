@@ -109,9 +109,20 @@ export function useUserProfile(session) {
 
   /**
    * 프로필 로딩 메인 로직
+   *
+   * session 상태:
+   * - undefined: 초기화 중 → LOADING 유지
+   * - null: 로그아웃 상태 → ROLE_SELECT로 전환
+   * - object: 로그인 상태 → 프로필 로딩
    */
   const loadProfile = useCallback(async () => {
-    if (!session?.user) {
+    // undefined = 아직 세션 확인 중 (초기화 중) → LOADING 상태 유지
+    if (session === undefined) {
+      return;
+    }
+
+    // null = 세션 없음 (로그아웃 상태) → ROLE_SELECT로 전환
+    if (session === null || !session?.user) {
       setViewState(VIEW_STATES.ROLE_SELECT);
       setIsLoading(false);
       return;
