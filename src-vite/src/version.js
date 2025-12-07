@@ -8,7 +8,7 @@
  * - MINOR: New features (backwards compatible)
  * - PATCH: Bug fixes
  */
-export const APP_VERSION = '2.12.1';
+export const APP_VERSION = '2.12.2';
 
 /**
  * Application name
