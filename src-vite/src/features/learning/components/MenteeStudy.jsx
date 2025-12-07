@@ -1,16 +1,20 @@
 // OJT Master v2.5.0 - Mentee Study Component
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState } from 'react';
 import { useDocs } from '@contexts/DocsContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
 import { supabase } from '@utils/api';
 import { sanitizeHtml, shuffleArray } from '@utils/helpers';
 import { CONFIG, VIEW_STATES } from '@/constants';
+import ReportContentModal from './ReportContentModal';
 
 export default function MenteeStudy() {
   const { selectedDoc, setSelectedDoc } = useDocs();
   const { user, setViewState } = useAuth();
+
+  // Report modal state
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Study state
   const [currentSection, setCurrentSection] = useState(0);
@@ -327,7 +331,17 @@ export default function MenteeStudy() {
           >
             ← 목록으로
           </button>
-          <span className="text-sm text-gray-500">Step {selectedDoc.step || 1}</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsReportModalOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+              aria-label="콘텐츠 신고"
+            >
+              <span>🚨</span>
+              <span>신고</span>
+            </button>
+            <span className="text-sm text-gray-500">Step {selectedDoc.step || 1}</span>
+          </div>
         </div>
 
         <h1 className="text-2xl font-bold text-gray-800 mb-2">{selectedDoc.title}</h1>
@@ -469,6 +483,15 @@ export default function MenteeStudy() {
           </button>
         </div>
       )}
+
+      {/* Report Content Modal */}
+      <ReportContentModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        docId={selectedDoc.id}
+        docTitle={selectedDoc.title}
+        userId={user.id}
+      />
     </div>
   );
 }

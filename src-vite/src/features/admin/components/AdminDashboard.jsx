@@ -15,14 +15,9 @@ import {
   useLearningActivity,
   useTeamStats,
 } from '../hooks/useAnalytics';
-import {
-  ActivityChart,
-  TeamStatsChart,
-  PassRateChart,
-  MentorContributionChart,
-  ProgressDistributionChart,
-} from './AnalyticsCharts';
 import { ContentManagementTab } from './content';
+import { SettingsTab } from './settings';
+import { StatsTab } from './stats';
 
 // 기본 부서 목록
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
@@ -332,7 +327,7 @@ export default function AdminDashboard() {
       {/* Tabs (Issue #77: Added a11y) */}
       <div className="bg-white rounded-xl shadow-sm">
         <div className="border-b flex" role="tablist" aria-label="관리자 대시보드 탭">
-          {['users', 'docs', 'stats'].map((tab) => (
+          {['users', 'docs', 'stats', 'settings'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -349,6 +344,7 @@ export default function AdminDashboard() {
               {tab === 'users' && '사용자 관리'}
               {tab === 'docs' && '콘텐츠 관리'}
               {tab === 'stats' && '통계'}
+              {tab === 'settings' && '설정'}
             </button>
           ))}
         </div>
@@ -530,164 +526,24 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Stats Tab (Issue #54) */}
+          {/* Stats Tab (Issue #54, Phase 6: Export) */}
           {activeTab === 'stats' && (
-            <div role="tabpanel" id="tabpanel-stats" aria-labelledby="tab-stats">
-              <div className="space-y-6">
-                {/* Overview Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <p className="text-sm text-blue-600">총 멘티</p>
-                    <p className="text-xl font-bold text-blue-800">{overallStats.totalMentees}명</p>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <p className="text-sm text-green-600">활동 멘티</p>
-                    <p className="text-xl font-bold text-green-800">
-                      {overallStats.activeMentees}명
-                    </p>
-                  </div>
-                  <div className="bg-purple-50 rounded-lg p-4">
-                    <p className="text-sm text-purple-600">전체 완료</p>
-                    <p className="text-xl font-bold text-purple-800">
-                      {overallStats.completedAllMentees}명
-                    </p>
-                  </div>
-                  <div className="bg-orange-50 rounded-lg p-4">
-                    <p className="text-sm text-orange-600">평균 진도</p>
-                    <p className="text-xl font-bold text-orange-800">
-                      {overallStats.avgProgressPercent}%
-                    </p>
-                  </div>
-                </div>
-
-                {/* Charts Row 1 */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-white border rounded-lg p-4">
-                    <ActivityChart data={last7Days} title="최근 7일 학습 활동" />
-                  </div>
-                  <div className="bg-white border rounded-lg p-4">
-                    <PassRateChart passRate={stats.passRate} />
-                  </div>
-                </div>
-
-                {/* Charts Row 2 */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-white border rounded-lg p-4">
-                    <MentorContributionChart data={mentorContribution} />
-                  </div>
-                  <div className="bg-white border rounded-lg p-4">
-                    <ProgressDistributionChart userProgress={userProgress} />
-                  </div>
-                </div>
-
-                {/* Team Stats Chart */}
-                {teamStats.length > 0 && (
-                  <div className="bg-white border rounded-lg p-4">
-                    <TeamStatsChart data={teamStats} />
-                  </div>
-                )}
-
-                {/* Weakness Table */}
-                {quizWeakness.length > 0 && (
-                  <div className="bg-white border rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-gray-700 mb-4">
-                      취약 파트 분석 (실패율 높은 문서)
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-gray-500 border-b">
-                            <th className="pb-2">문서</th>
-                            <th className="pb-2">팀</th>
-                            <th className="pb-2">시도</th>
-                            <th className="pb-2">실패율</th>
-                            <th className="pb-2">평균 점수</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {quizWeakness.map((item) => (
-                            <tr key={item.docId} className="border-b last:border-0">
-                              <td className="py-2">{item.title}</td>
-                              <td className="py-2 text-gray-500">{item.team}</td>
-                              <td className="py-2">{item.attempts}</td>
-                              <td className="py-2">
-                                <span
-                                  className={`px-2 py-1 rounded text-xs ${
-                                    item.failRate >= 50
-                                      ? 'bg-red-100 text-red-700'
-                                      : item.failRate >= 30
-                                        ? 'bg-yellow-100 text-yellow-700'
-                                        : 'bg-green-100 text-green-700'
-                                  }`}
-                                >
-                                  {item.failRate}%
-                                </span>
-                              </td>
-                              <td className="py-2">{item.avgScore}점</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Mentee Progress Table */}
-                {userProgress.length > 0 && (
-                  <div className="bg-white border rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-gray-700 mb-4">멘티별 진도 현황</h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-gray-500 border-b">
-                            <th className="pb-2">이름</th>
-                            <th className="pb-2">부서</th>
-                            <th className="pb-2">완료/전체</th>
-                            <th className="pb-2">진도율</th>
-                            <th className="pb-2">평균 점수</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {userProgress.slice(0, 10).map((user) => (
-                            <tr key={user.id} className="border-b last:border-0">
-                              <td className="py-2">{user.name}</td>
-                              <td className="py-2 text-gray-500">{user.department || '-'}</td>
-                              <td className="py-2">
-                                {user.passedCount}/{user.totalDocs}
-                              </td>
-                              <td className="py-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full ${
-                                        user.progressPercent === 100
-                                          ? 'bg-green-500'
-                                          : user.progressPercent >= 50
-                                            ? 'bg-blue-500'
-                                            : 'bg-orange-500'
-                                      }`}
-                                      style={{ width: `${user.progressPercent}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-xs">{user.progressPercent}%</span>
-                                </div>
-                              </td>
-                              <td className="py-2">{user.avgScore}점</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {userProgress.length > 10 && (
-                        <p className="text-xs text-gray-400 mt-2 text-center">
-                          상위 10명 표시 (전체 {userProgress.length}명)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <StatsTab
+              stats={stats}
+              overallStats={overallStats}
+              last7Days={last7Days}
+              mentorContribution={mentorContribution}
+              userProgress={userProgress}
+              teamStats={teamStats}
+              quizWeakness={quizWeakness}
+              allRecords={allRecords}
+              allUsers={allUsers}
+              allDocs={allDocs}
+            />
           )}
+
+          {/* Settings Tab */}
+          {activeTab === 'settings' && <SettingsTab />}
         </div>
       </div>
     </div>
