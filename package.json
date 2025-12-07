@@ -1,6 +1,6 @@
 {
   "name": "ggp_ojt_v2",
-  "version": "2.11.1",
+  "version": "2.11.2",
   "description": "OJT Master - AI 기반 신입사원 온보딩 교육 시스템",
   "private": true,
   "packageManager": "pnpm@9.15.0",
