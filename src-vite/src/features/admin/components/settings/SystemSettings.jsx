@@ -70,7 +70,14 @@ export function SystemSettings() {
         });
       } catch (error) {
         console.error('Settings load error:', error);
-        Toast.error('설정을 불러오는 중 오류가 발생했습니다.');
+        // 403 에러 시 RLS 정책 문제 안내
+        if (error.code === '42501' || error.message?.includes('permission denied')) {
+          Toast.error(
+            '권한 오류: RLS 정책을 확인하세요. (database/fixes/supabase_fix_admin_rls.sql)'
+          );
+        } else {
+          Toast.error('설정을 불러오는 중 오류가 발생했습니다.');
+        }
       } finally {
         setIsLoading(false);
       }
