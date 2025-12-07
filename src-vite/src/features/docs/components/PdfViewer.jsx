@@ -3,7 +3,8 @@
 
 import { useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { PDF_CONFIG } from '../../../constants';
+import { PDF_CONFIG } from '@/constants';
+import { InlineSpinner } from '@components/ui/Spinner';
 
 // PDF.js worker 설정
 pdfjs.GlobalWorkerOptions.workerSrc = PDF_CONFIG.WORKER_SRC;
@@ -134,8 +135,7 @@ export default function PdfViewer({ file, url, onError }) {
       <div className="flex-1 overflow-auto p-4">
         {isLoading && (
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-            <span className="ml-2 text-gray-600">PDF 로딩 중...</span>
+            <InlineSpinner text="PDF 로딩 중..." />
           </div>
         )}
 

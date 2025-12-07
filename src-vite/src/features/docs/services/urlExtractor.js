@@ -1,8 +1,8 @@
 // OJT Master - URL Text Extractor (Issue #59)
 // URL에서 텍스트 추출 (CORS 프록시 사용)
 
-import { CONFIG } from '../../../constants';
-import { validateUrlForSSRF } from '../../../utils/security/validateUrl';
+import { CONFIG } from '@/constants';
+import { validateUrlForSSRF } from '@utils/security/validateUrl';
 
 /**
  * Extract text from URL using CORS proxy (FR-801)
@@ -21,7 +21,7 @@ export async function extractUrlText(url, onProgress) {
 
   // 동적 import로 순환 참조 방지
   const { fetchWithCorsProxy, extractTextContent, extractMetadata } =
-    await import('../../../utils/cors-proxy.js');
+    await import('@utils/cors-proxy.js');
 
   try {
     const html = await fetchWithCorsProxy(url);

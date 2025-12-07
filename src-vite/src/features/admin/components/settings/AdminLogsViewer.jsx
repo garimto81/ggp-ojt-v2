@@ -5,6 +5,7 @@ import { supabase } from '@utils/api';
 import { Toast } from '@contexts/ToastContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { ROLES } from '@/constants';
+import { Spinner } from '@components/ui';
 
 const LOG_TYPE_ICONS = {
   INFO: { icon: 'ℹ️', color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -86,7 +87,7 @@ export function AdminLogsViewer() {
   if (isLoading && page === 1) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <Spinner size="sm" color="primary" />
       </div>
     );
   }

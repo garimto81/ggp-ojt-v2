@@ -1,4 +1,26 @@
 // OJT Master - React Query Hooks for Users (Issue #58)
+/**
+ * ROLE: React Query - Server State Management
+ *
+ * PURPOSE:
+ * - Supabase 사용자 데이터 fetch, mutation, caching
+ * - 관리자 기능: 역할 변경, 부서 변경, 활성화 토글, 삭제
+ * - 서버 상태 관리 및 Optimistic updates
+ *
+ * RESPONSIBILITY:
+ * ✅ 서버 데이터 CRUD (Supabase users 테이블)
+ * ✅ 역할/부서 변경, 사용자 활성화 관리
+ * ✅ 캐시 업데이트 및 무효화 (setQueryData, invalidateQueries)
+ *
+ * NOT RESPONSIBLE FOR:
+ * ❌ 현재 로그인 사용자 상태 → AuthContext 사용
+ * ❌ 세션 관리 및 인증 → AuthContext 사용
+ * ❌ UI 상태 (필터, 정렬) → 컴포넌트 로컬 상태
+ *
+ * PATTERN: Query Keys Factory + Optimistic Updates
+ * - usersKeys 객체로 쿼리 키 중앙 관리
+ * - mutation onSuccess에서 setQueryData로 즉시 캐시 업데이트
+ */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@utils/api';

@@ -2,7 +2,8 @@
 // URL 메타데이터 미리보기 및 콘텐츠 표시
 
 import { useState, useEffect } from 'react';
-import { fetchWithCorsProxy, extractMetadata, extractTextContent } from '../../../utils/cors-proxy';
+import { fetchWithCorsProxy, extractMetadata, extractTextContent } from '@utils/cors-proxy';
+import { Spinner } from '@components/ui';
 
 export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -75,7 +76,7 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4" />
+          <Spinner size="lg" color="primary" className="mx-auto mb-4" />
           <p className="text-gray-600">URL 분석 중...</p>
         </div>
       </div>

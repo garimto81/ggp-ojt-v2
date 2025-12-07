@@ -5,6 +5,7 @@ import { supabase } from '@utils/api';
 import { Toast } from '@contexts/ToastContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { ROLES } from '@/constants';
+import { Spinner } from '@components/ui';
 
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 
@@ -173,7 +174,7 @@ export function SystemSettings() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <Spinner size="sm" color="primary" />
       </div>
     );
   }

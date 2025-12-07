@@ -1,5 +1,30 @@
 // OJT Master - AI Context (WebLLM Only, Issue #62)
 // 브라우저 내 AI 엔진 상태 관리 - Service Worker 지원
+/**
+ * ROLE: Context API - Client State Management
+ *
+ * PURPOSE:
+ * - 브라우저 내 WebLLM 엔진 상태 관리 (전역 클라이언트 상태)
+ * - 모델 로딩, 언로드, 진행률, 에러 상태 추적
+ * - WebGPU 지원 여부 및 모델 캐시 상태 관리
+ *
+ * RESPONSIBILITY:
+ * ✅ WebLLM 엔진 상태 (loaded, loading, progress, error)
+ * ✅ 선택된 모델 및 사용 가능한 모델 목록
+ * ✅ WebGPU 지원 여부 확인
+ * ✅ 모델 캐시 상태 (IndexedDB 캐시 여부)
+ * ✅ 모델 로딩/언로드 액션
+ *
+ * NOT RESPONSIBLE FOR:
+ * ❌ AI 콘텐츠 생성 로직 → contentGenerator 서비스 사용
+ * ❌ 생성된 문서 저장 → useDocs mutation 사용
+ * ❌ 서버 데이터 관리 → React Query 사용
+ *
+ * WHY CONTEXT:
+ * - WebLLM은 브라우저 내에서만 동작하는 클라이언트 전용 상태
+ * - 서버와 무관하며, 앱 전체에서 공유되는 싱글톤 엔진
+ * - 실시간 진행률 업데이트 필요 (캐싱 불필요)
+ */
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { WEBLLM_CONFIG } from '@/constants';

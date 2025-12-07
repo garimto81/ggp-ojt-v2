@@ -8,6 +8,7 @@ import { supabase } from '@utils/api';
 import { formatDate, sanitizeText } from '@utils/helpers';
 import { useDebounce } from '@hooks/useDebounce';
 import { ROLES } from '@/constants';
+import { Spinner } from '@components/ui';
 import {
   useMentorContribution,
   useLearningProgress,
@@ -297,7 +298,7 @@ export default function AdminDashboard() {
   if (isLoading || docsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <Spinner size="md" color="primary" />
       </div>
     );
   }

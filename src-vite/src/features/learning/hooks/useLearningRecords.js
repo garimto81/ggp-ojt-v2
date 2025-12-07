@@ -1,4 +1,26 @@
 // OJT Master - React Query Hooks for Learning Records (Issue #58)
+/**
+ * ROLE: React Query - Server State Management
+ *
+ * PURPOSE:
+ * - Supabase 학습 기록 데이터 fetch, mutation, caching
+ * - 서버 상태 관리 (캐싱, 자동 refetch, 무효화)
+ * - 로딩/에러 상태 자동 처리
+ *
+ * RESPONSIBILITY:
+ * ✅ 서버 데이터 CRUD (Supabase learning_records 테이블)
+ * ✅ 캐시 관리 및 무효화 전략 (queryClient)
+ * ✅ Optimistic updates 및 데이터 동기화
+ *
+ * NOT RESPONSIBLE FOR:
+ * ❌ 클라이언트 전용 상태 (UI 상태, 로컬 설정)
+ * ❌ 전역 앱 상태 (인증, AI 엔진) → Context API 사용
+ * ❌ 비즈니스 로직 (유효성 검사, 변환) → 컴포넌트/서비스 레이어
+ *
+ * PATTERN: Query Keys Factory
+ * - learningKeys 객체로 쿼리 키 중앙 관리
+ * - 계층적 키 구조로 선택적 무효화 가능
+ */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@utils/api';

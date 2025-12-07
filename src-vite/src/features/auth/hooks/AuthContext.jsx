@@ -1,4 +1,29 @@
 // OJT Master v2.3.0 - Authentication Context
+/**
+ * ROLE: Context API - Client State Management
+ *
+ * PURPOSE:
+ * - 현재 로그인 사용자의 인증 상태 관리 (전역 클라이언트 상태)
+ * - Supabase 인증 세션과 동기화
+ * - 뷰 상태(viewState) 및 모드(sessionMode) 관리
+ *
+ * RESPONSIBILITY:
+ * ✅ 로그인 사용자 프로필 (user, displayRole)
+ * ✅ 뷰 상태 관리 (viewState: LOADING → ROLE_SELECT → DASHBOARD)
+ * ✅ 관리자 모드 전환 (sessionMode: admin ↔ mentor)
+ * ✅ 인증 액션 (로그인, 로그아웃, 역할 선택)
+ * ✅ Supabase auth 이벤트 리스너 및 세션 동기화
+ *
+ * NOT RESPONSIBLE FOR:
+ * ❌ 사용자 목록 조회 → useUsers (React Query) 사용
+ * ❌ 사용자 CRUD → useUsers mutation 사용
+ * ❌ 서버 데이터 캐싱 → React Query 사용
+ *
+ * WHY CONTEXT:
+ * - 인증 상태는 앱 전체에서 공유되는 클라이언트 상태
+ * - Supabase auth 이벤트를 실시간 리스닝해야 함
+ * - 서버 데이터가 아닌 "현재 세션" 상태이므로 캐싱 불필요
+ */
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@utils/api';

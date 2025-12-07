@@ -1,4 +1,27 @@
 // OJT Master - React Query Hooks for Documents (Issue #58)
+/**
+ * ROLE: React Query - Server State Management
+ *
+ * PURPOSE:
+ * - Supabase 문서 데이터 fetch, mutation, caching
+ * - 서버-로컬 캐시 동기화 (Dexie.js fallback)
+ * - 오프라인 지원 (네트워크 실패 시 로컬 캐시 사용)
+ *
+ * RESPONSIBILITY:
+ * ✅ 서버 데이터 CRUD (Supabase ojt_docs 테이블)
+ * ✅ 캐시 무효화 및 자동 refetch
+ * ✅ 로컬 캐시와 서버 동기화 (dbSave, dbDelete)
+ * ✅ 네트워크 에러 시 fallback 전략
+ *
+ * NOT RESPONSIBLE FOR:
+ * ❌ UI 상태 관리 (selectedDoc, editingDoc) → DocsContext 사용
+ * ❌ AI 생성 문서 임시 상태 → DocsContext 사용
+ * ❌ 전역 앱 설정 → Context API 사용
+ *
+ * PATTERN: Query Keys Factory + Offline Fallback
+ * - docsKeys 객체로 쿼리 키 중앙 관리
+ * - try-catch에서 Supabase 실패 시 로컬 캐시 반환
+ */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@utils/api';

@@ -1,7 +1,7 @@
 // OJT Master v2.10.0 - Export Report Button Component (Phase 6)
 
 import { useState } from 'react';
-import { exportToExcel, exportToCSV, exportToPDF } from '../../services/exportUtils';
+import { exportToExcel, exportToCSV, exportToPDF } from '@features/admin/services/exportUtils';
 
 export default function ExportReportButton({ data }) {
   const [isOpen, setIsOpen] = useState(false);

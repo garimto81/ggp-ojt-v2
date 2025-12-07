@@ -5,25 +5,25 @@
 export { supabase } from './supabaseClient';
 
 // AI Services
-export { checkAIStatus, generateOJTContent } from '../features/ai/services/contentGenerator';
+export { checkAIStatus, generateOJTContent } from '@features/ai/services/contentGenerator';
 export {
   validateQuizQuality,
   regenerateQuizQuestions,
-} from '../features/ai/services/quizValidator';
+} from '@features/ai/services/quizValidator';
 export {
   createFallbackContent,
   createPlaceholderQuiz,
   normalizeQuizQuestion,
-} from '../features/ai/services/fallbackContent';
+} from '@features/ai/services/fallbackContent';
 
 // Document Services
-export { extractUrlText } from '../features/docs/services/urlExtractor';
+export { extractUrlText } from '@features/docs/services/urlExtractor';
 
 // Security Utilities
 export { validateUrlForSSRF } from './security/validateUrl';
 
 // R2 Upload and PDF Services
-import { R2_CONFIG, PDF_CONFIG } from '../constants';
+import { R2_CONFIG, PDF_CONFIG } from '@/constants';
 
 /**
  * Upload image to R2

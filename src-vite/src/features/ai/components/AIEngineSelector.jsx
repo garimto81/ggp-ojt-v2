@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useAI } from '../hooks/AIContext';
+import { InlineSpinner } from '@components/ui/Spinner';
 
 /**
  * WebLLM 모델 선택 컴포넌트
@@ -161,10 +162,10 @@ export default function AIEngineSelector() {
                 }`}
               >
                 {webllmStatus.loading ? (
-                  <>
-                    <span className="animate-spin inline-block mr-1">⏳</span>
+                  <span className="flex items-center justify-center gap-2">
+                    <InlineSpinner />
                     로딩 중 ({webllmStatus.progress}%)
-                  </>
+                  </span>
                 ) : (
                   '모델 로드'
                 )}

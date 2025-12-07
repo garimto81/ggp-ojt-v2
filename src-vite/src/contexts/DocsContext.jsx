@@ -1,4 +1,31 @@
 // OJT Master v2.3.0 - Documents Context
+/**
+ * ROLE: Context API - Client State Management (Legacy + UI State)
+ *
+ * PURPOSE:
+ * - UI 상태 관리 (선택된 문서, 편집 중인 문서)
+ * - AI 생성 문서 임시 상태 (저장 전)
+ * - 로컬 캐시 직접 조회 (useDocs React Query와 병행 사용)
+ *
+ * RESPONSIBILITY:
+ * ✅ UI 상태: selectedDoc, editingDoc
+ * ✅ AI 생성 임시 상태: generatedDoc, generatedDocs (저장 전)
+ * ✅ 로컬 캐시 직접 조회: allDocs, myDocs (dbGetAll)
+ * ✅ 팀 목록 파생 상태: availableTeams (useMemo)
+ *
+ * NOT RESPONSIBLE FOR:
+ * ❌ 서버 데이터 동기화 → useDocs (React Query) 사용 권장
+ * ❌ 캐시 무효화 전략 → React Query가 처리
+ *
+ * MIGRATION NOTE (Issue #75):
+ * - 현재 DocsContext와 useDocs (React Query)가 병행 사용 중
+ * - 점진적 마이그레이션 전략:
+ *   1. 서버 데이터 CRUD → useDocs (React Query) 사용
+ *   2. UI 상태 → DocsContext 유지
+ *   3. AI 생성 임시 상태 → DocsContext 유지
+ * - 향후 리팩토링: saveDocument, deleteDocument 제거하고
+ *   useCreateDoc, useUpdateDoc, useDeleteDoc로 완전 전환
+ */
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { dbGetAll, dbSave, dbDelete } from '@utils/db';
