@@ -1,11 +1,13 @@
 // OJT Master - System Settings Component
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@utils/api';
 import { Toast } from '@contexts/ToastContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { ROLES } from '@/constants';
 import { Spinner } from '@components/ui';
+import { departmentsKeys } from '@features/admin/hooks/useDepartments';
 
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 
@@ -18,6 +20,7 @@ const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케�
  */
 export function SystemSettings() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const isAdmin = user?.role === ROLES.ADMIN;
 
   const [isLoading, setIsLoading] = useState(true);
@@ -144,6 +147,9 @@ export function SystemSettings() {
           autoHideReportCount,
         },
       });
+
+      // 부서 목록 캐시 무효화 - 다른 탭에서 즉시 반영 (#95)
+      queryClient.invalidateQueries({ queryKey: departmentsKeys.all });
 
       Toast.success('설정이 저장되었습니다.');
     } catch (error) {
