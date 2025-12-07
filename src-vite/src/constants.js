@@ -1,4 +1,4 @@
-// OJT Master v2.9.0 - Constants and Configuration (WebLLM Only)
+// OJT Master v2.10.0 - Constants and Configuration (WebLLM Only)
 
 export const CONFIG = {
   // Time limits

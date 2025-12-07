@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OJT Master v2.9.4 - AI 기반 온보딩 교육 플랫폼</title>
+  <title>OJT Master v2.10.0 - AI 기반 온보딩 교육 플랫폼</title>
   <!--
     CDN Script Loading Strategy:
     - Critical (sync): Tailwind, React, ReactDOM, Babel, Supabase, Dexie
@@ -233,9 +233,9 @@
 
     // 콘솔에 디버깅 활성화 메시지 출력
     if (DEBUG.enabled) {
-      console.log('%c🔧 OJT Master v2.9.4 디버깅 모드', 'color: #E91E63; font-size: 16px; font-weight: bold');
+      console.log('%c🔧 OJT Master v2.10.0 디버깅 모드', 'color: #E91E63; font-size: 16px; font-weight: bold');
       console.log('DEBUG.enabled = false 로 비활성화 가능');
-      console.log('v2.9.4 아키텍처: snake_case 통일 + WebLLM 오픈소스 LLM 통합');
+      console.log('v2.10.0 아키텍처: snake_case 통일 + WebLLM 오픈소스 LLM 통합');
       console.log('주요 검증 영역:');
       console.log('  1. snake_case 필드 존재 확인');
       console.log('  2. 데이터 흐름 (Supabase → Cache → UI)');
@@ -2790,7 +2790,7 @@ URL: ${sourceUrl}
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">OJT Master</h1>
                 <p className="text-slate-500">AI 기반 온보딩 교육 플랫폼</p>
-                <p className="text-xs text-slate-400 mt-1">v2.9.4 (65dcd49) | WebLLM 오픈소스 LLM 통합</p>
+                <p className="text-xs text-slate-400 mt-1">v2.10.0 (65dcd49) | WebLLM 오픈소스 LLM 통합</p>
                 <p className="text-xs text-slate-400 mt-0.5 max-w-xs truncate" title="fix(auth): Critical 설계 오류 수정">fix: Auth 설계 오류 수정 (Supabase-first)</p>
               </div>
 
@@ -2847,7 +2847,7 @@ URL: ${sourceUrl}
             <div className="flex items-center gap-2 cursor-pointer" onClick={handleHomeClick}>
               <Icon name="brain" className="w-8 h-8" />
               <div>
-                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.9.4</span></h1>
+                <h1 className="text-xl font-bold">OJT Master <span className="text-xs font-normal text-indigo-200">v2.10.0</span></h1>
                 <p className="text-xs text-indigo-200">
                   {user ? (
                     sessionMode

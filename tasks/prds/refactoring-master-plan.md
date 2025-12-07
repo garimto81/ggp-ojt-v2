@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-OJT Master v2.9.4의 Vite 이관 후 축적된 기술 부채를 해소하고,
+OJT Master v2.10.0의 Vite 이관 후 축적된 기술 부채를 해소하고,
 확장 가능한 아키텍처로 전환하는 종합 리팩토링 계획입니다.
 
 ### 핵심 목표

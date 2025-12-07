@@ -1611,7 +1611,7 @@ export default function Header() {
             />
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
-              <p className="text-xs text-gray-500">v2.9.4 (WebLLM)</p>
+              <p className="text-xs text-gray-500">v2.10.0 (WebLLM)</p>
             </div>
           </a>
 

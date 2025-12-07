@@ -36,7 +36,7 @@ export default function Header() {
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
               <p className="text-xs text-gray-500">
-                {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.9.4 (WebLLM)'}
+                {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.10.0 (WebLLM)'}
               </p>
             </div>
           </div>
