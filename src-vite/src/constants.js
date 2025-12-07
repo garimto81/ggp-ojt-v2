@@ -114,6 +114,32 @@ export const ROLES = {
   MENTEE: 'mentee',
 };
 
+// Role-based color system (Issue #91)
+// Admin=Purple (authority), Mentor=Blue (trust), Mentee=Green (growth)
+export const ROLE_COLORS = {
+  [ROLES.ADMIN]: {
+    bg: 'bg-purple-50',
+    border: 'border-purple-200',
+    text: 'text-purple-700',
+    badge: 'bg-purple-100 text-purple-700 border-purple-200',
+    primary: 'purple-600',
+  },
+  [ROLES.MENTOR]: {
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    text: 'text-blue-700',
+    badge: 'bg-blue-100 text-blue-700 border-blue-200',
+    primary: 'blue-600',
+  },
+  [ROLES.MENTEE]: {
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    text: 'text-green-700',
+    badge: 'bg-green-100 text-green-700 border-green-200',
+    primary: 'green-600',
+  },
+};
+
 // View states
 export const VIEW_STATES = {
   LOADING: 'loading',
