@@ -32,6 +32,15 @@ function getAllowedOrigins(env) {
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
+// 프로덕션 에러 응답 생성 (내부 정보 유출 방지)
+function createInternalErrorResponse(error, corsHeaders) {
+  console.error('Internal error:', error); // 서버 로깅만
+  return Response.json(
+    { error: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' },
+    { status: 500, headers: corsHeaders }
+  );
+}
+
 // 파일 매직 넘버 (파일 헤더 시그니처)
 const MAGIC_NUMBERS = {
   'image/jpeg': [0xFF, 0xD8, 0xFF],
@@ -110,9 +119,9 @@ export default {
           );
         }
 
-        // 고유 파일명 생성
+        // 고유 파일명 생성 (crypto.randomUUID 사용 - 암호학적 안전)
         const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2, 8);
+        const randomStr = crypto.randomUUID().split('-')[0]; // 8자리 hex
         const ext = filename.split('.').pop().toLowerCase();
         const key = `uploads/${timestamp}-${randomStr}.${ext}`;
 
@@ -124,10 +133,7 @@ export default {
 
       } catch (error) {
         console.error('POST error:', error);
-        return Response.json(
-          { error: error.message },
-          { status: 500, headers: corsHeaders }
-        );
+        return createInternalErrorResponse(error, corsHeaders);
       }
     }
 
@@ -199,10 +205,7 @@ export default {
 
       } catch (error) {
         console.error('PUT error:', error);
-        return Response.json(
-          { error: error.message },
-          { status: 500, headers: corsHeaders }
-        );
+        return createInternalErrorResponse(error, corsHeaders);
       }
     }
 
@@ -232,10 +235,7 @@ export default {
 
       } catch (error) {
         console.error('DELETE error:', error);
-        return Response.json(
-          { error: error.message },
-          { status: 500, headers: corsHeaders }
-        );
+        return createInternalErrorResponse(error, corsHeaders);
       }
     }
 
@@ -263,10 +263,7 @@ export default {
 
       } catch (error) {
         console.error('GET error:', error);
-        return Response.json(
-          { error: error.message },
-          { status: 500, headers: corsHeaders }
-        );
+        return createInternalErrorResponse(error, corsHeaders);
       }
     }
 
@@ -359,10 +356,7 @@ export default {
 
       } catch (error) {
         console.error('Proxy error:', error);
-        return Response.json(
-          { error: `프록시 오류: ${error.message}` },
-          { status: 500, headers: corsHeaders }
-        );
+        return createInternalErrorResponse(error, corsHeaders);
       }
     }
 
