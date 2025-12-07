@@ -1,126 +1,48 @@
-// OJT Master - AI Content Generator (Hybrid: Chrome AI + WebLLM, Issue #96)
-// Chrome AI 우선, WebLLM 폴백 콘텐츠 생성
+// OJT Master - AI Content Generator (Chrome Gemini Nano 전용, Issue #96)
+// Chrome 138+ 내장 Gemini Nano 모델만 사용
 
-import { createFallbackContent } from './fallbackContent';
+import { createFallbackContent, createPlaceholderQuiz } from './fallbackContent';
 
 /**
- * Check AI engine status (Chrome AI + WebLLM)
+ * Check Chrome AI status
  * @returns {Promise<Object>} AI status object
  */
 export async function checkAIStatus() {
   try {
-    // Chrome AI 상태 확인
-    const { checkChromeAISupport, getChromeAIStatus, CHROME_AI_STATUS } =
+    const { checkChromeAISupport, getChromeAIStatus, isChromeAIReady, CHROME_AI_STATUS } =
       await import('./chromeAI.js');
-    const chromeSupported = await checkChromeAISupport();
-    const chromeStatus = await getChromeAIStatus();
 
-    // WebLLM 상태 확인
-    const { getWebLLMStatus, checkWebGPUSupport } = await import('./webllm.js');
-    const webllmStatusData = getWebLLMStatus();
-    const webgpuSupported = await checkWebGPUSupport();
-
-    // Chrome AI가 ready면 최우선
-    const chromeReady = chromeSupported && chromeStatus === CHROME_AI_STATUS.READY;
+    const supported = await checkChromeAISupport();
+    const status = await getChromeAIStatus();
+    const ready = await isChromeAIReady();
 
     return {
-      // 통합 상태
-      online: chromeSupported || webgpuSupported,
-      engineReady: chromeReady || webllmStatusData.loaded,
-
-      // Chrome AI 상태
-      chromeAI: {
-        supported: chromeSupported,
-        status: chromeStatus,
-        ready: chromeReady,
-      },
-
-      // WebLLM 상태
-      webllm: {
-        model: webllmStatusData.model,
-        loaded: webllmStatusData.loaded,
-        loading: webllmStatusData.loading,
-        progress: webllmStatusData.progress,
-        webgpuSupported,
-      },
-
-      // 권장 엔진
-      recommendedEngine: chromeReady ? 'chromeai' : webllmStatusData.loaded ? 'webllm' : null,
+      supported,
+      status,
+      ready,
+      engine: 'chromeai',
+      model: 'Gemini Nano',
     };
   } catch (error) {
-    console.error('AI status check failed:', error);
+    console.error('[ContentGenerator] AI status check failed:', error);
     return {
-      online: false,
-      engineReady: false,
-      chromeAI: { supported: false, status: null, ready: false },
-      webllm: { model: null, loaded: false, webgpuSupported: false },
-      recommendedEngine: null,
+      supported: false,
+      status: null,
+      ready: false,
+      engine: null,
+      model: null,
     };
   }
 }
 
 /**
- * Generate content using Chrome AI
- * @param {string} contentText - Raw content text
- * @param {string} title - Document title
- * @param {Function} onProgress - Progress callback
- * @returns {Promise<Object>} Generated content
- */
-async function generateWithChromeAI(contentText, title, onProgress) {
-  const { generateWithChromeAI: chromeGenerate, createChromeAISession } =
-    await import('./chromeAI.js');
-
-  // 세션 확보
-  await createChromeAISession();
-
-  if (onProgress) onProgress('Chrome AI로 콘텐츠 분석 중...');
-
-  // 프롬프트 생성
-  const prompt = buildContentPrompt(contentText, title);
-
-  if (onProgress) onProgress('Chrome AI로 섹션 구조화 중...');
-  const response = await chromeGenerate(prompt);
-
-  if (onProgress) onProgress('Chrome AI 응답 파싱 중...');
-  const result = await parseAIResponse(response, title);
-
-  result.ai_engine = 'chromeai';
-  result.model = 'Gemini Nano';
-
-  return result;
-}
-
-/**
- * Generate content using WebLLM
- * @param {string} contentText - Raw content text
- * @param {string} title - Document title
- * @param {Function} onProgress - Progress callback
- * @returns {Promise<Object>} Generated content
- */
-async function generateWithWebLLMEngine(contentText, title, onProgress) {
-  const { generateWithWebLLM, getWebLLMStatus } = await import('./webllm.js');
-  const status = getWebLLMStatus();
-
-  if (!status.loaded) {
-    throw new Error('WebLLM이 로드되지 않았습니다. 먼저 모델을 로드해주세요.');
-  }
-
-  if (onProgress) onProgress('WebLLM으로 콘텐츠 생성 중...');
-  const result = await generateWithWebLLM(contentText, title, onProgress);
-  result.ai_engine = 'webllm';
-  return result;
-}
-
-/**
- * Generate OJT content using best available AI engine
- * Priority: Chrome AI (if ready) > WebLLM > Fallback
+ * Generate OJT content using Chrome AI (Gemini Nano)
  *
  * @param {string} contentText - Raw content text
  * @param {string} title - Document title
- * @param {number} _stepNumber - Current step number (unused, for compatibility)
- * @param {number} _totalSteps - Total number of steps (unused, for compatibility)
+ * @param {number} _stepNumber - Unused, for compatibility
+ * @param {number} _totalSteps - Unused, for compatibility
  * @param {Function} onProgress - Progress callback
- * @param {string} preferredEngine - Optional: 'chromeai' | 'webllm' | 'auto'
  * @returns {Promise<Object>} - Generated OJT content
  */
 export async function generateOJTContent(
@@ -128,48 +50,38 @@ export async function generateOJTContent(
   title,
   _stepNumber = 1,
   _totalSteps = 1,
-  onProgress,
-  preferredEngine = 'auto'
+  onProgress
 ) {
   try {
-    const status = await checkAIStatus();
+    const { generateWithChromeAI, createChromeAISession, isChromeAIReady } =
+      await import('./chromeAI.js');
 
-    // 엔진 선택
-    let engine = preferredEngine;
-    if (engine === 'auto') {
-      engine = status.recommendedEngine;
+    // Chrome AI 준비 확인
+    const ready = await isChromeAIReady();
+    if (!ready) {
+      // 세션 생성 시도
+      if (onProgress) onProgress('Chrome AI 세션 생성 중...');
+      await createChromeAISession();
     }
 
-    // Chrome AI 시도
-    if (engine === 'chromeai' && status.chromeAI.ready) {
-      try {
-        console.log('[ContentGenerator] Using Chrome AI (Gemini Nano)');
-        return await generateWithChromeAI(contentText, title, onProgress);
-      } catch (chromeError) {
-        console.warn('[ContentGenerator] Chrome AI failed, falling back to WebLLM:', chromeError);
-        // WebLLM으로 폴백
-        if (status.webllm.loaded) {
-          return await generateWithWebLLMEngine(contentText, title, onProgress);
-        }
-        throw chromeError;
-      }
-    }
+    if (onProgress) onProgress('Chrome AI로 콘텐츠 분석 중...');
 
-    // WebLLM 시도
-    if (engine === 'webllm' && status.webllm.loaded) {
-      try {
-        console.log('[ContentGenerator] Using WebLLM');
-        return await generateWithWebLLMEngine(contentText, title, onProgress);
-      } catch (webllmError) {
-        console.warn('[ContentGenerator] WebLLM failed:', webllmError);
-        throw webllmError;
-      }
-    }
+    // 프롬프트 생성
+    const prompt = buildContentPrompt(contentText, title);
 
-    // 엔진 없음
-    throw new Error('AI 엔진이 준비되지 않았습니다. Chrome AI 또는 WebLLM을 먼저 로드해주세요.');
+    if (onProgress) onProgress('Chrome AI로 섹션 및 퀴즈 생성 중...');
+    const response = await generateWithChromeAI(prompt);
+
+    if (onProgress) onProgress('응답 파싱 중...');
+    const result = await parseAIResponse(response, title);
+
+    result.ai_engine = 'chromeai';
+    result.model = 'Gemini Nano';
+
+    if (onProgress) onProgress('콘텐츠 생성 완료!');
+    return result;
   } catch (error) {
-    console.warn('AI 생성 실패:', error.message);
+    console.warn('[ContentGenerator] Chrome AI 생성 실패:', error.message);
 
     // Graceful Degradation: 원문 그대로 반환
     if (onProgress) onProgress('AI 분석 실패 - 원문으로 등록 중...');
@@ -241,7 +153,6 @@ async function parseAIResponse(response, title) {
 
       // 퀴즈 10개 미만이면 더미로 채움
       if (parsed.quiz.length < 10) {
-        const { createPlaceholderQuiz } = await import('./fallbackContent');
         const dummyQuizzes = createPlaceholderQuiz(10 - parsed.quiz.length, title);
         parsed.quiz = [...parsed.quiz, ...dummyQuizzes];
       }
@@ -269,7 +180,7 @@ async function parseAIResponse(response, title) {
           content: `<p>${response.replace(/\n/g, '</p><p>')}</p>`,
         },
       ],
-      quiz: [],
+      quiz: createPlaceholderQuiz(10, title),
       summary: '',
       estimated_minutes: 5,
     };

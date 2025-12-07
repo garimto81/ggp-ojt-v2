@@ -8,7 +8,7 @@
  * - MINOR: New features (backwards compatible)
  * - PATCH: Bug fixes
  */
-export const APP_VERSION = '2.12.5';
+export const APP_VERSION = '2.12.6';
 
 /**
  * Application name
@@ -22,7 +22,7 @@ export const BUILD_INFO = {
   version: APP_VERSION,
   name: APP_NAME,
   description: 'AI 기반 신입사원 온보딩 교육 시스템',
-  engine: 'WebLLM',
+  engine: 'Chrome AI',
 };
 
 /**

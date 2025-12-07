@@ -1,4 +1,4 @@
-// OJT Master - Header Component (WebLLM Only)
+// OJT Master - Header Component (Chrome AI 전용)
 
 import { useState } from 'react';
 import { useAuth } from '@features/auth/hooks/AuthContext';
@@ -9,7 +9,7 @@ import { getVersionString } from '@/version';
 
 export default function Header() {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();
-  const { webllmStatus, webgpuSupported } = useAI();
+  const { aiStatus, isSupported, isReady, isLoading, CHROME_AI_STATUS } = useAI();
   const [showModeMenu, setShowModeMenu] = useState(false);
 
   const isAdmin = user?.role === ROLES.ADMIN;
@@ -17,13 +17,13 @@ export default function Header() {
 
   // AI 상태 결정
   const getAIStatusText = () => {
-    if (webgpuSupported === false) return 'WebGPU 미지원';
-    if (webllmStatus.loading) return `로딩 ${webllmStatus.progress}%`;
-    if (webllmStatus.loaded) return 'WebLLM 준비됨';
+    if (isSupported === null) return 'AI 확인 중...';
+    if (isSupported === false) return 'Chrome 138+ 필요';
+    if (isLoading) return 'AI 준비 중...';
+    if (isReady) return 'AI 준비됨';
+    if (aiStatus.status === CHROME_AI_STATUS.NOT_DOWNLOADED) return 'AI 다운로드 필요';
     return 'AI 대기 중';
   };
-
-  const isAIReady = webllmStatus.loaded;
 
   return (
     <header className="bg-white shadow-sm border-b" role="banner">
@@ -60,11 +60,13 @@ export default function Header() {
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isAIReady
+                  isReady
                     ? 'bg-green-500'
-                    : webllmStatus.loading
+                    : isLoading
                       ? 'bg-amber-500 animate-pulse'
-                      : 'bg-gray-400'
+                      : isSupported === false
+                        ? 'bg-red-400'
+                        : 'bg-gray-400'
                 }`}
                 aria-hidden="true"
               />
