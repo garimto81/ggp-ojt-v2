@@ -116,17 +116,23 @@ export function useUserProfile(session) {
    * - object: 로그인 상태 → 프로필 로딩
    */
   const loadProfile = useCallback(async () => {
+    console.log('[useUserProfile] loadProfile 호출, session:', session === undefined ? 'undefined' : session === null ? 'null' : '세션 객체');
+
     // undefined = 아직 세션 확인 중 (초기화 중) → LOADING 상태 유지
     if (session === undefined) {
+      console.log('[useUserProfile] session === undefined, LOADING 유지');
       return;
     }
 
     // null = 세션 없음 (로그아웃 상태) → ROLE_SELECT로 전환
     if (session === null || !session?.user) {
+      console.log('[useUserProfile] session === null 또는 user 없음, ROLE_SELECT로 전환');
       setViewState(VIEW_STATES.ROLE_SELECT);
       setIsLoading(false);
       return;
     }
+
+    console.log('[useUserProfile] 유효한 세션, 프로필 로딩 시작. userId:', session.user.id);
 
     const { id: userId, email, user_metadata } = session.user;
 
@@ -145,6 +151,7 @@ export function useUserProfile(session) {
       // 4. 프로필 상태 처리
       if (profile?.role) {
         // 유효한 프로필
+        console.log('[useUserProfile] 유효한 프로필 발견, role:', profile.role);
         setUser({
           id: profile.id,
           name: profile.name || user_metadata?.full_name,
@@ -155,6 +162,7 @@ export function useUserProfile(session) {
 
         const tempMode = restoreSessionMode(profile.role);
         const newViewState = getViewStateByRole(profile.role, tempMode);
+        console.log('[useUserProfile] viewState 설정:', newViewState);
         setViewState(newViewState);
       } else if (profile && !profile.role) {
         // 손상된 캐시 (역할 없음)
@@ -168,6 +176,7 @@ export function useUserProfile(session) {
         setViewState(VIEW_STATES.ROLE_SELECT);
       } else {
         // 신규 사용자
+        console.log('[useUserProfile] 프로필 없음 - 신규 사용자로 처리');
         setUser({
           id: userId,
           name: user_metadata?.full_name,
@@ -180,6 +189,7 @@ export function useUserProfile(session) {
       console.error('[useUserProfile] Profile load error:', error);
       setViewState(VIEW_STATES.ROLE_SELECT);
     } finally {
+      console.log('[useUserProfile] loadProfile 완료, isLoading: false');
       setIsLoading(false);
     }
   }, [session]);
