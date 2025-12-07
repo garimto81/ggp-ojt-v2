@@ -16,7 +16,7 @@
 -- 0. 테이블 권한 부여 (핵심! - 이게 없으면 RLS 이전에 차단됨)
 -- ======================================
 
-GRANT SELECT ON admin_settings TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON admin_settings TO authenticated;
 GRANT SELECT, INSERT ON admin_logs TO authenticated;
 GRANT SELECT, INSERT, UPDATE ON content_reports TO authenticated;
 
