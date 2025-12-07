@@ -85,7 +85,7 @@ export function ActivityChart({ data, title = '학습 활동 추이' }) {
   };
 
   return (
-    <div className="h-64">
+    <div className="h-64" role="img" aria-label={`${title} 라인 차트`}>
       <Line data={chartData} options={options} />
     </div>
   );
@@ -129,7 +129,7 @@ export function TeamStatsChart({ data }) {
   };
 
   return (
-    <div className="h-64">
+    <div className="h-64" role="img" aria-label="팀별 콘텐츠 현황 막대 차트">
       <Bar data={chartData} options={options} />
     </div>
   );
@@ -165,9 +165,9 @@ export function PassRateChart({ passRate, label = '전체 통과율' }) {
   };
 
   return (
-    <div className="h-48 relative">
+    <div className="h-48 relative" role="img" aria-label={`${label}: ${passRate}% 도넛 차트`}>
       <Doughnut data={chartData} options={options} />
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
         <span className="text-2xl font-bold text-gray-700">{passRate}%</span>
       </div>
     </div>
@@ -211,7 +211,7 @@ export function MentorContributionChart({ data }) {
   };
 
   return (
-    <div className="h-64">
+    <div className="h-64" role="img" aria-label="멘토 기여도 TOP 5 수평 막대 차트">
       <Bar data={chartData} options={options} />
     </div>
   );
@@ -276,7 +276,7 @@ export function ProgressDistributionChart({ userProgress }) {
   };
 
   return (
-    <div className="h-64">
+    <div className="h-64" role="img" aria-label="멘티 진도율 분포 막대 차트">
       <Bar data={chartData} options={options} />
     </div>
   );

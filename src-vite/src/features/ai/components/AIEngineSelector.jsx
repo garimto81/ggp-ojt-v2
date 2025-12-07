@@ -66,13 +66,15 @@ export default function AIEngineSelector() {
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="text-slate-400 hover:text-slate-600 text-sm"
+          aria-expanded={isExpanded}
+          aria-label={isExpanded ? 'AI 모델 설정 패널 접기' : 'AI 모델 설정 패널 열기'}
         >
           {isExpanded ? '접기' : '설정'}
         </button>
       </div>
 
       {/* 현재 상태 표시 */}
-      <div className="text-sm mb-2">
+      <div className="text-sm mb-2" role="status" aria-live="polite">
         {webllmStatus.loaded ? (
           <span className="text-green-600 font-medium">
             ✓ {availableModels.find((m) => m.id === webllmStatus.model)?.name || webllmStatus.model}{' '}
@@ -81,7 +83,7 @@ export default function AIEngineSelector() {
         ) : webllmStatus.loading ? (
           <div>
             <span className="text-amber-600">모델 로딩 중... {webllmStatus.progress}%</span>
-            <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
+            <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden" role="progressbar" aria-valuenow={webllmStatus.progress} aria-valuemin="0" aria-valuemax="100" aria-label="모델 로딩 진행률">
               <div
                 className="h-full bg-green-500 transition-all duration-300"
                 style={{ width: `${webllmStatus.progress}%` }}
@@ -97,6 +99,7 @@ export default function AIEngineSelector() {
             <button
               onClick={handleLoadModel}
               className="ml-2 px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600"
+              aria-label="AI 모델 로드 시작"
             >
               모델 로드
             </button>
@@ -105,7 +108,11 @@ export default function AIEngineSelector() {
       </div>
 
       {/* 에러 메시지 */}
-      {error && <div className="text-xs text-red-500 bg-red-50 p-2 rounded mb-2">{error}</div>}
+      {error && (
+        <div className="text-xs text-red-500 bg-red-50 p-2 rounded mb-2" role="alert">
+          {error}
+        </div>
+      )}
 
       {/* 확장 영역: 모델 선택 */}
       {isExpanded && (
@@ -113,7 +120,7 @@ export default function AIEngineSelector() {
           <div className="text-sm font-medium text-slate-600 mb-2">모델 선택</div>
 
           {/* 모델 목록 */}
-          <div className="space-y-2 mb-3">
+          <div className="space-y-2 mb-3" role="radiogroup" aria-label="WebLLM 모델 선택">
             {availableModels.map((model) => (
               <label
                 key={model.id}
@@ -131,6 +138,7 @@ export default function AIEngineSelector() {
                   onChange={(e) => setSelectedModel(e.target.value)}
                   disabled={webllmStatus.loading}
                   className="mr-2"
+                  aria-label={`${model.name}, ${model.size}, ${model.description}`}
                 />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-slate-700">

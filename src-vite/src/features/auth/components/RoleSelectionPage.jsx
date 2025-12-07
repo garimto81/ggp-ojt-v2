@@ -38,8 +38,9 @@ export default function RoleSelectionPage() {
           <button
             onClick={onGoogleLogin}
             className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition"
+            aria-label="Google 계정으로 로그인"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -77,13 +78,19 @@ export default function RoleSelectionPage() {
           <p className="text-gray-600 mt-2">{user.name}님, 사용할 역할을 선택해주세요.</p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4" role="radiogroup" aria-label="역할 선택">
           <button
             onClick={() => onRoleSelect(ROLES.MENTOR)}
             className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group"
+            role="radio"
+            aria-checked="false"
+            aria-label="Mentor 역할 선택 - 교육 자료를 생성하고 관리합니다"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition">
+              <div
+                className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition"
+                aria-hidden="true"
+              >
                 <span className="text-2xl">👨‍🏫</span>
               </div>
               <div>
@@ -98,9 +105,15 @@ export default function RoleSelectionPage() {
           <button
             onClick={() => onRoleSelect(ROLES.MENTEE)}
             className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition text-left group"
+            role="radio"
+            aria-checked="false"
+            aria-label="Mentee 역할 선택 - 교육 자료를 학습하고 퀴즈를 풀어봅니다"
           >
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-200 transition">
+              <div
+                className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-200 transition"
+                aria-hidden="true"
+              >
                 <span className="text-2xl">👨‍🎓</span>
               </div>
               <div>

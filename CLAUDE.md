@@ -105,7 +105,8 @@ ggp_ojt_v2/
 │       ├── features/            # Feature-Based 모듈 (핵심)
 │       │   ├── admin/           # 관리자 기능
 │       │   │   ├── components/  # AdminDashboard, AnalyticsCharts
-│       │   │   └── hooks/       # useAnalytics, useUsers
+│       │   │   ├── hooks/       # useAnalytics, useUsers
+│       │   │   └── services/    # analyticsService
 │       │   ├── ai/              # AI 콘텐츠 생성
 │       │   │   ├── components/  # AIEngineSelector
 │       │   │   ├── hooks/       # AIContext
@@ -228,7 +229,7 @@ localDb.version(2).stores({
   users: 'id, name, role, department',
   ojt_docs: 'id, team, step, author_id, updated_at, [team+step], [author_id+updated_at]',
   learning_records: 'id, user_id, doc_id, completed_at, [user_id+doc_id], [user_id+completed_at]',
-  sync_queue: '++id, table, action, created_at'
+  sync_queue: '++id, table, action, created_at, retries'
 });
 ```
 

@@ -55,14 +55,15 @@ export default function PdfViewer({ file, url, onError }) {
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 bg-white border-b">
         {/* Page Navigation */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" role="navigation" aria-label="PDF 페이지 네비게이션">
           <button
             onClick={goToPrevPage}
             disabled={pageNumber <= 1}
             className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
             title="이전 페이지"
+            aria-label="이전 페이지로 이동"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -72,37 +73,46 @@ export default function PdfViewer({ file, url, onError }) {
             </svg>
           </button>
           <div className="flex items-center gap-1 text-sm">
+            <label htmlFor="page-number-input" className="sr-only">
+              현재 페이지 번호
+            </label>
             <input
+              id="page-number-input"
               type="number"
               value={pageNumber}
               onChange={(e) => goToPage(parseInt(e.target.value, 10) || 1)}
               min={1}
               max={numPages || 1}
               className="w-12 px-2 py-1 border rounded text-center"
+              aria-label={`현재 페이지: ${pageNumber}, 전체 ${numPages || 0}페이지`}
             />
-            <span className="text-gray-500">/ {numPages || '-'}</span>
+            <span className="text-gray-500" aria-label={`전체 ${numPages || 0}페이지`}>
+              / {numPages || '-'}
+            </span>
           </div>
           <button
             onClick={goToNextPage}
             disabled={pageNumber >= numPages}
             className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
             title="다음 페이지"
+            aria-label="다음 페이지로 이동"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
         </div>
 
         {/* Zoom Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" role="group" aria-label="PDF 확대/축소 컨트롤">
           <button
             onClick={zoomOut}
             disabled={scale <= PDF_CONFIG.MIN_SCALE}
             className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
             title="축소"
+            aria-label="PDF 축소"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
             </svg>
           </button>
@@ -110,6 +120,7 @@ export default function PdfViewer({ file, url, onError }) {
             onClick={resetZoom}
             className="px-2 py-1 text-sm rounded hover:bg-gray-100"
             title="원본 크기"
+            aria-label={`현재 확대 비율: ${Math.round(scale * 100)}%, 클릭하여 원본 크기로 복원`}
           >
             {Math.round(scale * 100)}%
           </button>
@@ -118,8 +129,9 @@ export default function PdfViewer({ file, url, onError }) {
             disabled={scale >= PDF_CONFIG.MAX_SCALE}
             className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50"
             title="확대"
+            aria-label="PDF 확대"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -132,16 +144,16 @@ export default function PdfViewer({ file, url, onError }) {
       </div>
 
       {/* PDF Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-4" role="main">
         {isLoading && (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full" role="status" aria-live="polite">
             <InlineSpinner text="PDF 로딩 중..." />
           </div>
         )}
 
         {error && (
-          <div className="flex flex-col items-center justify-center h-full text-red-500">
-            <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex flex-col items-center justify-center h-full text-red-500" role="alert">
+            <svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

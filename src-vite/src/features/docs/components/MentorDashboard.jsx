@@ -369,11 +369,13 @@ export default function MentorDashboard() {
           <h2 className="text-lg font-bold text-gray-800 mb-4">콘텐츠 입력</h2>
 
           {/* Input Type Selector */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2 mb-4" role="group" aria-label="콘텐츠 입력 방식 선택">
             {['text', 'url', 'pdf'].map((type) => (
               <button
                 key={type}
                 onClick={() => setInputType(type)}
+                aria-pressed={inputType === type}
+                aria-label={`${type === 'text' ? '텍스트' : type === 'url' ? 'URL' : 'PDF'} 입력 방식`}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                   inputType === type
                     ? 'bg-blue-500 text-white'
@@ -388,32 +390,51 @@ export default function MentorDashboard() {
           </div>
 
           {/* Title Input */}
+          <label htmlFor="doc-title-input" className="sr-only">
+            문서 제목
+          </label>
           <input
+            id="doc-title-input"
             type="text"
             value={inputTitle}
             onChange={(e) => setInputTitle(e.target.value)}
             placeholder="문서 제목"
+            aria-label="문서 제목 입력"
             className="w-full px-4 py-2 border rounded-lg mb-4"
           />
 
           {/* Content Input */}
           {inputType === 'text' && (
-            <textarea
-              value={rawInput}
-              onChange={(e) => setRawInput(e.target.value)}
-              placeholder="교육 콘텐츠를 입력하세요..."
-              className="w-full h-64 px-4 py-3 border rounded-lg resize-none"
-            />
+            <>
+              <label htmlFor="content-textarea" className="sr-only">
+                교육 콘텐츠 입력
+              </label>
+              <textarea
+                id="content-textarea"
+                value={rawInput}
+                onChange={(e) => setRawInput(e.target.value)}
+                placeholder="교육 콘텐츠를 입력하세요..."
+                aria-label="교육 콘텐츠 입력"
+                className="w-full h-64 px-4 py-3 border rounded-lg resize-none"
+              />
+            </>
           )}
 
           {inputType === 'url' && (
-            <input
-              type="url"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://example.com/article"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
+            <>
+              <label htmlFor="url-input" className="sr-only">
+                URL 입력
+              </label>
+              <input
+                id="url-input"
+                type="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://example.com/article"
+                aria-label="웹 페이지 URL 입력"
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </>
           )}
 
           {inputType === 'pdf' && (
@@ -429,6 +450,15 @@ export default function MentorDashboard() {
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                   }`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="PDF 파일 선택 또는 드래그 앤 드롭"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
                 >
                   <input
                     ref={fileInputRef}
@@ -436,8 +466,11 @@ export default function MentorDashboard() {
                     accept=".pdf,application/pdf"
                     onChange={handleFileInputChange}
                     className="hidden"
+                    aria-label="PDF 파일 선택"
                   />
-                  <div className="text-4xl mb-2">📁</div>
+                  <div className="text-4xl mb-2" aria-hidden="true">
+                    📁
+                  </div>
                   <p className="text-gray-600 font-medium">파일 선택 또는 드래그</p>
                   <p className="text-sm text-gray-400 mt-1">지원 형식: PDF (최대 10MB)</p>
                 </div>
@@ -455,6 +488,7 @@ export default function MentorDashboard() {
                   <button
                     onClick={removePdfFile}
                     className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition"
+                    aria-label={`${pdfFile.name} 파일 제거`}
                   >
                     ✕ 제거
                   </button>
@@ -632,12 +666,17 @@ export default function MentorDashboard() {
 
       {/* Quiz Preview Modal */}
       {previewingDoc && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="quiz-modal-title"
+        >
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="p-6 border-b flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-gray-800">
+                <h3 id="quiz-modal-title" className="text-lg font-bold text-gray-800">
                   퀴즈 검증: {previewingDoc.title}
                 </h3>
                 {quizValidation && (
@@ -654,6 +693,7 @@ export default function MentorDashboard() {
               <button
                 onClick={handleCloseQuizPreview}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
+                aria-label="퀴즈 검증 모달 닫기"
               >
                 &times;
               </button>
@@ -682,7 +722,7 @@ export default function MentorDashboard() {
               </div>
 
               {/* Quiz list */}
-              <div className="space-y-3">
+              <div className="space-y-3" role="list" aria-label="퀴즈 목록">
                 {previewingDoc.quiz?.map((q, idx) => {
                   const isProblematic = q.isPlaceholder || q.question?.includes('[자동 생성]');
                   const isSelected = selectedQuizIndices.includes(idx);
@@ -698,6 +738,7 @@ export default function MentorDashboard() {
                             ? 'border-amber-300 bg-amber-50'
                             : 'border-gray-200 hover:border-gray-300'
                       }`}
+                      role="listitem"
                     >
                       <div className="flex items-start gap-3">
                         <input
@@ -705,6 +746,7 @@ export default function MentorDashboard() {
                           checked={isSelected}
                           onChange={() => toggleQuizSelection(idx)}
                           className="mt-1"
+                          aria-label={`퀴즈 ${idx + 1}번 선택`}
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">

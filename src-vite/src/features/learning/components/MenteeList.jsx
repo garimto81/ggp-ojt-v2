@@ -45,10 +45,14 @@ export default function MenteeList() {
     <div className="space-y-6">
       {/* Team Filter */}
       <div className="bg-white rounded-xl shadow-sm p-4">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">팀 선택</h2>
-        <div className="flex flex-wrap gap-2">
+        <h2 id="team-filter-label" className="text-lg font-bold text-gray-800 mb-4">
+          팀 선택
+        </h2>
+        <div className="flex flex-wrap gap-2" role="group" aria-labelledby="team-filter-label">
           <button
             onClick={() => setSelectedTeam(null)}
+            aria-pressed={selectedTeam === null}
+            aria-label="전체 팀 선택"
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
               selectedTeam === null
                 ? 'bg-blue-500 text-white'
@@ -61,6 +65,8 @@ export default function MenteeList() {
             <button
               key={team}
               onClick={() => setSelectedTeam(team)}
+              aria-pressed={selectedTeam === team}
+              aria-label={`${team} 팀 선택`}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 selectedTeam === team
                   ? 'bg-blue-500 text-white'
@@ -93,15 +99,24 @@ export default function MenteeList() {
               .map(([step, docs]) => (
                 <div key={step}>
                   <h3 className="text-sm font-medium text-gray-500 mb-3">Step {step}</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div
+                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+                    role="list"
+                    aria-label={`Step ${step} 학습 자료 목록`}
+                  >
                     {docs.map((doc) => (
                       <button
                         key={doc.id}
                         onClick={() => handleDocSelect(doc)}
                         className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group"
+                        role="listitem"
+                        aria-label={`${doc.title}, ${doc.sections?.length || 0}개 섹션, ${doc.quiz?.length || 0}개 퀴즈${doc.estimated_minutes ? `, 약 ${doc.estimated_minutes}분` : ''}`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition">
+                          <div
+                            className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition"
+                            aria-hidden="true"
+                          >
                             <span className="text-blue-600 font-bold">{step}</span>
                           </div>
                           <div className="min-w-0">
