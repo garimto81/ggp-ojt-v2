@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { useAI } from '@features/ai/hooks/AIContext';
-import { ROLES } from '@/constants';
+import { ROLES, ROLE_COLORS } from '@/constants';
 import { sanitizeText } from '@utils/helpers';
 import { getVersionString } from '@/version';
 
@@ -112,13 +112,19 @@ export default function Header() {
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-800">{sanitizeText(user.name)}</p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {isTempMentorMode ? (
-                      <span className="text-amber-600">Mentor (임시)</span>
-                    ) : (
-                      sanitizeText(displayRole)
-                    )}
-                  </p>
+                  {isTempMentorMode ? (
+                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                      Mentor (임시)
+                    </span>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border capitalize ${
+                        ROLE_COLORS[displayRole]?.badge || 'bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {sanitizeText(displayRole)}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={handleLogout}

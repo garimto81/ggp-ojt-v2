@@ -1,6 +1,6 @@
 # PRD: Admin Page 재설계
 
-**Version**: 1.0
+**Version**: 1.1
 **Date**: 2025-12-07
 **Author**: Claude Code
 **Status**: Draft
@@ -110,6 +110,33 @@
 **우선순위**: Low
 **예상 공수**: 1일
 
+### 3.7 역할별 색상 구분 시스템 (P2) - Issue #91
+
+**문제**: 역할(Admin/Mentor/Mentee)별 시각적 구분이 일관되지 않음
+
+**현재 상태 분석**:
+- RoleSelectionPage: Mentor=blue, Mentee=green (hover만)
+- Header: 역할별 색상 구분 없음 (임시 Mentor 모드만 amber)
+- AdminDashboard: 사용자 목록에 역할 배지 색상 없음
+
+**해결**:
+- `constants.js`에 `ROLE_COLORS` 상수 정의
+- Header에 역할별 배지 색상 적용
+- 사용자 목록에 역할별 배지 표시
+- RoleSelectionPage와 색상 일관성 유지
+
+**색상 시스템**:
+
+| 역할 | Primary | Background | Border | Text |
+|------|---------|------------|--------|------|
+| Admin | `purple-600` | `purple-50` | `purple-200` | `purple-700` |
+| Mentor | `blue-600` | `blue-50` | `blue-200` | `blue-700` |
+| Mentee | `green-600` | `green-50` | `green-200` | `green-700` |
+
+**우선순위**: Medium
+**예상 공수**: 0.5일
+**관련 이슈**: [#91](https://github.com/garimto81/ggp-ojt-v2/issues/91)
+
 ---
 
 ## 4. 기술 요구사항
@@ -200,9 +227,10 @@ features/admin/
 | **4** | 사용자 관리 개선 | 2일 | 사이드 패널, 대량 작업 |
 | **5** | 설정 탭 | 1일 | 설정 UI, 로그 뷰어 |
 | **6** | 통계 내보내기 | 1일 | PDF/Excel 내보내기 |
+| **6.5** | 역할별 색상 시스템 | 0.5일 | ROLE_COLORS 상수, 배지 적용 |
 | **7** | 테스트 | 2일 | E2E, 접근성 테스트 |
 
-**총 예상 기간**: 12일
+**총 예상 기간**: 12.5일
 
 ---
 
@@ -215,6 +243,7 @@ features/admin/
 - Issue #54: Admin Analytics (완료)
 - Issue #78: Admin CSRF/권한 검증 (완료)
 - Issue #77: 접근성 개선 (완료)
+- Issue #91: 역할별 색상 구분 시스템 (진행 예정)
 
 ---
 
@@ -241,3 +270,4 @@ features/admin/
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
 | 1.0 | 2025-12-07 | 초안 작성 |
+| 1.1 | 2025-12-07 | 3.7 역할별 색상 구분 시스템 추가 (Issue #91) |

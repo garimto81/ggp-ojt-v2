@@ -7,7 +7,7 @@ import { Toast } from '@contexts/ToastContext';
 import { supabase } from '@utils/api';
 import { formatDate, sanitizeText } from '@utils/helpers';
 import { useDebounce } from '@hooks/useDebounce';
-import { ROLES } from '@/constants';
+import { ROLES, ROLE_COLORS } from '@/constants';
 import UserDetailPanel from './UserDetailPanel';
 import BulkActionsBar from './BulkActionsBar';
 
@@ -394,7 +394,9 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
                     <select
                       value={u.role || ''}
                       onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                      className="px-2 py-1 border rounded text-sm"
+                      className={`px-2 py-1 border rounded text-sm font-medium ${
+                        ROLE_COLORS[u.role]?.badge || 'bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
                       disabled={u.id === currentUser?.id}
                     >
                       <option value="admin">Admin</option>
