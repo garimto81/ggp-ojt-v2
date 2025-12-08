@@ -194,9 +194,19 @@ export function AIProvider({ children }) {
   const isLoading =
     aiStatus.status === AI_STATUS.CHECKING || aiStatus.status === AI_STATUS.WEBLLM_LOADING;
 
+  // MentorDashboard 호환용 webllmStatus (loaded 속성 제공)
+  // Local AI 사용 시에도 loaded=true로 처리하여 콘텐츠 생성 허용
+  const webllmStatus = {
+    loaded: aiStatus.localAI.available || aiStatus.webllm.ready,
+    loading: aiStatus.webllm.loading,
+    model: aiStatus.webllm.model,
+    progress: 0,
+  };
+
   const value = {
     // 상태
     aiStatus,
+    webllmStatus, // MentorDashboard 호환용
     isReady,
     isLoading,
     error: aiStatus.error,
