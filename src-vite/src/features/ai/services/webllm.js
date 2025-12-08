@@ -183,6 +183,14 @@ export async function initWebLLM(
 }
 
 /**
+ * WebLLM 준비 상태 간단 확인
+ * @returns {boolean}
+ */
+export function isWebLLMReady() {
+  return !!engineInstance;
+}
+
+/**
  * WebLLM 엔진 상태 확인
  * @returns {{loaded: boolean, model: string|null, progress: number}}
  */
