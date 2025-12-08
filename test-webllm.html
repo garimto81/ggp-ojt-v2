@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebLLM Test</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .info { background: #cce5ff; color: #004085; }
+    .warning { background: #fff3cd; color: #856404; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    #output { white-space: pre-wrap; background: #f9f9f9; padding: 15px; min-height: 100px; }
+  </style>
+</head>
+<body>
+  <h1>WebLLM 동작 테스트</h1>
+
+  <h2>1. 환경 체크</h2>
+  <div id="env-check"></div>
+
+  <h2>2. 모델 로드 테스트</h2>
+  <div>
+    <select id="model-select">
+      <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen 2.5 0.5B (작은 모델, 테스트용)</option>
+      <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen 2.5 1.5B (중간 모델)</option>
+      <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen 2.5 3B (기본 모델)</option>
+      <option value="gemma-2-2b-it-q4f16_1-MLC">Gemma 2 2B (대안 모델)</option>
+    </select>
+    <button id="btn-load" onclick="loadModel()">모델 로드</button>
+    <button id="btn-unload" onclick="unloadModel()" disabled>모델 해제</button>
+  </div>
+  <div id="load-status" class="status info">모델을 선택하고 '모델 로드' 버튼을 클릭하세요.</div>
+  <div id="progress"></div>
+
+  <h2>3. 텍스트 생성 테스트</h2>
+  <div>
+    <textarea id="prompt" rows="3" style="width: 100%;">한국의 수도는 어디인가요? 간단히 답해주세요.</textarea>
+    <br>
+    <button id="btn-generate" onclick="generateText()" disabled>텍스트 생성</button>
+    <button id="btn-stream" onclick="generateStream()" disabled>스트리밍 생성</button>
+  </div>
+  <div id="output"></div>
+
+  <h2>4. 디버그 로그</h2>
+  <pre id="debug-log"></pre>
+
+  <script type="module">
+    import * as webllm from 'https://esm.run/@mlc-ai/web-llm';
+
+    // 전역 변수
+    window.webllm = webllm;
+    window.engine = null;
+
+    const log = (msg, type = 'info') => {
+      const logEl = document.getElementById('debug-log');
+      const time = new Date().toLocaleTimeString();
+      logEl.textContent += `[${time}] [${type.toUpperCase()}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(`[${type}]`, msg);
+    };
+
+    const setStatus = (id, msg, type) => {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.className = `status ${type}`;
+    };
+
+    // 1. 환경 체크
+    async function checkEnvironment() {
+      const envEl = document.getElementById('env-check');
+      let html = '';
+
+      // WebGPU 체크
+      const hasGpu = !!navigator.gpu;
+      html += `<div class="status ${hasGpu ? 'success' : 'error'}">
+        WebGPU API: ${hasGpu ? '지원됨' : '미지원 (Chrome 113+ 필요)'}
+      </div>`;
+      log(`WebGPU API: ${hasGpu}`, hasGpu ? 'info' : 'error');
+
+      if (hasGpu) {
+        try {
+          const adapter = await navigator.gpu.requestAdapter();
+          if (adapter) {
+            const info = await adapter.requestAdapterInfo();
+            html += `<div class="status success">
+              GPU Adapter: ${info.vendor || 'Unknown'} - ${info.architecture || info.device || 'Unknown'}
+            </div>`;
+            log(`GPU Adapter: ${JSON.stringify(info)}`, 'info');
+
+            // 메모리 체크
+            const limits = adapter.limits;
+            const maxBuffer = (limits.maxBufferSize / (1024*1024*1024)).toFixed(2);
+            html += `<div class="status info">
+              Max Buffer Size: ${maxBuffer} GB
+            </div>`;
+            log(`Max Buffer: ${maxBuffer} GB`, 'info');
+          } else {
+            html += `<div class="status error">GPU Adapter: 사용 불가</div>`;
+            log('GPU Adapter: null', 'error');
+          }
+        } catch (e) {
+          html += `<div class="status error">GPU Adapter 오류: ${e.message}</div>`;
+          log(`GPU Adapter error: ${e.message}`, 'error');
+        }
+      }
+
+      // Service Worker 체크
+      const hasSW = 'serviceWorker' in navigator;
+      html += `<div class="status ${hasSW ? 'success' : 'warning'}">
+        Service Worker: ${hasSW ? '지원됨' : '미지원'}
+      </div>`;
+      log(`Service Worker: ${hasSW}`, 'info');
+
+      // 브라우저 정보
+      html += `<div class="status info">
+        User Agent: ${navigator.userAgent}
+      </div>`;
+
+      envEl.innerHTML = html;
+    }
+
+    // 2. 모델 로드
+    window.loadModel = async function() {
+      const modelId = document.getElementById('model-select').value;
+      const btnLoad = document.getElementById('btn-load');
+      const btnUnload = document.getElementById('btn-unload');
+      const btnGenerate = document.getElementById('btn-generate');
+      const btnStream = document.getElementById('btn-stream');
+
+      btnLoad.disabled = true;
+      setStatus('load-status', `${modelId} 로딩 중...`, 'info');
+      log(`Loading model: ${modelId}`, 'info');
+
+      try {
+        // 진행률 콜백
+        const progressCallback = (report) => {
+          const progress = Math.round(report.progress * 100);
+          const text = report.text || `${progress}%`;
+          document.getElementById('progress').textContent = text;
+          log(`Progress: ${text}`, 'info');
+        };
+
+        // 엔진 생성 시도
+        log('Creating MLCEngine...', 'info');
+
+        // Service Worker 버전 시도
+        try {
+          window.engine = await webllm.CreateServiceWorkerMLCEngine(modelId, {
+            initProgressCallback: progressCallback,
+          });
+          log('ServiceWorkerMLCEngine created successfully', 'info');
+        } catch (swError) {
+          log(`ServiceWorker failed: ${swError.message}, trying regular engine...`, 'warning');
+
+          // 일반 엔진 fallback
+          window.engine = await webllm.CreateMLCEngine(modelId, {
+            initProgressCallback: progressCallback,
+          });
+          log('Regular MLCEngine created successfully', 'info');
+        }
+
+        setStatus('load-status', `${modelId} 로드 완료!`, 'success');
+        btnUnload.disabled = false;
+        btnGenerate.disabled = false;
+        btnStream.disabled = false;
+        log('Model loaded successfully', 'info');
+
+      } catch (error) {
+        setStatus('load-status', `로드 실패: ${error.message}`, 'error');
+        log(`Load failed: ${error.message}`, 'error');
+        log(`Error stack: ${error.stack}`, 'error');
+        btnLoad.disabled = false;
+      }
+    };
+
+    // 모델 해제
+    window.unloadModel = async function() {
+      if (window.engine) {
+        await window.engine.unload();
+        window.engine = null;
+        log('Model unloaded', 'info');
+      }
+
+      document.getElementById('btn-load').disabled = false;
+      document.getElementById('btn-unload').disabled = true;
+      document.getElementById('btn-generate').disabled = true;
+      document.getElementById('btn-stream').disabled = true;
+      setStatus('load-status', '모델이 해제되었습니다.', 'info');
+    };
+
+    // 3. 텍스트 생성
+    window.generateText = async function() {
+      if (!window.engine) {
+        alert('먼저 모델을 로드하세요.');
+        return;
+      }
+
+      const prompt = document.getElementById('prompt').value;
+      const output = document.getElementById('output');
+
+      output.textContent = '생성 중...';
+      log(`Generating response for: ${prompt}`, 'info');
+
+      try {
+        const startTime = Date.now();
+
+        const response = await window.engine.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+          max_tokens: 512,
+        });
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        const text = response.choices[0]?.message?.content || '(응답 없음)';
+
+        output.textContent = `응답 (${elapsed}s):\n${text}`;
+        log(`Response generated in ${elapsed}s`, 'info');
+        log(`Response: ${text}`, 'info');
+
+      } catch (error) {
+        output.textContent = `오류: ${error.message}`;
+        log(`Generate error: ${error.message}`, 'error');
+      }
+    };
+
+    // 스트리밍 생성
+    window.generateStream = async function() {
+      if (!window.engine) {
+        alert('먼저 모델을 로드하세요.');
+        return;
+      }
+
+      const prompt = document.getElementById('prompt').value;
+      const output = document.getElementById('output');
+
+      output.textContent = '';
+      log(`Streaming response for: ${prompt}`, 'info');
+
+      try {
+        const startTime = Date.now();
+
+        const completion = await window.engine.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+          max_tokens: 512,
+          stream: true,
+        });
+
+        let fullText = '';
+        for await (const chunk of completion) {
+          const delta = chunk.choices[0]?.delta?.content || '';
+          fullText += delta;
+          output.textContent = fullText;
+        }
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+        output.textContent = `응답 (${elapsed}s, streaming):\n${fullText}`;
+        log(`Streaming completed in ${elapsed}s`, 'info');
+
+      } catch (error) {
+        output.textContent = `오류: ${error.message}`;
+        log(`Streaming error: ${error.message}`, 'error');
+      }
+    };
+
+    // 페이지 로드 시 환경 체크
+    checkEnvironment();
+    log('Test page initialized', 'info');
+  </script>
+</body>
+</html>

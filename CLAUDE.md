@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.12.4)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.12.6)
 
 ## Tech Stack
 
@@ -14,7 +14,7 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 | **State** | React Query (TanStack Query v5) |
 | **Backend/DB** | Supabase (PostgreSQL + Auth + RLS) |
 | **Local Cache** | Dexie.js (IndexedDB) |
-| **AI** | WebLLM (브라우저 내 LLM - 무료, 오프라인 가능) |
+| **AI** | Chrome AI (Gemini Nano) + WebLLM fallback (브라우저 내 LLM) |
 | **Charts** | Chart.js + react-chartjs-2 |
 | **Image Storage** | Cloudflare R2 (Worker 프록시) |
 | **Editor** | Quill 2.0 (Rich Text) |
@@ -116,8 +116,8 @@ ggp_ojt_v2/
 │       │   │   └── services/    # analyticsService
 │       │   ├── ai/              # AI 콘텐츠 생성
 │       │   │   ├── components/  # AIEngineSelector
-│       │   │   ├── hooks/       # AIContext
-│       │   │   └── services/    # webllm, contentGenerator, quizValidator
+│       │   │   ├── hooks/       # AIContext (Chrome AI 상태 관리)
+│       │   │   └── services/    # chromeAI, webllm, contentGenerator, quizValidator
 │       │   ├── auth/            # 인증
 │       │   │   ├── components/  # RoleSelectionPage
 │       │   │   └── hooks/       # AuthContext
@@ -146,7 +146,7 @@ ggp_ojt_v2/
 <QueryClientProvider>      // React Query (staleTime: 5분)
   <ToastProvider>          // Toast 알림
     <AuthProvider>         // 인증 상태 (features/auth/hooks/)
-      <AIProvider>         // WebLLM 상태 (features/ai/hooks/)
+      <AIProvider>         // Chrome AI 상태 (features/ai/hooks/)
         <DocsProvider>     // 문서 상태 (contexts/)
           <App />
         </DocsProvider>
@@ -296,15 +296,28 @@ localDb.version(2).stores({
 
 **Admin 모드 전환**: Header "모드" 버튼 → `sessionStorage`로 세션 유지
 
-## AI Content Generation (WebLLM)
+## AI Content Generation (Hybrid: Chrome AI + WebLLM)
 
-### WebLLM 설정
+### 엔진 우선순위 (Issue #96)
+
+1. **Chrome AI (Gemini Nano)** - Chrome 138+ 내장 모델, 최우선
+2. **WebLLM** - Chrome AI 미지원 시 fallback
+
+### Chrome AI 설정 (권장)
+
+- **Model**: Gemini Nano (Chrome 138+ 내장)
+- **Temperature**: 0.3
+- **Top-K**: 40
+- **요구사항**: Chrome 138+
+- **상태 흐름**: `NOT_SUPPORTED` → `NOT_DOWNLOADED` → `DOWNLOADING` → `READY`
+
+### WebLLM 설정 (fallback)
 
 - **Default Model**: Qwen 2.5 3B (한국어 우수, 2.4GB)
 - **Fallback Model**: Gemma 2 2B (저사양용, 1.8GB)
-- Temperature: 0.3
-- Max tokens: 4096
-- **요구사항**: WebGPU 지원 브라우저 (Chrome 113+, Edge 113+)
+- **Temperature**: 0.3
+- **Max tokens**: 4096
+- **요구사항**: WebGPU 지원 브라우저
 
 ### 콘텐츠 생성 방식
 
@@ -321,7 +334,7 @@ localDb.version(2).stores({
 - 적용형 25%: 실무 상황 판단
 - 10개 미만 시 더미 자동 생성
 
-### WebLLM 장점
+### 브라우저 내 AI 장점
 
 - **무료**: API 비용 없음
 - **프라이버시**: 데이터가 브라우저 외부로 전송되지 않음
@@ -331,7 +344,7 @@ localDb.version(2).stores({
 
 | 영역 | 전략 |
 |------|------|
-| WebLLM 로드 실패 | WebGPU 미지원 안내 표시 |
+| Chrome AI 미지원 | WebLLM fallback 시도, 둘 다 실패 시 안내 표시 |
 | AI JSON 파싱 실패 | Regex fallback으로 필드 추출 |
 | 퀴즈 부족 | `createPlaceholderQuiz()`로 자동 채움 |
 | CORS 차단 | `allorigins.win` → `corsproxy.io` 순차 시도 |
@@ -381,4 +394,4 @@ git log -1 --format='%h'
 1. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수
 2. **퀴즈 정답 인덱스**: 0 처리 주의 (`=== 0` 대신 `hasOwnProperty` 사용)
 3. **SSRF 방어**: `validateUrlForSSRF()` - localhost, 내부 IP 차단됨
-4. **WebGPU**: Chrome/Edge 113+ 필수, Safari/Firefox 미지원
+4. **Chrome AI**: Chrome 138+ 권장 (Gemini Nano), WebLLM은 WebGPU 필요
