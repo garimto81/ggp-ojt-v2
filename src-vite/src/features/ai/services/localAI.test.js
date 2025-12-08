@@ -35,10 +35,10 @@ describe('Local AI Service', () => {
   });
 
   describe('checkLocalAIAvailable', () => {
-    const originalFetch = global.fetch;
+    const originalFetch = globalThis.fetch;
 
     afterEach(() => {
-      global.fetch = originalFetch;
+      globalThis.fetch = originalFetch;
     });
 
     it('returns boolean result', async () => {
@@ -47,7 +47,7 @@ describe('Local AI Service', () => {
     });
 
     it('handles network errors gracefully', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
       const result = await checkLocalAIAvailable();
       // URL이 설정되어 있으면 false, 없으면 false
@@ -75,17 +75,18 @@ describe('Local AI Service', () => {
   });
 
   describe('generateWithLocalAI - with server available', () => {
-    const originalFetch = global.fetch;
+    const originalFetch = globalThis.fetch;
 
     beforeEach(() => {
       // Mock successful response
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
           choices: [
             {
               message: {
-                content: '{"sections": [{"title": "테스트", "content": "<p>내용</p>"}], "quiz": []}',
+                content:
+                  '{"sections": [{"title": "테스트", "content": "<p>내용</p>"}], "quiz": []}',
               },
             },
           ],
@@ -94,7 +95,7 @@ describe('Local AI Service', () => {
     });
 
     afterEach(() => {
-      global.fetch = originalFetch;
+      globalThis.fetch = originalFetch;
     });
 
     it('sends correct request format', async () => {
@@ -106,7 +107,7 @@ describe('Local AI Service', () => {
 
       await generateWithLocalAI('테스트 프롬프트');
 
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/v1/chat/completions'),
         expect.objectContaining({
           method: 'POST',
@@ -138,17 +139,17 @@ describe('Local AI Service', () => {
         maxTokens: 2048,
       });
 
-      const callBody = JSON.parse(global.fetch.mock.calls[0][1].body);
+      const callBody = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
       expect(callBody.temperature).toBe(0.7);
       expect(callBody.max_tokens).toBe(2048);
     });
   });
 
   describe('generateWithLocalAI - error handling', () => {
-    const originalFetch = global.fetch;
+    const originalFetch = globalThis.fetch;
 
     afterEach(() => {
-      global.fetch = originalFetch;
+      globalThis.fetch = originalFetch;
     });
 
     it('throws error when response is not ok', async () => {
@@ -157,7 +158,7 @@ describe('Local AI Service', () => {
         return;
       }
 
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
         json: async () => ({
@@ -174,7 +175,7 @@ describe('Local AI Service', () => {
         return;
       }
 
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({ choices: [] }),
       });
@@ -188,7 +189,7 @@ describe('Local AI Service', () => {
         return;
       }
 
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
       await expect(generateWithLocalAI('test')).rejects.toThrow();
     });

@@ -64,23 +64,28 @@ export async function generateOJTContent(
 ) {
   // 1순위: Local AI 서버 시도
   try {
+    if (onProgress) onProgress('Local AI 서버 연결 확인 중...');
     const localAvailable = await checkLocalAIAvailable();
     if (localAvailable) {
-      if (onProgress) onProgress('Local AI 서버로 콘텐츠 생성 중...');
+      if (onProgress) onProgress('✅ Local AI 서버 연결됨 - 콘텐츠 생성 시작...');
       const result = await generateWithLocalAIEngine(contentText, title, onProgress);
       if (result) return result;
+    } else {
+      if (onProgress) onProgress('Local AI 서버 미연결 - WebLLM으로 전환...');
     }
   } catch (localError) {
     console.warn('[ContentGenerator] Local AI 생성 실패:', localError.message);
+    if (onProgress) onProgress(`Local AI 실패: ${localError.message} - WebLLM으로 전환...`);
   }
 
   // 2순위: WebLLM 시도
   try {
-    if (onProgress) onProgress('WebLLM (브라우저)으로 콘텐츠 생성 중...');
+    if (onProgress) onProgress('WebLLM 엔진으로 콘텐츠 생성 중...');
     const result = await generateWithWebLLMEngine(contentText, title, onProgress);
     if (result) return result;
   } catch (webllmError) {
     console.warn('[ContentGenerator] WebLLM 생성 실패:', webllmError.message);
+    if (onProgress) onProgress(`WebLLM 실패: ${webllmError.message}`);
   }
 
   // 3순위: Fallback Content

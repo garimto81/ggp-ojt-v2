@@ -66,13 +66,79 @@ export default function AIEngineSelector() {
     );
   }
 
-  // 확인 중
+  // 초기 확인 중
   if (aiStatus.status === AI_STATUS.CHECKING) {
     return (
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
         <div className="flex items-center gap-2">
           <InlineSpinner />
           <span className="text-slate-600">AI 엔진 확인 중...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Local AI 연결 확인 중
+  if (aiStatus.status === AI_STATUS.LOCAL_AI_CHECKING) {
+    return (
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <InlineSpinner />
+          <span className="font-medium text-blue-700">Local AI 서버 연결 확인 중...</span>
+        </div>
+        <p className="text-xs text-blue-600">사내 vLLM 서버에 연결을 시도하고 있습니다.</p>
+      </div>
+    );
+  }
+
+  // Local AI 연결 실패 (WebLLM fallback 필요)
+  if (aiStatus.status === AI_STATUS.LOCAL_AI_FAILED) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⚠️</span>
+            <span className="font-medium text-amber-700">Local AI 연결 실패</span>
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="text-xs text-amber-600 hover:text-amber-800 underline"
+          >
+            다시 시도
+          </button>
+        </div>
+
+        {/* 안내 메시지 */}
+        <div className="text-sm text-amber-600 mb-3">
+          <p>Local AI 서버에 연결할 수 없습니다.</p>
+          <p className="text-xs mt-1">WebLLM을 사용하여 브라우저에서 AI를 실행할 수 있습니다.</p>
+        </div>
+
+        {/* WebLLM 시작 버튼 */}
+        <button
+          onClick={handleLoadWebLLM}
+          className="px-4 py-2 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 transition"
+          aria-label="WebLLM으로 대체 시작"
+        >
+          WebLLM으로 대체
+        </button>
+
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="text-xs text-red-500 bg-red-50 p-2 rounded mt-2" role="alert">
+            {error}
+          </div>
+        )}
+
+        {/* 안내 */}
+        <div className="mt-3 p-2 bg-amber-100/50 rounded-lg text-xs text-amber-600">
+          <strong>WebLLM 안내:</strong>
+          <ul className="mt-1 list-disc list-inside space-y-0.5">
+            <li>브라우저에서 직접 AI 실행 (WebGPU 필요)</li>
+            <li>첫 실행 시 모델 다운로드 필요 (~2.4GB)</li>
+            <li>Local AI 서버가 복구되면 자동 전환됩니다</li>
+          </ul>
         </div>
       </div>
     );
@@ -130,52 +196,55 @@ export default function AIEngineSelector() {
     );
   }
 
-  // AI 미사용 상태 (로딩 필요)
+  // AI 미사용 상태 (NO_ENGINE - 모든 엔진 사용 불가)
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-4 mb-4">
+    <div className="bg-red-50 rounded-lg border border-red-200 p-4 mb-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-lg">🤖</span>
-          <span className="font-medium text-slate-700">AI 엔진</span>
+          <span className="text-lg">❌</span>
+          <span className="font-medium text-red-700">AI 엔진 사용 불가</span>
         </div>
         <button
           onClick={handleRefresh}
-          className="text-xs text-slate-500 hover:text-slate-700 underline"
+          className="text-xs text-red-600 hover:text-red-800 underline"
         >
-          새로고침
+          다시 확인
         </button>
       </div>
 
       {/* 상태 표시 */}
       <div className="text-sm mb-3">
-        <p className="text-slate-500 mb-2">AI를 시작해주세요</p>
+        <p className="text-red-600 mb-2">
+          {aiStatus.error || 'Local AI 서버와 WebLLM 모두 사용할 수 없습니다.'}
+        </p>
         <button
           onClick={handleLoadWebLLM}
-          className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition"
-          aria-label="WebLLM 시작"
+          className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition"
+          aria-label="WebLLM 다시 시도"
         >
-          WebLLM 시작
+          WebLLM 다시 시도
         </button>
       </div>
 
       {/* 에러 메시지 */}
       {error && (
-        <div className="text-xs text-red-500 bg-red-50 p-2 rounded mb-2" role="alert">
+        <div className="text-xs text-red-500 bg-red-100 p-2 rounded mb-2" role="alert">
           {error}
         </div>
       )}
 
       {/* 안내 */}
-      <div className="mt-3 p-2 bg-slate-50 rounded-lg text-xs text-slate-500">
-        <strong>AI 엔진 우선순위:</strong>
+      <div className="mt-3 p-2 bg-red-100/50 rounded-lg text-xs text-red-600">
+        <strong>문제 해결 방법:</strong>
         <ol className="mt-1 list-decimal list-inside space-y-0.5">
           <li>
-            <strong>Local AI</strong> - 사내 vLLM 서버 (VITE_LOCAL_AI_URL 설정 필요)
+            <strong>Local AI</strong> - vLLM 서버가 실행 중인지 확인하세요
           </li>
           <li>
-            <strong>WebLLM</strong> - 브라우저 내 LLM (WebGPU 필요)
+            <strong>WebLLM</strong> - WebGPU 지원 브라우저가 필요합니다 (Chrome 113+)
           </li>
+          <li>네트워크 연결 상태를 확인하세요</li>
         </ol>
       </div>
     </div>

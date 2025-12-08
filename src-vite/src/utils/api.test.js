@@ -1,5 +1,5 @@
 // OJT Master v2.13.5 - API Utilities Tests (Local AI + WebLLM)
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { validateQuizQuality, generateOJTContent, checkAIStatus } from './api';
 
 describe('validateQuizQuality', () => {

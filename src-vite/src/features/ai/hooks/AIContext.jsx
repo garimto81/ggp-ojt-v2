@@ -26,11 +26,13 @@ const AIContext = createContext(null);
 
 // AI 엔진 상태 상수
 export const AI_STATUS = {
-  CHECKING: 'checking',
-  LOCAL_AI_READY: 'local_ai_ready',
-  WEBLLM_READY: 'webllm_ready',
-  WEBLLM_LOADING: 'webllm_loading',
-  NO_ENGINE: 'no_engine',
+  CHECKING: 'checking', // 초기 상태 확인 중
+  LOCAL_AI_CHECKING: 'local_ai_checking', // Local AI 연결 확인 중
+  LOCAL_AI_READY: 'local_ai_ready', // Local AI 사용 가능
+  LOCAL_AI_FAILED: 'local_ai_failed', // Local AI 연결 실패 (WebLLM fallback 필요)
+  WEBLLM_READY: 'webllm_ready', // WebLLM 사용 가능
+  WEBLLM_LOADING: 'webllm_loading', // WebLLM 모델 로딩 중
+  NO_ENGINE: 'no_engine', // 사용 가능한 엔진 없음
 };
 
 export function AIProvider({ children }) {
@@ -55,7 +57,13 @@ export function AIProvider({ children }) {
   useEffect(() => {
     const checkEngines = async () => {
       try {
-        // 1. Local AI 확인
+        // 1. Local AI 확인 시작 - 상태 업데이트
+        console.log('[AIContext] Local AI 서버 확인 시작...');
+        setAiStatus((prev) => ({
+          ...prev,
+          status: AI_STATUS.LOCAL_AI_CHECKING,
+        }));
+
         const localStatus = await getLocalAIStatus();
 
         if (localStatus.available) {
@@ -70,17 +78,25 @@ export function AIProvider({ children }) {
             webllm: { ready: false, loading: false, model: null },
             error: null,
           });
-          console.log('[AIContext] Local AI 사용:', localStatus.url);
+          console.log('[AIContext] ✅ Local AI 연결 성공:', localStatus.url);
           return;
         }
 
-        // 2. WebLLM 확인 (Local AI 미사용 시)
+        // 2. Local AI 실패 - WebLLM fallback 전환
+        console.log('[AIContext] Local AI 미사용 → WebLLM fallback 확인');
+        setAiStatus((prev) => ({
+          ...prev,
+          status: AI_STATUS.LOCAL_AI_FAILED,
+          localAI: { available: false, url: null, model: null },
+        }));
+
+        // 3. WebLLM 확인 (Local AI 미사용 시)
         try {
           const { isWebLLMReady } = await import('@features/ai/services/webllm.js');
           const webllmReady = isWebLLMReady(); // sync 함수
 
           setAiStatus({
-            status: webllmReady ? AI_STATUS.WEBLLM_READY : AI_STATUS.NO_ENGINE,
+            status: webllmReady ? AI_STATUS.WEBLLM_READY : AI_STATUS.LOCAL_AI_FAILED,
             engine: webllmReady ? 'webllm' : null,
             localAI: { available: false, url: null, model: null },
             webllm: {
