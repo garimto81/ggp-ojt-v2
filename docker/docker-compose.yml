@@ -1,0 +1,71 @@
+# OJT Master - Docker Compose Configuration (Issue #104)
+# Local AI + Frontend Same-Origin 배포
+#
+# 사용법:
+#   1. SSL 인증서 설정: docker/ssl/cert.pem, docker/ssl/key.pem
+#   2. 프론트엔드 빌드: cd src-vite && npm run build
+#   3. 실행: docker-compose up -d
+#
+# 구조:
+#   nginx:443 (HTTPS) ──┬── / → frontend (정적 파일)
+#                       └── /api/v1/* → vLLM (AI 서버)
+
+version: '3.8'
+
+services:
+  # Nginx: SSL termination + Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: ojt-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../src-vite/dist:/usr/share/nginx/html:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - vllm
+    networks:
+      - ojt-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # vLLM: Local AI Server (GPU 필요)
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: ojt-vllm
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - VLLM_LOGGING_LEVEL=INFO
+    command: >
+      --model Qwen/Qwen3-4B
+      --host 0.0.0.0
+      --port 8001
+      --max-model-len 8192
+      --gpu-memory-utilization 0.8
+      --trust-remote-code
+    networks:
+      - ojt-network
+    restart: unless-stopped
+    # 외부 노출 안함 (nginx를 통해서만 접근)
+    # GPU 메모리 부족 시 다음 옵션 조정:
+    # --gpu-memory-utilization 0.6
+    # --max-model-len 4096
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+networks:
+  ojt-network:
+    driver: bridge
+    name: ojt-network
