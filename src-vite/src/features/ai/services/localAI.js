@@ -1,5 +1,7 @@
-// OJT Master - Local AI Server Integration (Issue #101)
+// OJT Master - Local AI Server Integration (Issue #101, #104)
 // vLLM 기반 사내 AI 서버 연동 (OpenAI-compatible API)
+// Docker 환경: VITE_LOCAL_AI_URL=/api (nginx 프록시)
+// 직접 연결: VITE_LOCAL_AI_URL=http://10.10.100.209:8001
 
 /**
  * Local AI 설정
@@ -9,6 +11,22 @@ export const LOCAL_AI_CONFIG = {
   timeout: 60000, // 60초
   model: 'Qwen/Qwen3-4B',
 };
+
+/**
+ * API 경로 생성 헬퍼
+ * Docker 환경(/api)과 직접 연결(http://host:port) 모두 지원
+ * @param {string} baseUrl - Base URL
+ * @param {string} endpoint - API 엔드포인트 (예: '/v1/models')
+ * @returns {string} 전체 URL
+ */
+function buildApiUrl(baseUrl, endpoint) {
+  // /api 형태의 상대 경로 (Docker 프록시)
+  if (baseUrl.startsWith('/')) {
+    return `${baseUrl}${endpoint}`;
+  }
+  // http://host:port 형태의 절대 경로
+  return `${baseUrl}${endpoint}`;
+}
 
 /**
  * Local AI 상태 상수
@@ -36,7 +54,9 @@ export async function checkLocalAIAvailable() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(`${baseUrl}/health`, {
+    // Docker 프록시(/api) 또는 직접 연결 모두 지원
+    const healthUrl = buildApiUrl(baseUrl, '/health');
+    const response = await fetch(healthUrl, {
       method: 'GET',
       signal: controller.signal,
     });
@@ -80,7 +100,8 @@ export async function getLocalAIStatus() {
     }
 
     // 모델 정보 조회
-    const modelsResponse = await fetch(`${baseUrl}/v1/models`);
+    const modelsUrl = buildApiUrl(baseUrl, '/v1/models');
+    const modelsResponse = await fetch(modelsUrl);
     const modelsData = await modelsResponse.json();
     const model = modelsData.data?.[0]?.id || LOCAL_AI_CONFIG.model;
 
@@ -120,7 +141,8 @@ export async function generateWithLocalAI(prompt, options = {}) {
   );
 
   try {
-    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+    const chatUrl = buildApiUrl(baseUrl, '/v1/chat/completions');
+    const response = await fetch(chatUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -184,13 +206,15 @@ export async function testLocalAIConnection() {
 
   try {
     // 1. Health check
-    const healthResponse = await fetch(`${baseUrl}/health`, { method: 'GET' });
+    const healthUrl = buildApiUrl(baseUrl, '/health');
+    const healthResponse = await fetch(healthUrl, { method: 'GET' });
     if (!healthResponse.ok) {
       return { success: false, error: 'Health check 실패' };
     }
 
     // 2. Models list
-    const modelsResponse = await fetch(`${baseUrl}/v1/models`);
+    const modelsUrl = buildApiUrl(baseUrl, '/v1/models');
+    const modelsResponse = await fetch(modelsUrl);
     const modelsData = await modelsResponse.json();
 
     // 3. Simple generation test
