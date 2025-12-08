@@ -238,6 +238,60 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
+## 현재 배포 정보
+
+| 항목 | 값 |
+|------|-----|
+| **AI 서버 IP** | `10.10.100.209` |
+| **AI 서버 포트** | `8001` |
+| **AI API URL** | `http://10.10.100.209:8001` |
+| **모델** | `Qwen/Qwen3-4B` |
+
+### API 테스트 (Windows PowerShell)
+
+```powershell
+# 헬스체크
+Invoke-RestMethod -Uri "http://10.10.100.209:8001/health"
+
+# 모델 목록
+Invoke-RestMethod -Uri "http://10.10.100.209:8001/v1/models"
+
+# 채팅 테스트
+$body = @{
+    model = "Qwen/Qwen3-4B"
+    messages = @(@{role = "user"; content = "안녕하세요"})
+    temperature = 0.3
+    max_tokens = 100
+} | ConvertTo-Json -Depth 3
+
+Invoke-RestMethod -Uri "http://10.10.100.209:8001/v1/chat/completions" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $body
+```
+
+### API 테스트 (Linux/Mac/Git Bash)
+
+```bash
+# 헬스체크
+curl http://10.10.100.209:8001/health
+
+# 모델 목록
+curl http://10.10.100.209:8001/v1/models
+
+# 채팅 테스트
+curl http://10.10.100.209:8001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "Qwen/Qwen3-4B", "messages": [{"role": "user", "content": "안녕"}]}'
+```
+
+### OJT Master 연동
+
+```bash
+# src-vite/.env
+VITE_LOCAL_AI_URL=http://10.10.100.209:8001
+```
+
 ## 보안 권장사항
 
 1. **방화벽**: 필요한 포트만 개방 (80, 8000)
