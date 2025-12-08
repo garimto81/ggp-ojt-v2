@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.12.6)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.13.6)
 
 ## Tech Stack
 
@@ -14,7 +14,7 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 | **State** | React Query (TanStack Query v5) |
 | **Backend/DB** | Supabase (PostgreSQL + Auth + RLS) |
 | **Local Cache** | Dexie.js (IndexedDB) |
-| **AI** | Chrome AI (Gemini Nano) + WebLLM fallback (브라우저 내 LLM) |
+| **AI** | Local AI (vLLM) + WebLLM fallback (Issue #101) |
 | **Charts** | Chart.js + react-chartjs-2 |
 | **Image Storage** | Cloudflare R2 (Worker 프록시) |
 | **Editor** | Quill 2.0 (Rich Text) |
@@ -78,7 +78,8 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_R2_WORKER_URL=https://ojt-r2-upload.your-worker.workers.dev
 
-# Note: No AI API keys required! WebLLM runs entirely in the browser.
+# Local AI (vLLM) - 선택 사항 (Issue #101)
+VITE_LOCAL_AI_URL=http://your-vllm-server:8000  # 미설정 시 WebLLM fallback
 ```
 
 ## Path Aliases
@@ -116,8 +117,8 @@ ggp_ojt_v2/
 │       │   │   └── services/    # analyticsService
 │       │   ├── ai/              # AI 콘텐츠 생성
 │       │   │   ├── components/  # AIEngineSelector
-│       │   │   ├── hooks/       # AIContext (Chrome AI 상태 관리)
-│       │   │   └── services/    # chromeAI, webllm, contentGenerator, quizValidator
+│       │   │   ├── hooks/       # AIContext (Local AI + WebLLM 상태 관리)
+│       │   │   └── services/    # localAI, webllm, contentGenerator, quizValidator
 │       │   ├── auth/            # 인증
 │       │   │   ├── components/  # RoleSelectionPage
 │       │   │   └── hooks/       # AuthContext
@@ -143,10 +144,10 @@ ggp_ojt_v2/
 
 ```jsx
 // main.jsx - Provider 중첩 순서
-<QueryClientProvider>      // React Query (staleTime: 5분)
+<QueryClientProvider>      // React Query (staleTime: 5분, gcTime: 10분)
   <ToastProvider>          // Toast 알림
     <AuthProvider>         // 인증 상태 (features/auth/hooks/)
-      <AIProvider>         // Chrome AI 상태 (features/ai/hooks/)
+      <AIProvider>         // AI 상태 - Local AI + WebLLM (features/ai/hooks/)
         <DocsProvider>     // 문서 상태 (contexts/)
           <App />
         </DocsProvider>
@@ -296,20 +297,21 @@ localDb.version(2).stores({
 
 **Admin 모드 전환**: Header "모드" 버튼 → `sessionStorage`로 세션 유지
 
-## AI Content Generation (Hybrid: Chrome AI + WebLLM)
+## AI Content Generation (Local AI + WebLLM)
 
-### 엔진 우선순위 (Issue #96)
+### 엔진 우선순위 (Issue #101)
 
-1. **Chrome AI (Gemini Nano)** - Chrome 138+ 내장 모델, 최우선
-2. **WebLLM** - Chrome AI 미지원 시 fallback
+1. **Local AI (vLLM)** - 사내 AI 서버 최우선 (OpenAI-compatible API)
+2. **WebLLM** - Local AI 미사용 시 브라우저 fallback
 
-### Chrome AI 설정 (권장)
+### Local AI 설정 (최우선, Issue #101)
 
-- **Model**: Gemini Nano (Chrome 138+ 내장)
+- **Model**: Qwen/Qwen3-4B (vLLM 서버 기본값)
 - **Temperature**: 0.3
-- **Top-K**: 40
-- **요구사항**: Chrome 138+
-- **상태 흐름**: `NOT_SUPPORTED` → `NOT_DOWNLOADED` → `DOWNLOADING` → `READY`
+- **Max tokens**: 4096
+- **Timeout**: 60초
+- **요구사항**: `VITE_LOCAL_AI_URL` 환경변수 설정
+- **상태 흐름**: `NOT_CONFIGURED` → `CHECKING` → `AVAILABLE` / `UNAVAILABLE`
 
 ### WebLLM 설정 (fallback)
 
@@ -318,6 +320,19 @@ localDb.version(2).stores({
 - **Temperature**: 0.3
 - **Max tokens**: 4096
 - **요구사항**: WebGPU 지원 브라우저
+
+### AI Context 상태 (`AIContext.jsx`)
+
+```javascript
+// 상태 상수 (AI_STATUS)
+CHECKING          // 초기 상태 확인 중
+LOCAL_AI_CHECKING // Local AI 연결 확인 중
+LOCAL_AI_READY    // Local AI 사용 가능
+LOCAL_AI_FAILED   // Local AI 실패 → WebLLM fallback
+WEBLLM_READY      // WebLLM 사용 가능
+WEBLLM_LOADING    // WebLLM 모델 로딩 중
+NO_ENGINE         // 사용 가능한 엔진 없음
+```
 
 ### 콘텐츠 생성 방식
 
@@ -334,17 +349,16 @@ localDb.version(2).stores({
 - 적용형 25%: 실무 상황 판단
 - 10개 미만 시 더미 자동 생성
 
-### 브라우저 내 AI 장점
+### AI 장점
 
-- **무료**: API 비용 없음
-- **프라이버시**: 데이터가 브라우저 외부로 전송되지 않음
-- **오프라인**: 첫 모델 다운로드 후 오프라인 사용 가능
+- **Local AI**: 사내 데이터 보안, 빠른 응답, 서버 GPU 활용
+- **WebLLM**: API 비용 없음, 오프라인 가능 (첫 다운로드 후)
 
 ## Error Handling
 
 | 영역 | 전략 |
 |------|------|
-| Chrome AI 미지원 | WebLLM fallback 시도, 둘 다 실패 시 안내 표시 |
+| Local AI 연결 실패 | WebLLM fallback 자동 시도, 둘 다 실패 시 안내 표시 |
 | AI JSON 파싱 실패 | Regex fallback으로 필드 추출 |
 | 퀴즈 부족 | `createPlaceholderQuiz()`로 자동 채움 |
 | CORS 차단 | `allorigins.win` → `corsproxy.io` 순차 시도 |
@@ -394,4 +408,4 @@ git log -1 --format='%h'
 1. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수
 2. **퀴즈 정답 인덱스**: 0 처리 주의 (`=== 0` 대신 `hasOwnProperty` 사용)
 3. **SSRF 방어**: `validateUrlForSSRF()` - localhost, 내부 IP 차단됨
-4. **Chrome AI**: Chrome 138+ 권장 (Gemini Nano), WebLLM은 WebGPU 필요
+4. **AI 엔진**: Local AI 우선 (vLLM), 미설정 시 WebLLM fallback (WebGPU 필요)

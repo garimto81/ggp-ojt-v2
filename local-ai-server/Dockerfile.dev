@@ -1,0 +1,59 @@
+# OJT Master - 간편 배포용 Docker 이미지
+# Node.js 기반 Vite Preview 서버 (Nginx 불필요)
+# 용도: 사내 배포 (간편), GPU 없는 환경
+
+# === Build Stage ===
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# pnpm 설치
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
+# 패키지 파일 복사 (캐싱 최적화)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY src-vite/package.json ./src-vite/
+
+# 의존성 설치 (lockfile 동기화 문제 시 자동 업데이트)
+RUN pnpm install
+
+# 소스 복사
+COPY src-vite/ ./src-vite/
+
+# 환경변수 (빌드 시 주입)
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_LOCAL_AI_URL
+ARG VITE_R2_WORKER_URL
+
+# 빌드
+RUN pnpm --filter src-vite build
+
+# === Production Stage ===
+FROM node:20-alpine
+
+WORKDIR /app
+
+# serve 패키지 설치 (정적 파일 서빙용)
+RUN npm install -g serve
+
+# 빌드 결과물 복사
+COPY --from=builder /app/src-vite/dist ./dist
+
+# 비root 사용자 생성 (보안)
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S ojt -u 1001 -G nodejs && \
+    chown -R ojt:nodejs /app
+
+USER ojt
+
+# 포트 노출
+EXPOSE 3000
+
+# 헬스체크
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+# serve로 SPA 서빙 (-s: SPA 모드, 모든 경로를 index.html로)
+CMD ["serve", "-s", "dist", "-l", "3000"]

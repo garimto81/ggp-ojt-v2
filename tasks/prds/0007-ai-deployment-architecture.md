@@ -142,115 +142,84 @@ server {
 
 ---
 
-## 4. 솔루션 B: Docker 사내 배포
+## 4. 솔루션 B: Docker 사내 배포 (구현 완료)
 
 ### 4.1 아키텍처
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                   Docker Compose 구조                            │
+│                   사내 Docker 배포 구조                           │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  docker-compose.yml                                             │
-│  ├── nginx (port 80/443)                                        │
-│  │     └── SSL termination + routing                            │
-│  ├── frontend (React build)                                     │
-│  │     └── static files serving                                 │
-│  └── vllm (port 8001 internal)                                  │
-│        └── Local AI server                                      │
-│                                                                 │
-│  ┌─────────┐     ┌─────────────┐     ┌─────────┐                │
-│  │  nginx  │────▶│  frontend   │     │  vLLM   │                │
-│  │  :443   │     │  (static)   │     │  :8001  │                │
-│  └────┬────┘     └─────────────┘     └────▲────┘                │
-│       │                                    │                    │
-│       └────────────────────────────────────┘                    │
-│              /api/v1/* → vLLM proxy                             │
+│  ┌─────────────────────┐       ┌─────────────────────────┐      │
+│  │   OJT Master 앱     │       │   AI 서버 (별도 프로젝트) │      │
+│  │   (Docker)          │ ───▶  │   vLLM Qwen3-4B         │      │
+│  │   Port: 80          │       │   10.10.100.209:8001    │      │
+│  └─────────────────────┘       └─────────────────────────┘      │
+│           │                                                     │
+│           │ Supabase (외부 클라우드)                              │
+│           ▼                                                     │
+│  ┌─────────────────────┐                                       │
+│  │   사내 사용자        │                                       │
+│  │   http://<서버IP>/   │                                       │
+│  └─────────────────────┘                                       │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 docker-compose.yml
+### 4.2 docker-compose.yml (간소화)
 
 ```yaml
-version: '3.8'
-
+# local-ai-server/docker-compose.yml
 services:
-  nginx:
-    image: nginx:alpine
+  app:
+    build:
+      context: ..
+      dockerfile: local-ai-server/Dockerfile.dev
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY:-${VITE_SUPABASE_ANON_KEY}}
+        - VITE_LOCAL_AI_URL=${VITE_LOCAL_AI_URL}
+        - VITE_R2_WORKER_URL=${VITE_R2_WORKER_URL:-}
+    container_name: ojt-master
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./frontend/dist:/usr/share/nginx/html
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - vllm
-    networks:
-      - ojt-network
-
-  vllm:
-    image: vllm/vllm-openai:latest
-    runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-    command: >
-      --model Qwen/Qwen3-4B
-      --host 0.0.0.0
-      --port 8001
-      --max-model-len 8192
-    networks:
-      - ojt-network
-    # 외부 노출 안함 (nginx를 통해서만 접근)
-
-networks:
-  ojt-network:
-    driver: bridge
+      - "${APP_PORT:-80}:3000"
+    restart: unless-stopped
 ```
 
-### 4.3 nginx.conf
+### 4.3 Dockerfile.dev (Node.js serve 기반)
 
-```nginx
-events {
-    worker_connections 1024;
-}
+```dockerfile
+# Build Stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@9 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY src-vite/package.json ./src-vite/
+RUN pnpm install --frozen-lockfile
+COPY src-vite/ ./src-vite/
+ARG VITE_SUPABASE_URL
+ARG VITE_LOCAL_AI_URL
+# ... 빌드 ...
+RUN pnpm --filter src-vite build
 
-http {
-    include       mime.types;
-    default_type  application/octet-stream;
-
-    server {
-        listen 80;
-        listen 443 ssl;
-
-        ssl_certificate /etc/nginx/ssl/cert.pem;
-        ssl_certificate_key /etc/nginx/ssl/key.pem;
-
-        # Frontend
-        location / {
-            root /usr/share/nginx/html;
-            try_files $uri $uri/ /index.html;
-        }
-
-        # Local AI API Proxy (Same Origin!)
-        location /api/v1/ {
-            proxy_pass http://vllm:8001/v1/;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_read_timeout 120s;
-        }
-    }
-}
+# Production Stage
+FROM node:20-alpine
+RUN npm install -g serve
+COPY --from=builder /app/src-vite/dist ./dist
+EXPOSE 3000
+CMD ["serve", "-s", "dist", "-l", "3000"]
 ```
 
-### 4.4 환경 변수 설정
+### 4.4 배포 명령어
 
 ```bash
-# .env.docker
-VITE_LOCAL_AI_URL=/api  # Same origin, no CORS issues!
-VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_ANON_KEY=xxx
+cd local-ai-server
+cp .env.example .env
+# .env 편집: Supabase 정보 입력
+
+docker compose up -d --build
+# 접속: http://<서버IP>/
 ```
 
 ---
@@ -700,10 +669,10 @@ function generateKeywordQuiz(keywords, title, count) {
 - [ ] 테스트 코드 추가
 
 ### Phase 2: Docker 배포 옵션
-- [ ] docker-compose.yml 작성
-- [ ] nginx.conf 작성
-- [ ] 빌드 스크립트 추가
-- [ ] 배포 가이드 문서화
+- [x] docker-compose.yml 작성 (앱만 배포, 외부 AI 연동)
+- [x] Dockerfile.dev 작성 (Node.js serve 기반)
+- [x] 배포 가이드 문서화 (README.md)
+- [ ] 실제 배포 테스트
 
 ### Phase 3: Cloud API 통합
 - [ ] Gemini API 서비스 모듈
