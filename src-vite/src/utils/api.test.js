@@ -1,4 +1,4 @@
-// OJT Master v2.5.0 - API Utilities Tests
+// OJT Master v2.13.0 - API Utilities Tests
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { validateQuizQuality, generateOJTContent, checkAIStatus } from './api';
 
@@ -100,11 +100,11 @@ describe('validateQuizQuality', () => {
   });
 });
 
-describe('generateOJTContent - Graceful Degradation (WebLLM Only)', () => {
-  // WebLLM 전용: fetch mock 대신 WebLLM 미로드 상태에서 fallback 동작 테스트
+describe('generateOJTContent - Graceful Degradation', () => {
+  // Local AI와 WebLLM 모두 미설정 상태에서 fallback 동작 테스트
 
-  it('returns fallback content when WebLLM is not loaded', async () => {
-    // WebLLM이 로드되지 않은 상태에서 테스트
+  it('returns fallback content when no AI engine is available', async () => {
+    // 모든 AI 엔진 사용 불가 상태에서 테스트
     const result = await generateOJTContent(
       '테스트 콘텐츠 내용입니다. 이것은 원문 텍스트입니다.',
       '테스트 문서'
@@ -112,7 +112,7 @@ describe('generateOJTContent - Graceful Degradation (WebLLM Only)', () => {
 
     // Should return fallback structure
     expect(result.ai_processed).toBe(false);
-    expect(result.ai_error).toContain('WebLLM');
+    expect(result.ai_error).toBeDefined(); // 에러 메시지 존재
     expect(result.title).toBe('테스트 문서');
     expect(result.team).toBe('미분류');
     expect(result.sections).toHaveLength(1);
@@ -144,42 +144,56 @@ describe('generateOJTContent - Graceful Degradation (WebLLM Only)', () => {
     expect(result.title).toBe('제목 없음');
   });
 
-  it('calls onProgress callback with fallback message when WebLLM fails', async () => {
+  it('calls onProgress callback with fallback message when AI fails', async () => {
     const onProgress = vi.fn();
     await generateOJTContent('콘텐츠', '테스트', 1, 1, onProgress);
 
-    // WebLLM 미로드 상태에서는 fallback 메시지만 호출
+    // AI 미로드 상태에서는 fallback 메시지만 호출
     expect(onProgress).toHaveBeenCalledWith('AI 분석 실패 - 원문으로 등록 중...');
   });
 });
 
-describe('checkAIStatus (WebLLM Only)', () => {
-  // WebLLM 전용: WebGPU 지원 및 WebLLM 상태 확인
+describe('checkAIStatus (Hybrid Engine: Local AI + WebLLM)', () => {
+  // 하이브리드 엔진: Local AI + WebLLM 상태 확인
 
-  it('returns WebLLM status structure', async () => {
+  it('returns hybrid engine status structure', async () => {
     const result = await checkAIStatus();
 
-    // 필수 필드 존재 확인
+    // 필수 필드 존재 확인 (새 API 형식)
     expect(result).toHaveProperty('online');
-    expect(result).toHaveProperty('model');
-    expect(result).toHaveProperty('loaded');
-    expect(result).toHaveProperty('loading');
-    expect(result).toHaveProperty('progress');
-    expect(result).toHaveProperty('webgpuSupported');
+    expect(result).toHaveProperty('bestEngine');
+    expect(result).toHaveProperty('localAI');
+    expect(result).toHaveProperty('webllm');
+
+    // Local AI 구조 확인
+    expect(result.localAI).toHaveProperty('configured');
+    expect(result.localAI).toHaveProperty('available');
+    expect(result.localAI).toHaveProperty('url');
+    expect(result.localAI).toHaveProperty('model');
+
+    // WebLLM 구조 확인
+    expect(result.webllm).toHaveProperty('supported');
+    expect(result.webllm).toHaveProperty('loaded');
+    expect(result.webllm).toHaveProperty('loading');
+    expect(result.webllm).toHaveProperty('model');
   });
 
-  it('returns online based on WebGPU support', async () => {
+  it('returns online based on engine availability', async () => {
     const result = await checkAIStatus();
 
-    // jsdom 환경에서 WebGPU는 지원되지 않음
-    expect(result.webgpuSupported).toBe(false);
+    // jsdom 환경에서 Local AI와 WebGPU는 지원되지 않음
+    expect(result.localAI.configured).toBe(false); // VITE_LOCAL_AI_URL 미설정
+    expect(result.localAI.available).toBe(false);
+    expect(result.webllm.supported).toBe(false);
     expect(result.online).toBe(false);
   });
 
-  it('returns loaded: false when WebLLM is not initialized', async () => {
+  it('returns loaded: false when neither engine is initialized', async () => {
     const result = await checkAIStatus();
 
-    expect(result.loaded).toBe(false);
-    expect(result.loading).toBe(false);
+    expect(result.localAI.available).toBe(false);
+    expect(result.webllm.loaded).toBe(false);
+    expect(result.webllm.loading).toBe(false);
+    expect(result.bestEngine).toBe(null);
   });
 });
