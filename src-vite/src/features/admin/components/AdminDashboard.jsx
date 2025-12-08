@@ -20,6 +20,7 @@ import { useDepartments, getCombinedDepartments } from '../hooks/useDepartments'
 import { ContentManagementTab } from './content';
 import { SettingsTab } from './settings';
 import { StatsTab } from './stats';
+import UserApprovalTab from './UserApprovalTab';
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 
 export default function AdminDashboard() {
@@ -324,7 +325,7 @@ export default function AdminDashboard() {
       {/* Tabs (Issue #77: Added a11y) */}
       <div className="bg-white rounded-xl shadow-sm">
         <div className="border-b flex" role="tablist" aria-label="관리자 대시보드 탭">
-          {['users', 'docs', 'stats', 'settings'].map((tab) => (
+          {['users', 'approval', 'docs', 'stats', 'settings'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -339,6 +340,7 @@ export default function AdminDashboard() {
               }`}
             >
               {tab === 'users' && '사용자 관리'}
+              {tab === 'approval' && '승인 관리'}
               {tab === 'docs' && '콘텐츠 관리'}
               {tab === 'stats' && '통계'}
               {tab === 'settings' && '설정'}
@@ -509,6 +511,13 @@ export default function AdminDashboard() {
                   />
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Approval Tab (Issue #105: Email 사용자 승인) */}
+          {activeTab === 'approval' && (
+            <div role="tabpanel" id="tabpanel-approval" aria-labelledby="tab-approval">
+              <UserApprovalTab />
             </div>
           )}
 

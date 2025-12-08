@@ -160,10 +160,35 @@ export const ROLE_COLORS = {
   },
 };
 
+// Auth configuration (Issue #105)
+// MODE: 'google' | 'email' | 'hybrid'
+// - google: Google OAuth만 (Vercel 기본)
+// - email: Email 인증만 (Docker 사내 배포)
+// - hybrid: 둘 다 (기본값)
+export const AUTH_CONFIG = {
+  MODE: import.meta.env.VITE_AUTH_MODE || 'hybrid',
+  // Email 인증 시 관리자 승인 필요 여부
+  REQUIRE_APPROVAL: true,
+};
+
+// User status constants (Issue #105)
+export const USER_STATUS = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+};
+
+// Auth provider constants (Issue #105)
+export const AUTH_PROVIDER = {
+  GOOGLE: 'google',
+  EMAIL: 'email',
+};
+
 // View states
 export const VIEW_STATES = {
   LOADING: 'loading',
   ROLE_SELECT: 'role_select',
+  PENDING_APPROVAL: 'pending_approval', // Issue #105: 승인 대기
   ADMIN_DASHBOARD: 'admin_dashboard',
   MENTOR_DASHBOARD: 'mentor_dashboard',
   MENTEE_LIST: 'mentee_list',
