@@ -109,6 +109,7 @@ export function DocsProvider({ children }) {
         id: doc.id || crypto.randomUUID(),
         author_id: doc.author_id || user.id,
         author_name: doc.author_name || user.name,
+        status: doc.status || 'review', // 새 문서는 검토 대기 상태로 시작
         created_at: doc.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

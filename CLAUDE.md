@@ -23,6 +23,14 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 
 ## Commands
 
+**Workspace**: `pnpm-workspace.yaml` (루트) → `src-vite/`, `ojt-r2-upload/`
+
+| 테스트 종류 | 위치 | 실행 |
+|-------------|------|------|
+| Unit (Vitest) | `src-vite/src/**/*.test.{js,jsx}` | `pnpm test:vite` |
+| E2E (Playwright) | `tests/*.spec.js` | `pnpm test` |
+| R2 Worker | `ojt-r2-upload/` | `pnpm test:worker` |
+
 ```bash
 # === 루트에서 실행 (pnpm workspace) ===
 pnpm dev                        # 개발 서버 (http://localhost:5173)
@@ -47,13 +55,7 @@ npx vitest run src/utils/api.test.js              # 단일 파일
 npx vitest run -t "checkAIStatus"                 # 특정 테스트명 매칭
 
 # === E2E 테스트 (Playwright) - 루트에서 실행 ===
-# 테스트 파일: tests/*.spec.js (6개)
-#   - e2e-homepage.spec.js      # 홈페이지 기본 동작
-#   - e2e-admin-mode.spec.js    # Admin 모드 전환
-#   - e2e-admin-redesign.spec.js # Admin 대시보드 리디자인
-#   - e2e-issue34-source-field.spec.js # 소스 필드 검증
-#   - performance.spec.js       # 성능 테스트
-#   - debug-console.spec.js     # 콘솔 디버그
+# 테스트 파일 위치: 루트/tests/*.spec.js (6개)
 # 기본 baseURL: https://ggp-ojt-v2.vercel.app (프로덕션)
 # 로컬 테스트: playwright.config.js 17행 주석 해제, 16행 주석 처리
 pnpm test                       # 전체 테스트
@@ -228,7 +230,7 @@ learning_progress (id UUID PK, user_id FK, doc_id FK, status, current_section,
 teams (id UUID PK, name, slug, display_order, is_active)
 ```
 
-RLS 정책: `database/fixes/supabase_complete_permissions.sql` (권장) 또는 개별 파일 참조
+RLS 정책: `database/fixes/rls_complete_redesign.sql` **(권장 - Issue #112)**
 
 ### Database Migrations
 
@@ -241,18 +243,18 @@ database/
 │   ├── supabase_phase2_learning_progress.sql  # 2. learning_progress 테이블
 │   ├── supabase_phase3_teams.sql       # 3. teams 테이블
 │   ├── supabase_source_columns.sql     # 4. source_type/url/file 컬럼
-│   └── 20251207_admin_page_redesign.sql # 5. Admin 리디자인 관련
+│   ├── 20251207_admin_page_redesign.sql # 5. Admin 리디자인 관련
+│   └── 20251208_email_auth.sql         # 6. Email 인증 컬럼 추가
 └── fixes/                              # RLS 및 성능 수정
-    ├── supabase_complete_permissions.sql # ⭐ 전체 권한 설정 (권장 - Issue #93)
-    ├── VERIFICATION_CHECKLIST.md       # ⭐ 권한 검증 체크리스트
+    ├── rls_complete_redesign.sql       # ⭐⭐ RLS 완전 재설계 (최신, Issue #112)
+    ├── supabase_complete_permissions.sql # 전체 권한 설정 (구버전)
+    ├── VERIFICATION_CHECKLIST.md       # 권한 검증 체크리스트
     ├── check_admin_rls.sql             # 권한 검증 쿼리
-    ├── supabase_fix_rls.sql            # RLS 정책 수정
-    ├── supabase_fix_admin_rls.sql      # Admin 테이블 RLS 픽스
-    ├── supabase_performance.sql        # 성능 최적화 인덱스
-    └── supabase_audit_logs.sql         # 감사 로그 테이블
+    ├── fix_issue_109_infinite_recursion.sql # RLS 무한 재귀 수정
+    └── fix_signup_rls.sql              # 회원가입 RLS 수정
 ```
 
-**적용 방법**: Supabase Dashboard → SQL Editor에서 순서대로 실행
+**적용 방법**: Supabase Dashboard → SQL Editor에서 `rls_complete_redesign.sql` 실행
 
 ### Supabase 권한 체계 (중요!)
 
@@ -264,17 +266,33 @@ GRANT (테이블 레벨) → RLS (행 레벨)
 
 **핵심**: GRANT 없으면 RLS 검사 전에 "permission denied" 발생!
 
-| 테이블 | GRANT (authenticated) | RLS 요약 |
-|--------|----------------------|----------|
-| users | SELECT, INSERT, UPDATE | 본인 or Admin |
-| ojt_docs | SELECT, INSERT, UPDATE, DELETE | 모두 조회, Mentor/Admin 생성 |
-| learning_records | SELECT, INSERT, UPDATE | 본인 or Admin |
-| content_reports | SELECT, INSERT, UPDATE | 본인 생성, Admin 관리 |
-| admin_settings | SELECT, INSERT, UPDATE | 모두 조회, Admin 수정 |
-| admin_logs | SELECT, INSERT | Admin만 |
+### RLS 설계 원칙 (Issue #112)
 
-**403 에러 발생 시**: `database/fixes/supabase_complete_permissions.sql` 실행
-**검증**: `database/fixes/VERIFICATION_CHECKLIST.md` 참조
+| 원칙 | 설명 |
+|------|------|
+| **SECURITY DEFINER 함수** | 역할 확인 시 RLS 우회 필수 (`rls_is_admin()`) |
+| **자기 참조 금지** | `users` 정책에서 `users` 직접 조회 → 무한 재귀 |
+| **신규 사용자 예외** | INSERT는 `auth.uid() = id`만 체크 (users 테이블에 아직 없음) |
+
+### RLS 함수 (SECURITY DEFINER)
+
+```sql
+rls_is_admin()         -- Admin 여부 확인
+rls_is_mentor_or_admin() -- Mentor/Admin 여부 확인
+rls_get_my_role()      -- 현재 사용자 역할 조회
+```
+
+### 테이블별 RLS 정책
+
+| 테이블 | SELECT | INSERT | UPDATE | DELETE |
+|--------|--------|--------|--------|--------|
+| **users** | 본인 OR Admin | 본인만 | 본인 OR Admin | - |
+| **ojt_docs** | 모두 | Mentor/Admin | 작성자 OR Admin | 작성자 OR Admin |
+| **learning_records** | 본인 OR Admin | 본인만 | 본인만 | - |
+| **learning_progress** | 본인 OR Admin | 본인만 | 본인만 | - |
+| **teams** | 모두 | - | - | - |
+
+**403/500 에러 발생 시**: `database/fixes/rls_complete_redesign.sql` 실행
 
 ### Dexie.js (로컬 캐시)
 
