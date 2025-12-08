@@ -1,16 +1,17 @@
-// OJT Master - AI Context (Chrome Gemini Nano 전용, Issue #96)
-// Chrome 138+ 내장 Gemini Nano 모델만 사용
+// OJT Master - AI Context (Local AI + WebLLM, Issue #101)
+// 우선순위: Local AI (vLLM) → WebLLM
+
 /**
  * ROLE: Context API - Client State Management
  *
  * PURPOSE:
- * - Chrome Prompt API (Gemini Nano) 상태 관리
- * - 모델 로딩, 에러 상태 추적
- * - 단일 엔진으로 단순화
+ * - AI 엔진 상태 관리 (Local AI + WebLLM)
+ * - 자동 엔진 선택 및 상태 추적
  *
  * RESPONSIBILITY:
- * ✅ Chrome AI 엔진 상태 (ready, loading, error)
- * ✅ 세션 생성/종료 관리
+ * ✅ Local AI 서버 연결 상태
+ * ✅ WebLLM fallback 상태
+ * ✅ 현재 사용 중인 엔진 정보
  *
  * NOT RESPONSIBLE FOR:
  * ❌ AI 콘텐츠 생성 로직 → contentGenerator 서비스 사용
@@ -18,151 +19,199 @@
  */
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { CHROME_AI_CONFIG } from '@/constants';
-import {
-  checkChromeAISupport,
-  getChromeAIStatus,
-  getChromeAIInfo,
-  createChromeAISession,
-  destroyChromeAISession,
-  CHROME_AI_STATUS,
-  CHROME_AI_ERROR_TYPES,
-} from '@features/ai/services/chromeAI';
+import { AI_ENGINE_CONFIG, LOCAL_AI_CONFIG, WEBLLM_CONFIG } from '@/constants';
+import { getLocalAIStatus } from '@features/ai/services/localAI';
 
 const AIContext = createContext(null);
 
+// AI 엔진 상태 상수
+export const AI_STATUS = {
+  CHECKING: 'checking',
+  LOCAL_AI_READY: 'local_ai_ready',
+  WEBLLM_READY: 'webllm_ready',
+  WEBLLM_LOADING: 'webllm_loading',
+  NO_ENGINE: 'no_engine',
+};
+
 export function AIProvider({ children }) {
-  // Chrome AI 상태
+  // AI 상태
   const [aiStatus, setAiStatus] = useState({
-    supported: null, // null = 확인 중, true/false
-    status: CHROME_AI_STATUS.NOT_SUPPORTED,
-    ready: false,
-    loading: false,
+    status: AI_STATUS.CHECKING,
+    engine: null, // 'localai' | 'webllm' | null
+    localAI: {
+      available: false,
+      url: null,
+      model: null,
+    },
+    webllm: {
+      ready: false,
+      loading: false,
+      model: null,
+    },
     error: null,
-    errorType: null,
   });
 
-  // 초기화: Chrome AI 지원 여부 확인
+  // 초기화: AI 엔진 상태 확인
   useEffect(() => {
-    const checkSupport = async () => {
+    const checkEngines = async () => {
       try {
-        const supported = await checkChromeAISupport();
-        const info = await getChromeAIInfo();
+        // 1. Local AI 확인
+        const localStatus = await getLocalAIStatus();
 
-        setAiStatus((prev) => ({
-          ...prev,
-          supported,
-          status: info.status,
-          ready: info.status === CHROME_AI_STATUS.READY,
-        }));
+        if (localStatus.available) {
+          setAiStatus({
+            status: AI_STATUS.LOCAL_AI_READY,
+            engine: 'localai',
+            localAI: {
+              available: true,
+              url: localStatus.url,
+              model: localStatus.model,
+            },
+            webllm: { ready: false, loading: false, model: null },
+            error: null,
+          });
+          console.log('[AIContext] Local AI 사용:', localStatus.url);
+          return;
+        }
 
-        console.log('[AIContext] Chrome AI:', supported ? '지원' : '미지원', info);
+        // 2. WebLLM 확인 (Local AI 미사용 시)
+        try {
+          const { isWebLLMReady } = await import('@features/ai/services/webllm.js');
+          const webllmReady = await isWebLLMReady();
+
+          setAiStatus({
+            status: webllmReady ? AI_STATUS.WEBLLM_READY : AI_STATUS.NO_ENGINE,
+            engine: webllmReady ? 'webllm' : null,
+            localAI: { available: false, url: null, model: null },
+            webllm: {
+              ready: webllmReady,
+              loading: false,
+              model: webllmReady ? WEBLLM_CONFIG.DEFAULT_MODEL : null,
+            },
+            error: null,
+          });
+          console.log('[AIContext] WebLLM:', webllmReady ? '준비됨' : '로딩 필요');
+        } catch (webllmError) {
+          console.warn('[AIContext] WebLLM 확인 실패:', webllmError);
+          setAiStatus({
+            status: AI_STATUS.NO_ENGINE,
+            engine: null,
+            localAI: { available: false, url: null, model: null },
+            webllm: { ready: false, loading: false, model: null },
+            error: 'AI 엔진을 사용할 수 없습니다.',
+          });
+        }
       } catch (error) {
-        console.warn('[AIContext] Chrome AI 확인 실패:', error);
+        console.error('[AIContext] AI 확인 실패:', error);
         setAiStatus((prev) => ({
           ...prev,
-          supported: false,
-          status: CHROME_AI_STATUS.NOT_SUPPORTED,
-          error: 'Chrome AI 확인 실패',
+          status: AI_STATUS.NO_ENGINE,
+          error: error.message,
         }));
       }
     };
 
-    checkSupport();
+    checkEngines();
   }, []);
 
   /**
-   * Chrome AI 세션 초기화/로드
+   * WebLLM 로드 (Local AI 미사용 시)
    */
-  const loadAI = useCallback(async () => {
-    if (aiStatus.loading) return;
-    if (aiStatus.ready) return; // 이미 준비됨
-
-    if (!aiStatus.supported) {
-      const error = new Error(
-        `Chrome AI (Gemini Nano)를 지원하지 않습니다. Chrome ${CHROME_AI_CONFIG.MIN_CHROME_VERSION}+ 필요.`
-      );
-      error.errorType = CHROME_AI_ERROR_TYPES.NOT_SUPPORTED;
-      throw error;
-    }
-
-    setAiStatus((prev) => ({
-      ...prev,
-      loading: true,
-      error: null,
-      errorType: null,
-    }));
-
-    try {
-      await createChromeAISession({
-        temperature: CHROME_AI_CONFIG.TEMPERATURE,
-        topK: CHROME_AI_CONFIG.TOP_K,
-        onProgress: (progress) => {
-          console.log(`[AIContext] Chrome AI 다운로드: ${progress}%`);
-        },
-      });
+  const loadWebLLM = useCallback(
+    async (onProgress) => {
+      if (aiStatus.webllm.ready || aiStatus.webllm.loading) return;
+      if (aiStatus.localAI.available) return; // Local AI 있으면 불필요
 
       setAiStatus((prev) => ({
         ...prev,
-        ready: true,
-        loading: false,
-        status: CHROME_AI_STATUS.READY,
-        error: null,
-        errorType: null,
+        status: AI_STATUS.WEBLLM_LOADING,
+        webllm: { ...prev.webllm, loading: true },
       }));
 
-      console.log('[AIContext] Chrome AI 준비 완료');
-    } catch (error) {
-      setAiStatus((prev) => ({
-        ...prev,
-        loading: false,
-        error: error.message,
-        errorType: error.errorType || CHROME_AI_ERROR_TYPES.SESSION_FAILED,
-      }));
-      throw error;
-    }
-  }, [aiStatus.supported, aiStatus.loading, aiStatus.ready]);
+      try {
+        const { initWebLLM } = await import('@features/ai/services/webllm.js');
+        await initWebLLM(onProgress);
 
-  /**
-   * Chrome AI 세션 종료
-   */
-  const unloadAI = useCallback(async () => {
-    await destroyChromeAISession();
-    setAiStatus((prev) => ({
-      ...prev,
-      ready: false,
-    }));
-  }, []);
+        setAiStatus((prev) => ({
+          ...prev,
+          status: AI_STATUS.WEBLLM_READY,
+          engine: 'webllm',
+          webllm: {
+            ready: true,
+            loading: false,
+            model: WEBLLM_CONFIG.DEFAULT_MODEL,
+          },
+          error: null,
+        }));
+        console.log('[AIContext] WebLLM 로드 완료');
+      } catch (error) {
+        setAiStatus((prev) => ({
+          ...prev,
+          status: AI_STATUS.NO_ENGINE,
+          webllm: { ...prev.webllm, loading: false },
+          error: error.message,
+        }));
+        throw error;
+      }
+    },
+    [aiStatus.webllm.ready, aiStatus.webllm.loading, aiStatus.localAI.available]
+  );
 
   /**
    * 상태 새로고침
    */
   const refreshStatus = useCallback(async () => {
-    const status = await getChromeAIStatus();
-    setAiStatus((prev) => ({
-      ...prev,
-      status,
-      ready: status === CHROME_AI_STATUS.READY,
-    }));
+    setAiStatus((prev) => ({ ...prev, status: AI_STATUS.CHECKING }));
+
+    const localStatus = await getLocalAIStatus();
+
+    if (localStatus.available) {
+      setAiStatus({
+        status: AI_STATUS.LOCAL_AI_READY,
+        engine: 'localai',
+        localAI: {
+          available: true,
+          url: localStatus.url,
+          model: localStatus.model,
+        },
+        webllm: { ready: false, loading: false, model: null },
+        error: null,
+      });
+    } else {
+      // WebLLM 상태 유지
+      setAiStatus((prev) => ({
+        ...prev,
+        status: prev.webllm.ready ? AI_STATUS.WEBLLM_READY : AI_STATUS.NO_ENGINE,
+        engine: prev.webllm.ready ? 'webllm' : null,
+        localAI: { available: false, url: null, model: null },
+      }));
+    }
   }, []);
+
+  // 편의 속성
+  const isReady =
+    aiStatus.status === AI_STATUS.LOCAL_AI_READY || aiStatus.status === AI_STATUS.WEBLLM_READY;
+  const isLoading =
+    aiStatus.status === AI_STATUS.CHECKING || aiStatus.status === AI_STATUS.WEBLLM_LOADING;
 
   const value = {
     // 상태
     aiStatus,
-    isSupported: aiStatus.supported,
-    isReady: aiStatus.ready,
-    isLoading: aiStatus.loading,
+    isReady,
+    isLoading,
     error: aiStatus.error,
+    currentEngine: aiStatus.engine,
+    currentModel: aiStatus.localAI.model || aiStatus.webllm.model,
 
     // 액션
-    loadAI,
-    unloadAI,
+    loadWebLLM,
     refreshStatus,
 
     // 상수
-    CHROME_AI_STATUS,
-    CHROME_AI_ERROR_TYPES,
-    CHROME_AI_CONFIG,
+    AI_STATUS,
+    AI_ENGINE_CONFIG,
+    LOCAL_AI_CONFIG,
+    WEBLLM_CONFIG,
   };
 
   return <AIContext.Provider value={value}>{children}</AIContext.Provider>;

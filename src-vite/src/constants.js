@@ -1,4 +1,4 @@
-// OJT Master v2.10.0 - Constants and Configuration (WebLLM Only)
+// OJT Master v2.13.0 - Constants and Configuration (Local AI + WebLLM)
 
 export const CONFIG = {
   // Time limits
@@ -31,9 +31,7 @@ export const SUPABASE_CONFIG = {
   URL: import.meta.env.VITE_SUPABASE_URL || '',
   // 신규 publishable key 우선, 없으면 레거시 anon key 사용
   ANON_KEY:
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY ||
-    '',
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '',
 };
 
 // R2 Upload configuration
@@ -91,12 +89,12 @@ export const WEBLLM_CONFIG = {
   ],
 };
 
-// AI Engine configuration (Hybrid: Chrome AI + WebLLM, Issue #96)
+// AI Engine configuration (Local AI + WebLLM, Issue #101)
 export const AI_ENGINE_CONFIG = {
-  // 엔진 우선순위: chromeai > webllm
+  // 엔진 우선순위: localai > webllm > fallback
   ENGINES: {
-    CHROME_AI: 'chromeai', // Chrome 138+ Gemini Nano (최우선)
-    WEBLLM: 'webllm', // WebLLM fallback
+    LOCAL_AI: 'localai', // 사내 vLLM 서버 (최우선)
+    WEBLLM: 'webllm', // WebLLM fallback (브라우저)
   },
   // 기본 엔진 (자동 선택)
   DEFAULT_ENGINE: 'auto',
@@ -104,15 +102,15 @@ export const AI_ENGINE_CONFIG = {
   STORAGE_KEY: 'ojt_ai_engine',
 };
 
-// Chrome AI configuration (Issue #96)
-export const CHROME_AI_CONFIG = {
+// Local AI configuration (Issue #101)
+export const LOCAL_AI_CONFIG = {
   // 생성 파라미터
   TEMPERATURE: 0.3,
-  TOP_K: 40,
-  // 최소 지원 Chrome 버전
-  MIN_CHROME_VERSION: 138,
-  // 모델 이름
-  MODEL_NAME: 'Gemini Nano',
+  MAX_TOKENS: 4096,
+  // 기본 모델
+  MODEL_NAME: 'Qwen/Qwen3-4B',
+  // 타임아웃 (ms)
+  TIMEOUT: 60000,
 };
 
 // PDF Viewer configuration (FR-802)

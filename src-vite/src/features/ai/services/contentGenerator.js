@@ -1,30 +1,39 @@
-// OJT Master - AI Content Generator (Chrome Gemini Nano 전용, Issue #96)
-// Chrome 138+ 내장 Gemini Nano 모델만 사용
+// OJT Master - AI Content Generator (Local AI + WebLLM, Issue #101)
+// 우선순위: Local AI (vLLM) → WebLLM → Fallback
 
 import { createFallbackContent, createPlaceholderQuiz } from './fallbackContent';
+import { generateWithLocalAI, checkLocalAIAvailable, getLocalAIStatus } from './localAI';
 
 /**
- * Check Chrome AI status
+ * Check AI status (Local AI → WebLLM)
  * @returns {Promise<Object>} AI status object
  */
 export async function checkAIStatus() {
-  try {
-    const { checkChromeAISupport, getChromeAIStatus, isChromeAIReady, CHROME_AI_STATUS } =
-      await import('./chromeAI.js');
-
-    const supported = await checkChromeAISupport();
-    const status = await getChromeAIStatus();
-    const ready = await isChromeAIReady();
-
+  // 1. Local AI 상태 확인
+  const localStatus = await getLocalAIStatus();
+  if (localStatus.available) {
     return {
-      supported,
-      status,
-      ready,
-      engine: 'chromeai',
-      model: 'Gemini Nano',
+      supported: true,
+      status: 'available',
+      ready: true,
+      engine: 'localai',
+      model: localStatus.model,
+      url: localStatus.url,
     };
-  } catch (error) {
-    console.error('[ContentGenerator] AI status check failed:', error);
+  }
+
+  // 2. WebLLM 상태 확인
+  try {
+    const { isWebLLMReady } = await import('./webllm.js');
+    const webllmReady = await isWebLLMReady();
+    return {
+      supported: true,
+      status: webllmReady ? 'ready' : 'not_loaded',
+      ready: webllmReady,
+      engine: 'webllm',
+      model: 'Qwen2.5-3B-Instruct',
+    };
+  } catch {
     return {
       supported: false,
       status: null,
@@ -36,7 +45,8 @@ export async function checkAIStatus() {
 }
 
 /**
- * Generate OJT content using Chrome AI (Gemini Nano)
+ * Generate OJT content using AI engines
+ * Priority: Local AI → WebLLM → Fallback
  *
  * @param {string} contentText - Raw content text
  * @param {string} title - Document title
@@ -52,42 +62,79 @@ export async function generateOJTContent(
   _totalSteps = 1,
   onProgress
 ) {
+  // 1순위: Local AI 서버 시도
   try {
-    const { generateWithChromeAI, createChromeAISession, isChromeAIReady } =
-      await import('./chromeAI.js');
-
-    // Chrome AI 준비 확인
-    const ready = await isChromeAIReady();
-    if (!ready) {
-      // 세션 생성 시도
-      if (onProgress) onProgress('Chrome AI 세션 생성 중...');
-      await createChromeAISession();
+    const localAvailable = await checkLocalAIAvailable();
+    if (localAvailable) {
+      if (onProgress) onProgress('Local AI 서버로 콘텐츠 생성 중...');
+      const result = await generateWithLocalAIEngine(contentText, title, onProgress);
+      if (result) return result;
     }
-
-    if (onProgress) onProgress('Chrome AI로 콘텐츠 분석 중...');
-
-    // 프롬프트 생성
-    const prompt = buildContentPrompt(contentText, title);
-
-    if (onProgress) onProgress('Chrome AI로 섹션 및 퀴즈 생성 중...');
-    const response = await generateWithChromeAI(prompt);
-
-    if (onProgress) onProgress('응답 파싱 중...');
-    const result = await parseAIResponse(response, title);
-
-    result.ai_engine = 'chromeai';
-    result.model = 'Gemini Nano';
-
-    if (onProgress) onProgress('콘텐츠 생성 완료!');
-    return result;
-  } catch (error) {
-    console.warn('[ContentGenerator] Chrome AI 생성 실패:', error.message);
-
-    // Graceful Degradation: 원문 그대로 반환
-    if (onProgress) onProgress('AI 분석 실패 - 원문으로 등록 중...');
-
-    return createFallbackContent(contentText, title, error.message);
+  } catch (localError) {
+    console.warn('[ContentGenerator] Local AI 생성 실패:', localError.message);
   }
+
+  // 2순위: WebLLM 시도
+  try {
+    if (onProgress) onProgress('WebLLM (브라우저)으로 콘텐츠 생성 중...');
+    const result = await generateWithWebLLMEngine(contentText, title, onProgress);
+    if (result) return result;
+  } catch (webllmError) {
+    console.warn('[ContentGenerator] WebLLM 생성 실패:', webllmError.message);
+  }
+
+  // 3순위: Fallback Content
+  if (onProgress) onProgress('AI 분석 실패 - 원문으로 등록 중...');
+  return createFallbackContent(contentText, title, 'AI 엔진을 사용할 수 없습니다.');
+}
+
+/**
+ * Generate content using Local AI server
+ */
+async function generateWithLocalAIEngine(contentText, title, onProgress) {
+  const prompt = buildContentPrompt(contentText, title);
+
+  if (onProgress) onProgress('Local AI로 섹션 및 퀴즈 생성 중...');
+  const response = await generateWithLocalAI(prompt);
+
+  if (onProgress) onProgress('응답 파싱 중...');
+  const result = await parseAIResponse(response, title);
+
+  result.ai_engine = 'localai';
+  result.model = 'Qwen/Qwen3-4B';
+
+  if (onProgress) onProgress('콘텐츠 생성 완료!');
+  return result;
+}
+
+/**
+ * Generate content using WebLLM (browser)
+ */
+async function generateWithWebLLMEngine(contentText, title, onProgress) {
+  const { generateWithWebLLM, isWebLLMReady, initWebLLM } = await import('./webllm.js');
+
+  // WebLLM 준비 확인
+  const ready = await isWebLLMReady();
+  if (!ready) {
+    if (onProgress) onProgress('WebLLM 모델 로딩 중...');
+    await initWebLLM((progress) => {
+      if (onProgress) onProgress(`모델 다운로드: ${Math.round(progress)}%`);
+    });
+  }
+
+  const prompt = buildContentPrompt(contentText, title);
+
+  if (onProgress) onProgress('WebLLM으로 섹션 및 퀴즈 생성 중...');
+  const response = await generateWithWebLLM(prompt);
+
+  if (onProgress) onProgress('응답 파싱 중...');
+  const result = await parseAIResponse(response, title);
+
+  result.ai_engine = 'webllm';
+  result.model = 'Qwen2.5-3B-Instruct';
+
+  if (onProgress) onProgress('콘텐츠 생성 완료!');
+  return result;
 }
 
 /**

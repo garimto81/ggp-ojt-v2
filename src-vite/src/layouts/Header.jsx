@@ -1,15 +1,15 @@
-// OJT Master - Header Component (Chrome AI 전용)
+// OJT Master - Header Component (Local AI + WebLLM)
 
 import { useState } from 'react';
 import { useAuth } from '@features/auth/hooks/AuthContext';
-import { useAI } from '@features/ai/hooks/AIContext';
+import { useAI, AI_STATUS } from '@features/ai/hooks/AIContext';
 import { ROLES, ROLE_COLORS } from '@/constants';
 import { sanitizeText } from '@utils/helpers';
 import { getVersionString } from '@/version';
 
 export default function Header() {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();
-  const { aiStatus, isSupported, isReady, isLoading, CHROME_AI_STATUS } = useAI();
+  const { aiStatus, isReady, isLoading } = useAI();
   const [showModeMenu, setShowModeMenu] = useState(false);
 
   const isAdmin = user?.role === ROLES.ADMIN;
@@ -17,12 +17,27 @@ export default function Header() {
 
   // AI 상태 결정
   const getAIStatusText = () => {
-    if (isSupported === null) return 'AI 확인 중...';
-    if (isSupported === false) return 'Chrome 138+ 필요';
-    if (isLoading) return 'AI 준비 중...';
-    if (isReady) return 'AI 준비됨';
-    if (aiStatus.status === CHROME_AI_STATUS.NOT_DOWNLOADED) return 'AI 다운로드 필요';
-    return 'AI 대기 중';
+    switch (aiStatus.status) {
+      case AI_STATUS.CHECKING:
+        return 'AI 확인 중...';
+      case AI_STATUS.LOCAL_AI_READY:
+        return `Local AI (${aiStatus.localAI.model || 'Qwen3'})`;
+      case AI_STATUS.WEBLLM_READY:
+        return 'WebLLM 준비됨';
+      case AI_STATUS.WEBLLM_LOADING:
+        return 'WebLLM 로딩 중...';
+      case AI_STATUS.NO_ENGINE:
+        return 'AI 로딩 필요';
+      default:
+        return 'AI 대기 중';
+    }
+  };
+
+  // AI 상태 색상
+  const getStatusColor = () => {
+    if (isReady) return 'bg-green-500';
+    if (isLoading) return 'bg-amber-500 animate-pulse';
+    return 'bg-gray-400';
   };
 
   return (
@@ -58,18 +73,7 @@ export default function Header() {
               aria-live="polite"
               aria-label="AI 모델 상태"
             >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isReady
-                    ? 'bg-green-500'
-                    : isLoading
-                      ? 'bg-amber-500 animate-pulse'
-                      : isSupported === false
-                        ? 'bg-red-400'
-                        : 'bg-gray-400'
-                }`}
-                aria-hidden="true"
-              />
+              <span className={`w-2 h-2 rounded-full ${getStatusColor()}`} aria-hidden="true" />
               <span className="text-sm text-gray-600">{getAIStatusText()}</span>
             </div>
 
