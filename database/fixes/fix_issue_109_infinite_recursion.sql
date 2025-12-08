@@ -69,8 +69,17 @@ GRANT SELECT, INSERT, UPDATE ON users TO authenticated;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 -- ======================================
--- STEP 6: 새 RLS 정책 생성 (무한 재귀 없음)
+-- STEP 6: 기존 정책 모두 삭제 후 새로 생성
 -- ======================================
+
+-- 기존 정책 삭제
+DROP POLICY IF EXISTS "Users can view own profile" ON users;
+DROP POLICY IF EXISTS "Admins can view all users" ON users;
+DROP POLICY IF EXISTS "Users can insert own profile" ON users;
+DROP POLICY IF EXISTS "Users can update own profile" ON users;
+DROP POLICY IF EXISTS "Users can update own profile (except role)" ON users;
+DROP POLICY IF EXISTS "Admins can update all users" ON users;
+DROP POLICY IF EXISTS "Admins can update user roles" ON users;
 
 -- 6.1 자신의 프로필 조회
 CREATE POLICY "Users can view own profile" ON users

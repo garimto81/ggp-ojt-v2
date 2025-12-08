@@ -131,10 +131,10 @@ export default function AuthLoginPage() {
 }
 
 // ============================================================
-// LoginForm 컴포넌트
+// LoginForm 컴포넌트 (아이디/비밀번호)
 // ============================================================
 function LoginForm({ onSubmit, isLoading, setIsLoading }) {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
@@ -142,20 +142,22 @@ function LoginForm({ onSubmit, isLoading, setIsLoading }) {
     e.preventDefault();
     setError('');
 
-    if (!email || !password) {
-      setError('이메일과 비밀번호를 입력해주세요.');
+    if (!username || !password) {
+      setError('아이디와 비밀번호를 입력해주세요.');
       return;
     }
 
     setIsLoading(true);
     try {
+      // 아이디에 @가 없으면 @local 추가 (내부 계정)
+      const email = username.includes('@') ? username : `${username}@local`;
       await onSubmit(email, password);
     } catch (err) {
       // 에러 메시지 한글화
       if (err.message?.includes('Invalid login credentials')) {
-        setError('이메일 또는 비밀번호가 올바르지 않습니다.');
+        setError('아이디 또는 비밀번호가 올바르지 않습니다.');
       } else if (err.message?.includes('Email not confirmed')) {
-        setError('이메일 인증이 완료되지 않았습니다.');
+        setError('계정 인증이 완료되지 않았습니다.');
       } else if (err.message?.includes('pending')) {
         setError('관리자 승인 대기 중입니다.');
       } else {
@@ -169,18 +171,18 @@ function LoginForm({ onSubmit, isLoading, setIsLoading }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
-          이메일
+        <label htmlFor="login-username" className="block text-sm font-medium text-gray-700 mb-1">
+          아이디
         </label>
         <input
-          id="login-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@company.com"
+          id="login-username"
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="아이디 입력"
           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isLoading}
-          autoComplete="email"
+          autoComplete="username"
         />
       </div>
 
@@ -193,7 +195,7 @@ function LoginForm({ onSubmit, isLoading, setIsLoading }) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
+          placeholder="비밀번호 입력"
           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isLoading}
           autoComplete="current-password"
@@ -218,14 +220,12 @@ function LoginForm({ onSubmit, isLoading, setIsLoading }) {
 }
 
 // ============================================================
-// SignupForm 컴포넌트
+// SignupForm 컴포넌트 (간소화: 아이디/비밀번호만)
 // ============================================================
 function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('mentee');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -234,13 +234,18 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
     setError('');
 
     // 유효성 검사
-    if (!name || !email || !password || !confirmPassword) {
+    if (!username || !password || !confirmPassword) {
       setError('모든 필드를 입력해주세요.');
       return;
     }
 
-    if (password.length < 8) {
-      setError('비밀번호는 8자 이상이어야 합니다.');
+    if (username.length < 3) {
+      setError('아이디는 3자 이상이어야 합니다.');
+      return;
+    }
+
+    if (password.length < 4) {
+      setError('비밀번호는 4자 이상이어야 합니다.');
       return;
     }
 
@@ -251,12 +256,14 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
 
     setIsLoading(true);
     try {
-      await onSubmit({ name, email, password, role });
+      // Supabase는 이메일 형식을 요구하므로 @local 접미사 추가
+      const fakeEmail = `${username}@local`;
+      await onSubmit({ name: username, email: fakeEmail, password, role: 'mentee' });
       setSuccess(true);
       Toast.success('회원가입이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.');
     } catch (err) {
       if (err.message?.includes('already registered')) {
-        setError('이미 등록된 이메일입니다.');
+        setError('이미 등록된 아이디입니다.');
       } else {
         setError(err.message || '회원가입 중 오류가 발생했습니다.');
       }
@@ -277,8 +284,6 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
         <h3 className="text-lg font-bold text-gray-800 mb-2">회원가입 완료</h3>
         <p className="text-sm text-gray-600 mb-4">
           관리자 승인 후 로그인할 수 있습니다.
-          <br />
-          승인 완료 시 이메일로 알려드립니다.
         </p>
         <button
           onClick={onSuccess}
@@ -293,47 +298,31 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="signup-name" className="block text-sm font-medium text-gray-700 mb-1">
-          이름
+        <label htmlFor="signup-username" className="block text-sm font-medium text-gray-700 mb-1">
+          아이디
         </label>
         <input
-          id="signup-name"
+          id="signup-username"
           type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="홍길동"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="사용할 아이디 입력"
           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isLoading}
-          autoComplete="name"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="signup-email" className="block text-sm font-medium text-gray-700 mb-1">
-          이메일
-        </label>
-        <input
-          id="signup-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@company.com"
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          disabled={isLoading}
-          autoComplete="email"
+          autoComplete="username"
         />
       </div>
 
       <div>
         <label htmlFor="signup-password" className="block text-sm font-medium text-gray-700 mb-1">
-          비밀번호 (8자 이상)
+          비밀번호
         </label>
         <input
           id="signup-password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
+          placeholder="비밀번호 입력"
           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isLoading}
           autoComplete="new-password"
@@ -349,47 +338,11 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="••••••••"
+          placeholder="비밀번호 다시 입력"
           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isLoading}
           autoComplete="new-password"
         />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">역할 선택</label>
-        <div className="flex gap-3">
-          <label className="flex-1">
-            <input
-              type="radio"
-              name="role"
-              value="mentor"
-              checked={role === 'mentor'}
-              onChange={(e) => setRole(e.target.value)}
-              className="sr-only peer"
-              disabled={isLoading}
-            />
-            <div className="p-3 border-2 border-gray-200 rounded-xl text-center cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50 transition">
-              <span className="text-xl">👨‍🏫</span>
-              <p className="text-sm font-medium mt-1">Mentor</p>
-            </div>
-          </label>
-          <label className="flex-1">
-            <input
-              type="radio"
-              name="role"
-              value="mentee"
-              checked={role === 'mentee'}
-              onChange={(e) => setRole(e.target.value)}
-              className="sr-only peer"
-              disabled={isLoading}
-            />
-            <div className="p-3 border-2 border-gray-200 rounded-xl text-center cursor-pointer peer-checked:border-green-500 peer-checked:bg-green-50 hover:bg-gray-50 transition">
-              <span className="text-xl">👨‍🎓</span>
-              <p className="text-sm font-medium mt-1">Mentee</p>
-            </div>
-          </label>
-        </div>
       </div>
 
       {error && (
@@ -407,7 +360,7 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
         disabled={isLoading}
         className="w-full py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isLoading ? '처리 중...' : '회원가입 신청'}
+        {isLoading ? '처리 중...' : '회원가입'}
       </button>
     </form>
   );
