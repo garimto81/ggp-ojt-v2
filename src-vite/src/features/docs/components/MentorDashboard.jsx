@@ -269,23 +269,44 @@ export default function MentorDashboard() {
   // Handle save
   const handleSave = async () => {
     try {
+      let syncPendingCount = 0;
+
       for (const doc of generatedDocs) {
         // source_type, source_url, source_file are already included in doc
-        await saveDocument({
+        const savedDoc = await saveDocument({
           ...doc,
           author_id: user.id,
           author_name: user.name,
         });
+
+        if (savedDoc?._syncPending) {
+          syncPendingCount++;
+        }
       }
 
-      Toast.success(`${generatedDocs.length}개 문서가 저장되었습니다.`);
+      // 저장 결과에 따른 메시지
+      if (syncPendingCount > 0) {
+        Toast.warning(
+          `${generatedDocs.length}개 문서가 로컬에 저장되었습니다. (서버 동기화 대기 중: ${syncPendingCount}개)`
+        );
+      } else {
+        Toast.success(`${generatedDocs.length}개 문서가 저장되었습니다.`);
+      }
+
       setGeneratedDocs([]);
       setRawInput('');
       setUrlInput('');
       setInputTitle('');
+      removePdfFile();
       await loadMyDocs();
     } catch (error) {
-      Toast.error('저장 중 오류가 발생했습니다.');
+      console.error('[MentorDashboard] Save error:', error);
+      // 권한 에러인 경우 명확한 메시지 표시
+      if (error.isPermissionError) {
+        Toast.error(error.message);
+      } else {
+        Toast.error(`저장 중 오류가 발생했습니다: ${error.message}`);
+      }
     }
   };
 

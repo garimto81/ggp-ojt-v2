@@ -113,13 +113,21 @@ export function DocsProvider({ children }) {
         updated_at: new Date().toISOString(),
       };
 
-      await dbSave('ojt_docs', docData);
+      console.log('[Docs] Saving document:', docData.id, docData.title);
+      const savedData = await dbSave('ojt_docs', docData);
+
+      // sync 상태 로깅
+      if (savedData?._syncPending) {
+        console.warn('[Docs] Document saved locally, pending sync to server');
+      } else {
+        console.log('[Docs] Document saved to server successfully');
+      }
 
       // Refresh lists
       await loadAllDocs();
       await loadMyDocs();
 
-      return docData;
+      return savedData;
     },
     [user, loadAllDocs, loadMyDocs]
   );

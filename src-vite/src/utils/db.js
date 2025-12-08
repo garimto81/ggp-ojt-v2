@@ -45,9 +45,11 @@ function withTimeout(promise, ms) {
 export async function dbGetAll(table, filter = null) {
   try {
     const localData = await localDb[table].toArray();
+    console.log(`[dbGetAll] Local cache for ${table}:`, localData.length, 'items');
 
     // Return local data if no supabase connection
     if (!window.supabase) {
+      console.warn(`[dbGetAll] No Supabase connection, returning local cache for ${table}`);
       return localData;
     }
 
@@ -66,9 +68,15 @@ export async function dbGetAll(table, filter = null) {
     const { data: remoteData, error } = await withTimeout(query, SUPABASE_QUERY_TIMEOUT);
 
     if (error) {
-      console.warn(`Supabase error for ${table}:`, error);
+      console.warn(`[dbGetAll] Supabase error for ${table}:`, error.message, error.code);
+      // RLS 에러인 경우 명확히 로깅
+      if (error.code === '42501' || error.message?.includes('permission')) {
+        console.error(`[dbGetAll] RLS permission denied for ${table}. Check Supabase policies.`);
+      }
       return localData;
     }
+
+    console.log(`[dbGetAll] Supabase returned ${remoteData?.length || 0} items for ${table}`);
 
     // Sync local cache with remote data
     if (remoteData && remoteData.length > 0) {
@@ -86,9 +94,14 @@ export async function dbGetAll(table, filter = null) {
       return remoteData;
     }
 
-    return localData;
+    // Remote is empty but local has data - return local (could be offline data)
+    if (localData.length > 0 && (!remoteData || remoteData.length === 0)) {
+      console.info(`[dbGetAll] Remote empty, returning ${localData.length} local items for ${table}`);
+    }
+
+    return remoteData || localData;
   } catch (error) {
-    console.error(`dbGetAll error for ${table}:`, error);
+    console.error(`[dbGetAll] Error for ${table}:`, error);
     return [];
   }
 }
@@ -97,7 +110,7 @@ export async function dbGetAll(table, filter = null) {
  * Save a record to both local and remote database
  * @param {string} table - Table name
  * @param {Object} data - Data to save
- * @returns {Promise<Object>} - Saved data
+ * @returns {Promise<Object>} - Saved data with success status
  */
 export async function dbSave(table, data) {
   try {
@@ -115,18 +128,31 @@ export async function dbSave(table, data) {
       if (error) {
         // Queue for later sync
         await addToSyncQueue(table, 'upsert', data);
-        console.warn(`Queued ${table} for sync:`, error);
+        console.warn(`[dbSave] Supabase error for ${table}:`, error.message, error.code);
+
+        // RLS 권한 에러인 경우 명확한 에러 throw
+        if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('policy')) {
+          const permissionError = new Error(`저장 권한이 없습니다. 관리자에게 문의하세요. (${error.message})`);
+          permissionError.isPermissionError = true;
+          permissionError.originalError = error;
+          throw permissionError;
+        }
+
+        // 다른 에러는 로컬 저장 후 sync queue로 처리
+        console.info(`[dbSave] Data saved locally, queued for sync: ${table}`);
+        return { ...data, _syncPending: true };
       } else {
+        console.info(`[dbSave] Saved to Supabase: ${table}`, savedData?.id);
         return savedData;
       }
     } else {
       // Queue for later sync
       await addToSyncQueue(table, 'upsert', data);
+      console.info(`[dbSave] No Supabase connection, queued for sync: ${table}`);
+      return { ...data, _syncPending: true };
     }
-
-    return data;
   } catch (error) {
-    console.error(`dbSave error for ${table}:`, error);
+    console.error(`[dbSave] Error for ${table}:`, error);
     throw error;
   }
 }

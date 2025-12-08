@@ -291,11 +291,39 @@ localDb.version(2).stores({
 
 | 역할 | 권한 | viewState |
 |------|------|-----------|
-| **Admin** | 전체 관리, Mentor 모드 전환 | `admin_dashboard` |
+| **Admin** | 전체 관리, Mentor 모드 전환, 사용자 승인 | `admin_dashboard` |
 | **Mentor** | AI 콘텐츠 생성, 자료 CRUD | `mentor_dashboard` |
 | **Mentee** | 로드맵 탐색, 학습, 퀴즈 (읽기 전용) | `mentee_list` → `mentee_study` |
 
 **Admin 모드 전환**: Header "모드" 버튼 → `sessionStorage`로 세션 유지
+
+## Authentication (Issue #105, #107)
+
+### 환경별 인증 모드
+
+| 환경 | VITE_AUTH_MODE | 인증 방식 |
+|------|----------------|----------|
+| **Vercel** | `google` (기본) | Google OAuth |
+| **Docker** | `email` (기본) | 아이디/비밀번호 + 관리자 승인 |
+| **하이브리드** | `hybrid` | 둘 다 지원 |
+
+### Docker 사내 배포 인증 흐름
+
+```
+회원가입 (아이디/비밀번호) → status='pending' → Admin 승인 → status='approved' → 로그인 가능
+```
+
+- **아이디**: 내부적으로 `@local` 접미사 추가 (예: `hong` → `hong@local`)
+- **관리자 승인**: Admin Dashboard > "승인 관리" 탭
+- **Supabase 설정**: Authentication > Providers > Email > "Confirm email" OFF
+
+### 관련 파일
+
+- `src-vite/src/features/auth/components/AuthLoginPage.jsx` - 로그인/회원가입 UI
+- `src-vite/src/features/auth/components/PendingApprovalPage.jsx` - 승인 대기 화면
+- `src-vite/src/features/admin/components/UserApprovalTab.jsx` - Admin 승인 관리
+- `database/migrations/20251208_email_auth.sql` - DB 스키마
+- `docs/DOCKER_AUTH_SETUP.md` - 상세 가이드
 
 ## AI Content Generation (Local AI + WebLLM)
 
