@@ -24,7 +24,7 @@ import {
 import AIEngineSelector from '@features/ai/components/AIEngineSelector';
 
 export default function MentorDashboard() {
-  const { myDocs, saveDocument, deleteDocument, loadMyDocs } = useDocs();
+  const { myDocs, saveDocument, deleteDocument, loadMyDocs, availableTeams } = useDocs();
   const { user } = useAuth();
   // 방어적 코딩: AI Context가 불완전해도 페이지 로드 보장
   const { webllmStatus = { loaded: false, loading: false } } = useAI();
@@ -34,6 +34,7 @@ export default function MentorDashboard() {
   const [rawInput, setRawInput] = useState('');
   const [urlInput, setUrlInput] = useState('');
   const [inputTitle, setInputTitle] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState(''); // 팀 선택 상태 추가
   const [autoSplit, setAutoSplit] = useState(true);
 
   // PDF upload states
@@ -130,6 +131,11 @@ export default function MentorDashboard() {
       Toast.warning('PDF 파일을 선택해주세요.');
       return;
     }
+    // 팀 필수 검증
+    if (!selectedTeam) {
+      Toast.warning('소속 팀을 선택해주세요.');
+      return;
+    }
 
     setIsProcessing(true);
     setProcessingStatus('콘텐츠 분석 중...');
@@ -209,6 +215,7 @@ export default function MentorDashboard() {
           docs.push({
             ...result,
             step: i + 1,
+            team: selectedTeam,
             source_type: currentSourceInfo.type,
             source_url: currentSourceInfo.url,
             source_file: currentSourceInfo.file,
@@ -226,6 +233,7 @@ export default function MentorDashboard() {
         docs.push({
           ...result,
           step: 1,
+          team: selectedTeam,
           source_type: currentSourceInfo.type,
           source_url: currentSourceInfo.url,
           source_file: currentSourceInfo.file,
@@ -297,6 +305,7 @@ export default function MentorDashboard() {
       setRawInput('');
       setUrlInput('');
       setInputTitle('');
+      setSelectedTeam('');
       removePdfFile();
       await loadMyDocs();
     } catch (error) {
@@ -445,6 +454,37 @@ export default function MentorDashboard() {
             aria-label="문서 제목 입력"
             className="w-full px-4 py-2 border rounded-lg mb-4"
           />
+
+          {/* Team Selector */}
+          <div className="mb-4">
+            <label htmlFor="team-select" className="block text-sm font-medium text-gray-700 mb-1">
+              소속 팀 (필수)
+            </label>
+            <select
+              id="team-select"
+              value={selectedTeam}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg bg-white"
+              aria-label="소속 팀 선택"
+            >
+              <option value="">팀을 선택해주세요</option>
+              {availableTeams.length > 0 ? (
+                availableTeams.map((team) => (
+                  <option key={team} value={team}>
+                    {team}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="개발팀">개발팀</option>
+                  <option value="디자인팀">디자인팀</option>
+                  <option value="기획팀">기획팀</option>
+                  <option value="마케팅팀">마케팅팀</option>
+                  <option value="공통">공통</option>
+                </>
+              )}
+            </select>
+          </div>
 
           {/* Content Input */}
           {inputType === 'text' && (
