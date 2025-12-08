@@ -123,12 +123,14 @@ VITE_LOCAL_AI_URL=http://10.10.100.209:8001
 curl http://10.10.100.209:8001/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen/Qwen3-4B",
+    "model": "Qwen3-4B",
     "messages": [{"role": "user", "content": "Hello!"}],
     "temperature": 0.3,
     "max_tokens": 1024
   }'
 ```
+
+> **참고**: 현재 사용 중인 모델은 `Qwen3-4B` (4B 파라미터, 한국어 지원)
 
 ## 명령어 참조
 
