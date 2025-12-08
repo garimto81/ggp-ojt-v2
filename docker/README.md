@@ -109,6 +109,27 @@ docker run -d --name ojt-local-ai \
 VITE_LOCAL_AI_URL=http://10.10.100.209:8001
 ```
 
+### API 엔드포인트
+
+| 엔드포인트 | 설명 |
+|-----------|------|
+| `http://10.10.100.209:8001/health` | 서버 상태 확인 |
+| `http://10.10.100.209:8001/v1/models` | 사용 가능한 모델 목록 |
+| `http://10.10.100.209:8001/v1/chat/completions` | 채팅 완성 API (OpenAI 호환) |
+
+**예시 요청:**
+
+```bash
+curl http://10.10.100.209:8001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen/Qwen3-4B",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "temperature": 0.3,
+    "max_tokens": 1024
+  }'
+```
+
 ## 명령어 참조
 
 ```bash
