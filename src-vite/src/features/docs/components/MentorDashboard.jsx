@@ -25,7 +25,8 @@ import AIEngineSelector from '@features/ai/components/AIEngineSelector';
 export default function MentorDashboard() {
   const { myDocs, saveDocument, deleteDocument, loadMyDocs } = useDocs();
   const { user } = useAuth();
-  const { webllmStatus } = useAI();
+  // 방어적 코딩: AI Context가 불완전해도 페이지 로드 보장
+  const { webllmStatus = { loaded: false, loading: false } } = useAI();
 
   // Input states
   const [inputType, setInputType] = useState('text');
