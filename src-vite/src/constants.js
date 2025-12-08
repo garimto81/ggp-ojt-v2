@@ -25,9 +25,15 @@ export const CONFIG = {
 };
 
 // Supabase configuration
+// 2025년 11월 이후 신규 프로젝트: VITE_SUPABASE_PUBLISHABLE_KEY 사용
+// 레거시 프로젝트: VITE_SUPABASE_ANON_KEY 계속 사용 가능
 export const SUPABASE_CONFIG = {
   URL: import.meta.env.VITE_SUPABASE_URL || '',
-  ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+  // 신규 publishable key 우선, 없으면 레거시 anon key 사용
+  ANON_KEY:
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    import.meta.env.VITE_SUPABASE_ANON_KEY ||
+    '',
 };
 
 // R2 Upload configuration
