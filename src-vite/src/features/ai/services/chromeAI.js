@@ -105,6 +105,11 @@ export async function createChromeAISession(options = {}) {
 
       sessionOptions.monitor = (monitor) => {
         monitor.addEventListener('downloadprogress', (e) => {
+          // 방어적 프로그래밍: e.loaded, e.total이 유효한지 확인
+          if (e?.loaded == null || !e?.total) {
+            console.log('[ChromeAI] Download progress event received (no details)');
+            return;
+          }
           const progress = Math.round((e.loaded / e.total) * 100);
           console.log(`[ChromeAI] Download progress: ${progress}%`);
           // 콜백이 있으면 호출
