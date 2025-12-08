@@ -216,3 +216,141 @@ DEBUG.checkRenderCondition('원문 버튼', {
   - 라인 2503-2549: handleSaveToDB 디버깅
   - 라인 4200-4208: Mentor 미리보기 렌더링 디버깅
   - 라인 4473-4484: Mentee 학습 렌더링 디버깅
+
+---
+
+## AI 엔진 트러블슈팅 (Issue #96)
+
+### 엔진 우선순위
+
+```
+Chrome AI (Gemini Nano) → WebLLM → 에러 표시
+```
+
+### Chrome AI 디버깅
+
+**지원 여부 확인** (브라우저 콘솔):
+```javascript
+// Chrome AI API 존재 확인
+console.log('window.ai:', !!window.ai);
+console.log('languageModel:', !!window.ai?.languageModel);
+
+// Capabilities 확인
+const caps = await window.ai.languageModel.capabilities();
+console.log('available:', caps.available);
+// 'readily' = 즉시 사용 가능
+// 'after-download' = 다운로드 필요
+// 'no' = 미지원
+```
+
+**Chrome AI 상태값**:
+| 상태 | 의미 |
+|------|------|
+| `NOT_SUPPORTED` | 브라우저 미지원 (Chrome 138 미만) |
+| `NOT_DOWNLOADED` | 모델 다운로드 필요 |
+| `DOWNLOADING` | 다운로드 진행 중 |
+| `READY` | 사용 가능 |
+
+**Chrome 버전 확인**:
+```javascript
+// Chrome 버전 확인
+const match = navigator.userAgent.match(/Chrome\/(\d+)/);
+console.log('Chrome version:', match ? match[1] : 'Not Chrome');
+// 138 이상 필요
+```
+
+### WebLLM 디버깅
+
+**독립 테스트 파일**: `test-webllm.html`
+
+```bash
+# 로컬 서버로 테스트 (CORS 방지)
+npx serve . -p 8080
+# http://localhost:8080/test-webllm.html 접속
+```
+
+**WebGPU 지원 확인** (브라우저 콘솔):
+```javascript
+// WebGPU API 존재
+console.log('navigator.gpu:', !!navigator.gpu);
+
+// GPU Adapter 획득
+const adapter = await navigator.gpu?.requestAdapter();
+console.log('adapter:', adapter);
+
+// Adapter 정보
+if (adapter) {
+  const info = await adapter.requestAdapterInfo();
+  console.log('GPU:', info.vendor, info.architecture);
+  console.log('Max buffer:', adapter.limits.maxBufferSize / 1024 / 1024 / 1024, 'GB');
+}
+```
+
+**에러 유형별 해결책**:
+
+| 에러 타입 | 메시지 예시 | 해결책 |
+|-----------|------------|--------|
+| `WEBGPU_NOT_SUPPORTED` | "WebGPU를 지원하지 않습니다" | Chrome 113+ 업데이트 |
+| `NETWORK_ERROR` | "네트워크 오류" | 인터넷 연결, VPN 해제 |
+| `OUT_OF_MEMORY` | "메모리가 부족합니다" | 더 작은 모델 선택 (0.5B) |
+| `MODEL_LOAD_FAILED` | "모델 로드 실패" | 페이지 새로고침, 캐시 삭제 |
+| `GENERATION_FAILED` | "생성 실패" | 입력 텍스트 길이 축소 |
+
+**모델 캐시 확인**:
+```javascript
+// 캐시된 모델 확인
+const cache = await caches.open('webllm-models');
+const keys = await cache.keys();
+console.log('Cached models:', keys.map(k => k.url));
+```
+
+**모델 캐시 삭제** (문제 발생 시):
+```javascript
+// WebLLM 캐시 삭제
+await caches.delete('webllm-models');
+console.log('Cache cleared');
+```
+
+### AIContext 상태 확인
+
+React 컴포넌트에서:
+```javascript
+import { useAI } from '@features/ai/hooks/AIContext';
+
+const { aiStatus, isSupported, isReady, isLoading, error } = useAI();
+console.log('AI Status:', {
+  supported: isSupported,
+  ready: isReady,
+  loading: isLoading,
+  error: error,
+  status: aiStatus.status,
+});
+```
+
+### 테스트 시나리오
+
+#### 시나리오 1: Chrome AI 정상 동작 확인
+1. Chrome 138+ 사용
+2. 콘솔에서 `window.ai.languageModel.capabilities()` 확인
+3. `available: 'readily'` 또는 `'after-download'` 확인
+4. Mentor 대시보드에서 AI 콘텐츠 생성 테스트
+
+#### 시나리오 2: WebLLM Fallback 테스트
+1. Chrome 138 미만 또는 Firefox 사용 (Chrome AI 미지원)
+2. `test-webllm.html` 열기
+3. 환경 체크에서 WebGPU 지원 확인
+4. 0.5B 모델로 로드 테스트
+5. 텍스트 생성 테스트
+
+#### 시나리오 3: 둘 다 실패 케이스
+1. Safari 또는 구형 브라우저 사용
+2. 에러 메시지 확인: "AI 기능을 사용할 수 없습니다"
+3. 사용자에게 브라우저 업그레이드 안내 표시 확인
+
+### 관련 파일
+
+- `src-vite/src/features/ai/services/chromeAI.js` - Chrome AI 서비스
+- `src-vite/src/features/ai/services/webllm.js` - WebLLM 서비스
+- `src-vite/src/features/ai/hooks/AIContext.jsx` - AI 상태 관리
+- `src-vite/src/features/ai/services/contentGenerator.js` - 콘텐츠 생성
+- `test-webllm.html` - WebLLM 독립 테스트 페이지
