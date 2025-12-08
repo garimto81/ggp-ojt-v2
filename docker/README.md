@@ -1,50 +1,36 @@
 # OJT Master - Docker 배포 가이드
 
-Docker Compose를 사용한 로컬 AI 서버 + 프론트엔드 통합 배포 가이드입니다.
+Docker Compose를 사용한 프론트엔드 배포 가이드입니다.
 
-## 개요
+## ⚠️ 중요: AI 서버 구조
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Docker Compose 구조                       │
+│                     현재 배포 구조                           │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Browser ──HTTPS──▶ nginx:443                               │
+│  Browser ──HTTPS──▶ ojt-nginx:8443                          │
 │                        │                                    │
-│                        ├── / ──▶ 정적 파일 (React)           │
-│                        │                                    │
-│                        └── /api/v1/* ──▶ vLLM:8001          │
-│                                          (Local AI)         │
+│                        └── / ──▶ 정적 파일 (React SPA)       │
+│                                                             │
+│  React App ──HTTP──▶ ojt-local-ai:8001 (외부 AI 서버)        │
+│                       (10.10.100.209:8001)                  │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 장점
+### vLLM 서버 분리 이유
 
-- **Same-Origin**: Mixed Content 문제 없음 (HTTPS → HTTPS)
-- **보안**: vLLM이 외부에 직접 노출되지 않음
-- **단순화**: 단일 도메인으로 모든 서비스 접근
+- **ojt-local-ai**: 별도 관리되는 vLLM 컨테이너 (이미 실행 중)
+- **docker-compose**: 프론트엔드(nginx)만 관리
+- GPU 리소스 공유 문제 방지
+- AI 서버 독립적 관리 가능
 
 ## 요구사항
 
 - Docker 20.10+
 - Docker Compose 2.0+
-- NVIDIA GPU + NVIDIA Container Toolkit
 - Node.js 18+ (프론트엔드 빌드용)
-
-### NVIDIA Container Toolkit 설치
-
-```bash
-# Ubuntu/Debian
-distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
-curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | \
-  sudo tee /etc/apt/sources.list.d/nvidia-docker.list
-
-sudo apt-get update
-sudo apt-get install -y nvidia-container-toolkit
-sudo systemctl restart docker
-```
 
 ## 빠른 시작
 
@@ -53,32 +39,24 @@ sudo systemctl restart docker
 ```bash
 cd docker
 
+# ssl 폴더 생성
+mkdir -p ssl
+
 # 자체 서명 인증서 생성
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout ssl/key.pem -out ssl/cert.pem \
   -subj "/CN=localhost"
 ```
 
-### 2. 환경 변수 설정
-
-```bash
-cp .env.docker.example .env.docker
-# 필요한 값 수정
-```
-
-### 3. 프론트엔드 빌드
+### 2. 프론트엔드 빌드
 
 ```bash
 cd ../src-vite
-
-# .env 파일에 Docker용 설정 적용
-echo "VITE_LOCAL_AI_URL=/api" >> .env
-
 npm install
 npm run build
 ```
 
-### 4. Docker Compose 실행
+### 3. Docker Compose 실행
 
 ```bash
 cd ../docker
@@ -88,64 +66,78 @@ docker-compose up -d
 docker-compose logs -f
 ```
 
-### 5. 접속
+### 4. 접속
 
-- **프론트엔드**: https://localhost (자체 서명 인증서 경고 무시)
-- **AI API**: https://localhost/api/v1/chat/completions
+- **프론트엔드**: https://localhost:8443 (자체 서명 인증서 경고 무시)
 
-## 설정 커스터마이징
+## AI 서버 관리
 
-### GPU 메모리 부족 시
+### ⚠️ vLLM은 docker-compose에 포함되지 않습니다
 
-`docker-compose.yml`에서 vLLM 옵션 조정:
+AI 서버는 별도의 `ojt-local-ai` 컨테이너에서 실행됩니다.
 
-```yaml
-command: >
-  --model Qwen/Qwen3-4B
-  --host 0.0.0.0
-  --port 8001
-  --max-model-len 4096          # 8192 → 4096
-  --gpu-memory-utilization 0.6  # 0.8 → 0.6
+```bash
+# AI 서버 상태 확인
+docker ps | grep ojt-local-ai
+
+# AI 서버 헬스체크
+curl http://10.10.100.209:8001/health
 ```
 
-### 다른 모델 사용
+### AI 서버가 없는 경우 (최초 설정)
 
-```yaml
-command: >
-  --model Qwen/Qwen2.5-7B-Instruct  # 더 큰 모델
-  # 또는
-  --model Qwen/Qwen2.5-1.5B-Instruct  # 더 작은 모델
+```bash
+docker run -d --name ojt-local-ai \
+  --gpus all \
+  -p 8001:8000 \
+  --restart unless-stopped \
+  vllm/vllm-openai:latest \
+  --model Qwen/Qwen3-4B \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --max-model-len 4096 \
+  --gpu-memory-utilization 0.7 \
+  --enforce-eager
 ```
 
-### 외부 접근 허용
+### 환경 변수 설정
 
-1. 방화벽에서 443 포트 오픈
-2. Let's Encrypt로 실제 SSL 인증서 발급
-3. nginx.conf의 `server_name` 수정
+프론트엔드에서 AI 서버 URL 설정:
+
+```bash
+# src-vite/.env
+VITE_LOCAL_AI_URL=http://10.10.100.209:8001
+```
+
+## 명령어 참조
+
+```bash
+# 프론트엔드 시작 (nginx만)
+docker-compose up -d
+
+# 프론트엔드 중지
+docker-compose down
+
+# 로그 확인
+docker-compose logs -f nginx
+
+# 프론트엔드 재시작 (빌드 후)
+cd ../src-vite && npm run build
+cd ../docker && docker-compose restart nginx
+
+# 컨테이너 상태
+docker-compose ps
+```
 
 ## 문제 해결
 
-### vLLM 컨테이너 시작 실패
-
-```bash
-# GPU 확인
-docker run --rm --gpus all nvidia/cuda:12.0-base nvidia-smi
-
-# 로그 확인
-docker-compose logs vllm
-```
-
 ### Mixed Content 에러
 
-nginx 프록시를 통해 접근하고 있는지 확인:
+HTTPS 페이지에서 HTTP AI 서버 호출 시 발생할 수 있습니다.
 
-```javascript
-// 올바른 설정 (.env)
-VITE_LOCAL_AI_URL=/api  // Same-Origin
-
-// 잘못된 설정
-VITE_LOCAL_AI_URL=http://localhost:8001  // Mixed Content!
-```
+**해결책**:
+1. AI 서버도 HTTPS로 설정
+2. 또는 브라우저에서 Mixed Content 허용 (개발용)
 
 ### 인증서 경고
 
@@ -154,40 +146,27 @@ VITE_LOCAL_AI_URL=http://localhost:8001  // Mixed Content!
 - Chrome: "고급" → "localhost(안전하지 않음)으로 계속"
 - Firefox: "위험을 감수하고 계속"
 
-프로덕션 환경에서는 Let's Encrypt 사용을 권장합니다.
-
-## 명령어 참조
+### AI 서버 연결 실패
 
 ```bash
-# 시작
-docker-compose up -d
+# 1. AI 서버 실행 확인
+docker ps | grep ojt-local-ai
 
-# 중지
-docker-compose down
+# 2. 네트워크 연결 확인
+curl http://10.10.100.209:8001/health
 
-# 로그 확인
-docker-compose logs -f [service_name]
-
-# 재시작
-docker-compose restart [service_name]
-
-# 컨테이너 상태
-docker-compose ps
-
-# 리소스 사용량
-docker stats
+# 3. 방화벽 확인 (8001 포트)
 ```
 
 ## 프로덕션 배포 체크리스트
 
 - [ ] Let's Encrypt SSL 인증서 적용
-- [ ] 방화벽 설정 (443만 허용)
+- [ ] 방화벽 설정 (8443만 허용)
 - [ ] nginx 로그 경로 설정
-- [ ] vLLM 모델 최적화
-- [ ] 모니터링 설정 (Prometheus, Grafana 등)
+- [ ] AI 서버 모니터링 설정
 - [ ] 백업 전략 수립
 
 ## 관련 문서
 
-- [PRD 0007: AI 배포 아키텍처](../tasks/prds/0007-ai-deployment-architecture.md)
+- [AI 서비스 아키텍처](../docs/AI_ARCHITECTURE.md)
 - [Issue #104: WebLLM + Fallback 개선](https://github.com/garimto81/ggp-ojt-v2/issues/104)
