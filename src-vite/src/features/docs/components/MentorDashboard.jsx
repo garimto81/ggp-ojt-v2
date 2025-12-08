@@ -1,6 +1,7 @@
-// OJT Master v2.10.0 - Mentor Dashboard Component (WebLLM Only)
+// OJT Master v2.13.6 - Mentor Dashboard Component (Local AI + WebLLM + Fallback)
+// Issue #104: 타임아웃 및 취소 지원
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useDocs } from '@contexts/DocsContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { useAI } from '@features/ai/hooks/AIContext';
@@ -43,6 +44,7 @@ export default function MentorDashboard() {
   // Processing states
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
+  const abortControllerRef = useRef(null);
 
   // Generated content
   const [generatedDocs, setGeneratedDocs] = useState([]);
@@ -181,47 +183,49 @@ export default function MentorDashboard() {
         }
       }
 
-      // WebLLM 모델 로드 확인
-      if (!webllmStatus.loaded) {
-        Toast.warning('WebLLM 모델을 먼저 로드해주세요.');
-        setIsProcessing(false);
-        return;
-      }
+      // AbortController 생성 (취소 지원)
+      abortControllerRef.current = new AbortController();
+      const { signal } = abortControllerRef.current;
 
       const numSteps = autoSplit ? requiredSteps : 1;
       const segments = splitContentForSteps(contentText, numSteps);
       const docs = [];
 
-      // Generate content for each step (in parallel if multiple)
+      // Generate content for each step
+      // AbortController를 전달하여 취소 가능하게 함
       if (numSteps > 1) {
-        const promises = segments.map((segment, i) =>
-          generateOJTContent(segment, inputTitle || '새 OJT 문서', i + 1, numSteps, (status) =>
-            setProcessingStatus(`Step ${i + 1}: ${status}`)
-          )
-        );
-        const results = await Promise.all(promises);
-        docs.push(
-          ...results.map((r, i) => ({
-            ...r,
+        // 병렬 처리 시에도 signal 전달
+        for (let i = 0; i < segments.length; i++) {
+          if (signal.aborted) break;
+          setProcessingStatus(`Step ${i + 1}/${numSteps}: 콘텐츠 생성 중...`);
+          const result = await generateOJTContent(
+            segments[i],
+            inputTitle || '새 OJT 문서',
+            i + 1,
+            numSteps,
+            (status) => setProcessingStatus(`Step ${i + 1}/${numSteps}: ${status}`),
+            { signal }
+          );
+          docs.push({
+            ...result,
             step: i + 1,
-            // Include source info in each doc
             source_type: currentSourceInfo.type,
             source_url: currentSourceInfo.url,
             source_file: currentSourceInfo.file,
-          }))
-        );
+          });
+        }
       } else {
         const result = await generateOJTContent(
           contentText,
           inputTitle || '새 OJT 문서',
           1,
           1,
-          setProcessingStatus
+          setProcessingStatus,
+          { signal }
         );
         docs.push({
           ...result,
           step: 1,
-          // Include source info
           source_type: currentSourceInfo.type,
           source_url: currentSourceInfo.url,
           source_file: currentSourceInfo.file,
@@ -230,20 +234,37 @@ export default function MentorDashboard() {
 
       setGeneratedDocs(docs);
 
-      // Check if any doc was created with fallback (AI failed)
+      // Check if any doc was created with fallback (AI failed or user skipped)
       const fallbackDocs = docs.filter((d) => d.ai_processed === false);
-      if (fallbackDocs.length > 0) {
+      const userInitiatedFallbacks = docs.filter((d) => d._fallback?.userInitiated);
+
+      if (userInitiatedFallbacks.length > 0) {
+        Toast.success(
+          `${docs.length}개 문서가 Fallback 모드로 생성되었습니다. (키워드 기반 퀴즈 포함)`
+        );
+      } else if (fallbackDocs.length > 0) {
         Toast.warning(`${fallbackDocs.length}개 문서가 AI 분석 없이 원문으로 생성되었습니다.`);
       } else {
         Toast.success(`${docs.length}개 문서가 생성되었습니다.`);
       }
     } catch (error) {
+      // USER_CANCELLED는 이제 Fallback으로 처리되므로 여기 도달하지 않음
+      // 다른 예외적 에러만 처리
       Toast.error(`오류: ${error.message}`);
     } finally {
       setIsProcessing(false);
       setProcessingStatus('');
+      abortControllerRef.current = null;
     }
   };
+
+  // 콘텐츠 생성 취소 (Fallback으로 전환)
+  const handleCancelGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      Toast.info('Fallback 모드로 전환 중...');
+    }
+  }, []);
 
   // Handle save
   const handleSave = async () => {
@@ -529,7 +550,31 @@ export default function MentorDashboard() {
                 ? '💻 WebLLM으로 교육 자료 생성'
                 : '모델을 먼저 로드해주세요'}
           </button>
-          {!webllmStatus.loaded && (
+
+          {/* 처리 중일 때 Fallback 건너뛰기 버튼 표시 */}
+          {isProcessing && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-amber-700">
+                  <span className="animate-spin">⏳</span>
+                  <span>AI 콘텐츠 생성 중... 시간이 오래 걸릴 수 있습니다.</span>
+                </div>
+                <button
+                  onClick={handleCancelGeneration}
+                  className="px-3 py-1.5 text-sm font-medium text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-lg transition flex items-center gap-1"
+                  aria-label="AI 생성 취소하고 Fallback 모드로 전환"
+                >
+                  <span>⏭️</span>
+                  <span>Fallback으로 건너뛰기</span>
+                </button>
+              </div>
+              <p className="text-xs text-amber-600 mt-2">
+                💡 AI 분석 없이 원문 기반으로 자료를 생성합니다 (키워드 퀴즈 자동 생성)
+              </p>
+            </div>
+          )}
+
+          {!webllmStatus.loaded && !isProcessing && (
             <p className="text-xs text-green-600 mt-2 text-center">
               💡 상단에서 모델을 로드한 후 사용할 수 있습니다
             </p>

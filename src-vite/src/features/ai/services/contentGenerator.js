@@ -1,8 +1,44 @@
-// OJT Master - AI Content Generator (Local AI + WebLLM, Issue #101)
+// OJT Master - AI Content Generator (Local AI + WebLLM, Issue #101, #104)
 // 우선순위: Local AI (vLLM) → WebLLM → Fallback
+// 타임아웃 및 사용자 취소 지원
 
-import { createFallbackContent, createPlaceholderQuiz } from './fallbackContent';
+import { createPlaceholderQuiz, createEnhancedFallbackContent } from './fallbackContent';
 import { generateWithLocalAI, checkLocalAIAvailable, getLocalAIStatus } from './localAI';
+
+// 타임아웃 설정 (ms)
+const TIMEOUTS = {
+  LOCAL_AI_CHECK: 5000, // Local AI 연결 확인: 5초
+  LOCAL_AI_GENERATE: 60000, // Local AI 생성: 60초
+  WEBLLM_LOAD: 30000, // WebLLM 모델 로딩: 30초
+  WEBLLM_GENERATE: 60000, // WebLLM 콘텐츠 생성: 60초
+};
+
+/**
+ * Promise with timeout wrapper
+ * @param {Promise} promise - 원본 Promise
+ * @param {number} ms - 타임아웃 (ms)
+ * @param {string} errorMessage - 타임아웃 에러 메시지
+ * @param {AbortController} abortController - 취소 컨트롤러 (optional)
+ * @returns {Promise}
+ */
+function withTimeout(promise, ms, errorMessage, abortController = null) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      if (abortController) abortController.abort();
+      reject(new Error(errorMessage));
+    }, ms);
+
+    promise
+      .then((result) => {
+        clearTimeout(timeoutId);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      });
+  });
+}
 
 /**
  * Check AI status (Local AI → WebLLM)
@@ -47,12 +83,16 @@ export async function checkAIStatus() {
 /**
  * Generate OJT content using AI engines
  * Priority: Local AI → WebLLM → Fallback
+ * 타임아웃 및 사용자 취소 지원
  *
  * @param {string} contentText - Raw content text
  * @param {string} title - Document title
  * @param {number} _stepNumber - Unused, for compatibility
  * @param {number} _totalSteps - Unused, for compatibility
  * @param {Function} onProgress - Progress callback
+ * @param {Object} options - 추가 옵션
+ * @param {AbortSignal} options.signal - 사용자 취소 시그널
+ * @param {Function} options.onCancel - 취소 콜백
  * @returns {Promise<Object>} - Generated OJT content
  */
 export async function generateOJTContent(
@@ -60,37 +100,141 @@ export async function generateOJTContent(
   title,
   _stepNumber = 1,
   _totalSteps = 1,
-  onProgress
+  onProgress,
+  options = {}
 ) {
+  const { signal } = options;
+  const errors = [];
+  const startTime = Date.now();
+
+  // 사용자 취소 확인 헬퍼
+  const checkAborted = () => {
+    if (signal?.aborted) {
+      throw new Error('USER_CANCELLED');
+    }
+  };
+
   // 1순위: Local AI 서버 시도
   try {
+    checkAborted();
     if (onProgress) onProgress('Local AI 서버 연결 확인 중...');
-    const localAvailable = await checkLocalAIAvailable();
+
+    const localAvailable = await withTimeout(
+      checkLocalAIAvailable(),
+      TIMEOUTS.LOCAL_AI_CHECK,
+      'Local AI 연결 타임아웃 (5초)'
+    );
+
     if (localAvailable) {
+      checkAborted();
       if (onProgress) onProgress('✅ Local AI 서버 연결됨 - 콘텐츠 생성 시작...');
-      const result = await generateWithLocalAIEngine(contentText, title, onProgress);
-      if (result) return result;
+
+      const result = await withTimeout(
+        generateWithLocalAIEngine(contentText, title, onProgress),
+        TIMEOUTS.LOCAL_AI_GENERATE,
+        'Local AI 생성 타임아웃 (60초)'
+      );
+
+      if (result) {
+        result.generation_time = Date.now() - startTime;
+        return result;
+      }
     } else {
+      errors.push({ engine: 'localai', error: '서버 미연결' });
       if (onProgress) onProgress('Local AI 서버 미연결 - WebLLM으로 전환...');
     }
   } catch (localError) {
-    console.warn('[ContentGenerator] Local AI 생성 실패:', localError.message);
-    if (onProgress) onProgress(`Local AI 실패: ${localError.message} - WebLLM으로 전환...`);
+    if (localError.message === 'USER_CANCELLED') throw localError;
+    errors.push({ engine: 'localai', error: localError.message });
+    console.warn('[ContentGenerator] Local AI 실패:', localError.message);
+    if (onProgress) onProgress(`Local AI 실패: ${localError.message}`);
   }
 
   // 2순위: WebLLM 시도
   try {
-    if (onProgress) onProgress('WebLLM 엔진으로 콘텐츠 생성 중...');
-    const result = await generateWithWebLLMEngine(contentText, title, onProgress);
-    if (result) return result;
+    checkAborted();
+    if (onProgress) onProgress('WebLLM 엔진 준비 중...');
+
+    const result = await generateWithWebLLMEngineWithTimeout(
+      contentText,
+      title,
+      onProgress,
+      signal
+    );
+
+    if (result) {
+      result.generation_time = Date.now() - startTime;
+      return result;
+    }
   } catch (webllmError) {
-    console.warn('[ContentGenerator] WebLLM 생성 실패:', webllmError.message);
-    if (onProgress) onProgress(`WebLLM 실패: ${webllmError.message}`);
+    // 사용자가 "Fallback으로 건너뛰기" 선택 시 → Fallback 콘텐츠 생성
+    if (webllmError.message === 'USER_CANCELLED') {
+      errors.push({ engine: 'webllm', error: '사용자가 Fallback으로 전환' });
+      if (onProgress) onProgress('⏭️ Fallback 모드로 전환 중...');
+      // 아래 Fallback 로직으로 진행
+    } else {
+      errors.push({ engine: 'webllm', error: webllmError.message });
+      console.warn('[ContentGenerator] WebLLM 실패:', webllmError.message);
+      if (onProgress) onProgress(`WebLLM 실패: ${webllmError.message}`);
+    }
   }
 
-  // 3순위: Fallback Content
-  if (onProgress) onProgress('AI 분석 실패 - 원문으로 등록 중...');
-  return createFallbackContent(contentText, title, 'AI 엔진을 사용할 수 없습니다.');
+  // 3순위: Fallback Content (AI 실패 또는 사용자 취소 시)
+  if (onProgress) onProgress('📝 Fallback 콘텐츠 생성 중... (키워드 기반 퀴즈 자동 생성)');
+
+  const fallbackResult = createEnhancedFallbackContent(contentText, title, errors);
+  fallbackResult.generation_time = Date.now() - startTime;
+
+  // 사용자 취소로 인한 Fallback인 경우 플래그 추가
+  if (signal?.aborted) {
+    fallbackResult._fallback.reason = '사용자가 Fallback으로 전환';
+    fallbackResult._fallback.userInitiated = true;
+  }
+
+  return fallbackResult;
+}
+
+/**
+ * WebLLM 엔진으로 생성 (타임아웃 적용)
+ */
+async function generateWithWebLLMEngineWithTimeout(contentText, title, onProgress, signal) {
+  const { generateWithWebLLM, isWebLLMReady, initWebLLM } = await import('./webllm.js');
+
+  // WebLLM 준비 확인
+  const ready = isWebLLMReady();
+  if (!ready) {
+    if (onProgress) onProgress('WebLLM 모델 로딩 중... (최대 30초)');
+
+    // 로딩에 타임아웃 적용
+    await withTimeout(
+      initWebLLM(undefined, (progressText) => {
+        if (signal?.aborted) return;
+        if (onProgress) onProgress(progressText);
+      }),
+      TIMEOUTS.WEBLLM_LOAD,
+      'WebLLM 모델 로딩 타임아웃 (30초)'
+    );
+  }
+
+  // 사용자 취소 확인
+  if (signal?.aborted) {
+    throw new Error('USER_CANCELLED');
+  }
+
+  if (onProgress) onProgress('WebLLM으로 콘텐츠 생성 중... (최대 60초)');
+
+  // 생성에 타임아웃 적용
+  const result = await withTimeout(
+    generateWithWebLLM(contentText, title, onProgress, null, signal),
+    TIMEOUTS.WEBLLM_GENERATE,
+    'WebLLM 콘텐츠 생성 타임아웃 (60초)'
+  );
+
+  result.ai_engine = 'webllm';
+  result.model = 'Qwen2.5-3B-Instruct';
+
+  if (onProgress) onProgress('✅ 콘텐츠 생성 완료!');
+  return result;
 }
 
 /**
@@ -112,35 +256,7 @@ async function generateWithLocalAIEngine(contentText, title, onProgress) {
   return result;
 }
 
-/**
- * Generate content using WebLLM (browser)
- * webllm.js의 generateWithWebLLM은 내부에서 프롬프트를 생성하므로
- * contentText와 title을 직접 전달해야 함
- */
-async function generateWithWebLLMEngine(contentText, title, onProgress) {
-  const { generateWithWebLLM, isWebLLMReady, initWebLLM } = await import('./webllm.js');
-
-  // WebLLM 준비 확인
-  const ready = isWebLLMReady();
-  if (!ready) {
-    if (onProgress) onProgress('WebLLM 모델 로딩 중...');
-    await initWebLLM((progress) => {
-      if (onProgress) onProgress(`모델 다운로드: ${Math.round(progress)}%`);
-    });
-  }
-
-  if (onProgress) onProgress('WebLLM으로 섹션 및 퀴즈 생성 중...');
-
-  // webllm.js의 generateWithWebLLM은 (contentText, title, onProgress, onStream, signal)을 받음
-  // 내부에서 프롬프트 생성 및 파싱까지 처리함
-  const result = await generateWithWebLLM(contentText, title, onProgress);
-
-  result.ai_engine = 'webllm';
-  result.model = 'Qwen2.5-3B-Instruct';
-
-  if (onProgress) onProgress('콘텐츠 생성 완료!');
-  return result;
-}
+// generateWithWebLLMEngine 함수는 generateWithWebLLMEngineWithTimeout으로 대체됨
 
 /**
  * Build content generation prompt
