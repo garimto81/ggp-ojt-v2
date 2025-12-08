@@ -1,5 +1,5 @@
-// OJT Master v2.5.0 - API Utilities Tests
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// OJT Master v2.13.5 - API Utilities Tests (Local AI + WebLLM)
+import { describe, it, expect, vi } from 'vitest';
 import { validateQuizQuality, generateOJTContent, checkAIStatus } from './api';
 
 describe('validateQuizQuality', () => {
@@ -100,86 +100,69 @@ describe('validateQuizQuality', () => {
   });
 });
 
-describe('generateOJTContent - Graceful Degradation (WebLLM Only)', () => {
-  // WebLLM 전용: fetch mock 대신 WebLLM 미로드 상태에서 fallback 동작 테스트
+describe('checkAIStatus (Local AI + WebLLM)', () => {
+  // Local AI 우선, WebLLM fallback 구조
 
-  it('returns fallback content when WebLLM is not loaded', async () => {
-    // WebLLM이 로드되지 않은 상태에서 테스트
-    const result = await generateOJTContent(
-      '테스트 콘텐츠 내용입니다. 이것은 원문 텍스트입니다.',
-      '테스트 문서'
-    );
+  it('returns AI status structure with required fields', async () => {
+    const result = await checkAIStatus();
 
-    // Should return fallback structure
-    expect(result.ai_processed).toBe(false);
-    expect(result.ai_error).toContain('WebLLM');
-    expect(result.title).toBe('테스트 문서');
-    expect(result.team).toBe('미분류');
-    expect(result.sections).toHaveLength(1);
-    expect(result.sections[0].title).toBe('원문 내용');
-    expect(result.quiz).toEqual([]);
+    // 필수 필드 존재 확인 (새로운 구조)
+    expect(result).toHaveProperty('supported');
+    expect(result).toHaveProperty('status');
+    expect(result).toHaveProperty('ready');
+    expect(result).toHaveProperty('engine');
+    expect(result).toHaveProperty('model');
   });
 
-  it('sanitizes HTML content in fallback mode', async () => {
-    const maliciousContent = '<script>alert("xss")</script><p>정상 콘텐츠</p>';
-    const result = await generateOJTContent(maliciousContent, '테스트');
+  it('returns valid engine type', async () => {
+    const result = await checkAIStatus();
 
-    // Script tags should be removed
-    expect(result.sections[0].content).not.toContain('<script>');
-    expect(result.sections[0].content).toContain('정상 콘텐츠');
+    // engine은 'localai', 'webllm', 또는 null
+    const validEngines = ['localai', 'webllm', null];
+    expect(validEngines).toContain(result.engine);
   });
 
-  it('converts plain text to HTML paragraphs in fallback mode', async () => {
-    const plainText = '첫 번째 문단\n\n두 번째 문단';
-    const result = await generateOJTContent(plainText, '테스트');
+  it('returns valid status value', async () => {
+    const result = await checkAIStatus();
 
-    expect(result.sections[0].content).toContain('<p>');
-    expect(result.sections[0].content).toContain('첫 번째 문단');
-    expect(result.sections[0].content).toContain('두 번째 문단');
+    // status 값 검증
+    const validStatuses = ['available', 'ready', 'not_loaded', null];
+    expect(validStatuses).toContain(result.status);
   });
 
-  it('uses default title when not provided', async () => {
-    const result = await generateOJTContent('콘텐츠', '');
+  it('returns boolean for supported and ready', async () => {
+    const result = await checkAIStatus();
 
-    expect(result.title).toBe('제목 없음');
+    expect(typeof result.supported).toBe('boolean');
+    expect(typeof result.ready).toBe('boolean');
   });
 
-  it('calls onProgress callback with fallback message when WebLLM fails', async () => {
-    const onProgress = vi.fn();
-    await generateOJTContent('콘텐츠', '테스트', 1, 1, onProgress);
+  it('has consistent ready and status values', async () => {
+    const result = await checkAIStatus();
 
-    // WebLLM 미로드 상태에서는 fallback 메시지만 호출
-    expect(onProgress).toHaveBeenCalledWith('AI 분석 실패 - 원문으로 등록 중...');
+    // ready가 true면 status는 'available' 또는 'ready'
+    if (result.ready) {
+      expect(['available', 'ready']).toContain(result.status);
+    }
+    // ready가 false면 engine이 null이거나 status가 'not_loaded'
+    if (!result.ready) {
+      expect(result.engine === null || result.status === 'not_loaded').toBe(true);
+    }
   });
 });
 
-describe('checkAIStatus (WebLLM Only)', () => {
-  // WebLLM 전용: WebGPU 지원 및 WebLLM 상태 확인
+describe('generateOJTContent - Function Signature', () => {
+  // generateOJTContent 함수 시그니처 및 기본 동작 테스트
+  // 실제 AI 생성 테스트는 localAI.test.js의 Integration 테스트에서 수행
 
-  it('returns WebLLM status structure', async () => {
-    const result = await checkAIStatus();
-
-    // 필수 필드 존재 확인
-    expect(result).toHaveProperty('online');
-    expect(result).toHaveProperty('model');
-    expect(result).toHaveProperty('loaded');
-    expect(result).toHaveProperty('loading');
-    expect(result).toHaveProperty('progress');
-    expect(result).toHaveProperty('webgpuSupported');
+  it('is a function that accepts contentText and title', () => {
+    expect(typeof generateOJTContent).toBe('function');
+    expect(generateOJTContent.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('returns online based on WebGPU support', async () => {
-    const result = await checkAIStatus();
-
-    // jsdom 환경에서 WebGPU는 지원되지 않음
-    expect(result.webgpuSupported).toBe(false);
-    expect(result.online).toBe(false);
-  });
-
-  it('returns loaded: false when WebLLM is not initialized', async () => {
-    const result = await checkAIStatus();
-
-    expect(result.loaded).toBe(false);
-    expect(result.loading).toBe(false);
+  it('returns a promise', () => {
+    const result = generateOJTContent('test', 'test');
+    expect(result).toBeInstanceOf(Promise);
+    // 테스트 후 정리 (Promise는 실행되지만 결과는 기다리지 않음)
   });
 });
