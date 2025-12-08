@@ -11,7 +11,8 @@ services:
       dockerfile: local-ai-server/Dockerfile.app
       args:
         - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        # 신규 publishable key 또는 레거시 anon key 지원
+        - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY:-${VITE_SUPABASE_ANON_KEY}}
         - VITE_LOCAL_AI_URL=http://${AI_SERVER_HOST:-localhost}:${PORT:-8000}
         - VITE_R2_WORKER_URL=${VITE_R2_WORKER_URL:-}
     container_name: ojt-app

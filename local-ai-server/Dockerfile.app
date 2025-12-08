@@ -17,6 +17,9 @@ COPY src-vite/ ./
 
 # 환경변수 (빌드 시 주입)
 ARG VITE_SUPABASE_URL
+# 신규 publishable key (2025년 11월 이후 표준)
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+# 레거시 anon key (기존 프로젝트 호환)
 ARG VITE_SUPABASE_ANON_KEY
 ARG VITE_LOCAL_AI_URL
 ARG VITE_R2_WORKER_URL
