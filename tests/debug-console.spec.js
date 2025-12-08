@@ -1,4 +1,4 @@
-// Debug console log test
+// Debug console log test (Local Docker Environment)
 const { test, expect } = require('@playwright/test');
 
 test('Capture Auth and App console logs', async ({ page }) => {
@@ -14,8 +14,8 @@ test('Capture Auth and App console logs', async ({ page }) => {
     }
   });
 
-  // Navigate to production
-  await page.goto('https://ggp-ojt-v2.vercel.app/', { waitUntil: 'networkidle' });
+  // Navigate to local Docker environment
+  await page.goto('/', { waitUntil: 'networkidle' });
 
   // Wait for React to render
   await page.waitForTimeout(3000);

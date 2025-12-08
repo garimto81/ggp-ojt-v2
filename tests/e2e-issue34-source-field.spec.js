@@ -2,13 +2,16 @@
 const { test, expect } = require('@playwright/test');
 
 /**
- * Issue #34 TDD Test Suite (Legacy)
+ * Issue #34 TDD Test Suite (Legacy - Local Docker Environment)
  *
  * Note: 이 테스트들은 v2.7.0의 snake_case 아키텍처 검증 테스트였으나,
  * v2.10.0에서 Feature-Based 구조 + React Query로 리팩토링되었습니다.
  * 테스트 검증 방식이 HTML 문자열 파싱 기반이라 번들된 코드에서는 정확하지 않음.
  *
  * 실제 기능 검증은 e2e-homepage.spec.js의 통합 테스트에서 수행됩니다.
+ *
+ * Environment: Docker (http://localhost:8080)
+ * Status: Tests are skipped (legacy architecture validation)
  */
 
 test.describe('Issue #34: Source Field Persistence - TDD Tests', () => {

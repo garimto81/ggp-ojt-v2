@@ -1,23 +1,27 @@
-// OJT Master - useUserProfile Hook
+// OJT Master v2.14.0 - useUserProfile Hook (Local-Only Architecture)
 /**
  * ROLE: Custom Hook - User Profile Loading & Sync
  *
  * PURPOSE:
  * - AuthContext에서 분리된 프로필 로딩 로직
- * - Supabase → 로컬 캐시 동기화
+ * - 데이터베이스 → 로컬 캐시 동기화
  * - 오프라인 폴백 처리
  *
  * WHY SEPARATED:
  * - 단일 책임 원칙 (SRP): 프로필 로딩은 인증과 별개의 관심사
  * - 테스트 용이성: Hook 단위로 독립 테스트 가능
  * - 재사용성: 다른 컴포넌트에서도 프로필 로딩 로직 활용 가능
+ *
+ * REFACTORED (Issue #114):
+ * - auth_provider 체크 제거 (이메일 인증만 사용)
+ * - Supabase 의존성을 자체 API로 전환 준비 (TODO 표시)
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@utils/api';
 import { dbGetAll, dbSave } from '@utils/db';
 import { SecureSession, getViewStateByRole } from '@utils/helpers';
-import { VIEW_STATES, ROLES, USER_STATUS, AUTH_PROVIDER } from '@/constants';
+import { VIEW_STATES, ROLES, USER_STATUS } from '@/constants';
 
 /**
  * @typedef {Object} UserProfile
@@ -49,7 +53,9 @@ export function useUserProfile(session) {
   const [isLoading, setIsLoading] = useState(true);
 
   /**
-   * Supabase에서 프로필 조회
+   * 데이터베이스에서 프로필 조회
+   * TODO(Issue #114): Supabase → 자체 API로 교체
+   * GET /api/users/:id
    * @param {string} userId
    * @returns {Promise<Object|null>}
    */
@@ -58,7 +64,7 @@ export function useUserProfile(session) {
 
     if (error && error.code !== 'PGRST116') {
       // PGRST116 = no rows returned (new user)
-      console.error('[useUserProfile] Supabase fetch error:', error);
+      console.error('[useUserProfile] Database fetch error:', error);
     }
 
     return data;
@@ -161,24 +167,19 @@ export function useUserProfile(session) {
           email,
           role: profile.role,
           department: profile.department,
-          auth_provider: profile.auth_provider,
           status: profile.status,
         });
 
-        // Issue #105: Email 사용자 status 체크
-        // Google OAuth 사용자는 status 체크 없이 바로 진입
-        // Email 사용자만 pending/rejected 체크
-        if (profile.auth_provider === AUTH_PROVIDER.EMAIL) {
-          if (profile.status === USER_STATUS.PENDING) {
-            console.log('[useUserProfile] Email user pending approval');
-            setViewState(VIEW_STATES.PENDING_APPROVAL);
-            return;
-          }
-          if (profile.status === USER_STATUS.REJECTED) {
-            console.log('[useUserProfile] Email user rejected');
-            setViewState(VIEW_STATES.ROLE_SELECT);
-            return;
-          }
+        // 사용자 status 체크 (이메일 인증만 사용)
+        if (profile.status === USER_STATUS.PENDING) {
+          console.log('[useUserProfile] User pending approval');
+          setViewState(VIEW_STATES.PENDING_APPROVAL);
+          return;
+        }
+        if (profile.status === USER_STATUS.REJECTED) {
+          console.log('[useUserProfile] User rejected');
+          setViewState(VIEW_STATES.ROLE_SELECT);
+          return;
         }
 
         const tempMode = restoreSessionMode(profile.role);

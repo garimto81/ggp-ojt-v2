@@ -2,13 +2,16 @@
 const { test, expect } = require('@playwright/test');
 
 /**
- * Performance Test Suite for OJT Master
+ * Performance Test Suite for OJT Master (Local Docker Environment)
  *
  * Tests measure:
  * 1. Page load time
  * 2. Time to interactive
  * 3. Resource loading
  * 4. Memory usage
+ *
+ * Environment: Docker (http://localhost:8080)
+ * Note: Performance metrics may differ from production due to local networking
  */
 
 test.describe('OJT Master Performance Tests', () => {
