@@ -1,0 +1,81 @@
+# OJT Master - Local AI Server Docker Compose
+# Qwen3 모델 기반 OpenAI 호환 API 서버
+
+services:
+  # ============================================
+  # 옵션 1: vLLM (고성능, 권장)
+  # ============================================
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: ojt-local-ai
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - huggingface-cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: >
+      --model ${MODEL_NAME:-Qwen/Qwen3-4B}
+      --host 0.0.0.0
+      --port 8000
+      --max-model-len ${MAX_MODEL_LEN:-8192}
+      --gpu-memory-utilization ${GPU_MEMORY_UTIL:-0.9}
+      --trust-remote-code
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # ============================================
+  # 옵션 2: Ollama (간편 설정)
+  # docker-compose --profile ollama up -d
+  # ============================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ojt-ollama
+    profiles: ["ollama"]
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Ollama 모델 자동 다운로드 (초기화 시 1회 실행)
+  ollama-init:
+    image: curlimages/curl:latest
+    container_name: ojt-ollama-init
+    profiles: ["ollama"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"qwen3:4b\"}'"
+    restart: "no"
+
+volumes:
+  huggingface-cache:
+    name: ojt-hf-cache
+  ollama-data:
+    name: ojt-ollama-data
