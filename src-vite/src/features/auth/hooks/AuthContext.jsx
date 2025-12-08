@@ -28,7 +28,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { supabase } from '@utils/api';
 import { dbSave } from '@utils/db';
 import { SecureSession, getViewStateByRole } from '@utils/helpers';
-import { VIEW_STATES, ROLES } from '@/constants';
+import { VIEW_STATES, ROLES, USER_STATUS, AUTH_PROVIDER } from '@/constants';
 import { useUserProfile } from './useUserProfile';
 
 const AuthContext = createContext(null);
@@ -123,6 +123,92 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Email login (Issue #105)
+  const handleEmailLogin = useCallback(async (email, password) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+
+      // 사용자 status 확인 (Email 인증 사용자만)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('status, auth_provider')
+        .eq('id', data.user.id)
+        .single();
+
+      if (userError) {
+        // 신규 사용자 - 아직 users 테이블에 없음
+        console.log('[Auth] User not in users table yet, proceeding to role selection');
+        return { user: data.user, needsRoleSelect: true };
+      }
+
+      // Email 사용자이고 승인 대기 중인 경우
+      if (userData.auth_provider === AUTH_PROVIDER.EMAIL && userData.status === USER_STATUS.PENDING) {
+        console.log('[Auth] Email user pending approval');
+        return { user: data.user, status: USER_STATUS.PENDING };
+      }
+
+      // Email 사용자이고 거부된 경우
+      if (userData.auth_provider === AUTH_PROVIDER.EMAIL && userData.status === USER_STATUS.REJECTED) {
+        await supabase.auth.signOut();
+        throw new Error('계정이 승인 거부되었습니다. 관리자에게 문의하세요.');
+      }
+
+      return { user: data.user, status: USER_STATUS.APPROVED };
+    } catch (error) {
+      console.error('[Auth] Email login error:', error);
+      throw error;
+    }
+  }, []);
+
+  // Email signup (Issue #105)
+  const handleEmailSignup = useCallback(async ({ name, email, password, role }) => {
+    try {
+      // 1. Supabase Auth 계정 생성
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name, role },
+        },
+      });
+      if (error) throw error;
+
+      // 2. users 테이블에 pending 상태로 생성
+      const userData = {
+        id: data.user.id,
+        name,
+        role,
+        department: null,
+        auth_provider: AUTH_PROVIDER.EMAIL,
+        status: USER_STATUS.PENDING,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: insertError } = await supabase.from('users').insert(userData);
+
+      if (insertError) {
+        console.error('[Auth] User insert error:', insertError);
+        // Auth 계정 삭제 시도 (롤백)
+        await supabase.auth.signOut();
+        throw insertError;
+      }
+
+      // 3. 로컬 캐시에도 저장
+      await dbSave('users', userData);
+
+      console.log('[Auth] Email signup successful, pending approval');
+      return { user: data.user, status: USER_STATUS.PENDING };
+    } catch (error) {
+      console.error('[Auth] Email signup error:', error);
+      throw error;
+    }
+  }, []);
+
   // Logout
   const handleLogout = useCallback(async () => {
     SecureSession.remove('ojt_sessionMode');
@@ -151,6 +237,8 @@ export function AuthProvider({ children }) {
           name: user.name,
           role: selectedRole,
           department: null,
+          auth_provider: AUTH_PROVIDER.GOOGLE, // Google OAuth 사용자
+          status: USER_STATUS.APPROVED, // Google OAuth는 즉시 승인
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -204,6 +292,8 @@ export function AuthProvider({ children }) {
     displayRole,
     isLoading,
     handleGoogleLogin,
+    handleEmailLogin, // Issue #105: Email 로그인
+    handleEmailSignup, // Issue #105: Email 회원가입
     handleLogout,
     handleRoleSelect,
     handleModeSwitch,

@@ -17,7 +17,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@utils/api';
 import { dbGetAll, dbSave } from '@utils/db';
 import { SecureSession, getViewStateByRole } from '@utils/helpers';
-import { VIEW_STATES, ROLES } from '@/constants';
+import { VIEW_STATES, ROLES, USER_STATUS, AUTH_PROVIDER } from '@/constants';
 
 /**
  * @typedef {Object} UserProfile
@@ -161,7 +161,25 @@ export function useUserProfile(session) {
           email,
           role: profile.role,
           department: profile.department,
+          auth_provider: profile.auth_provider,
+          status: profile.status,
         });
+
+        // Issue #105: Email 사용자 status 체크
+        // Google OAuth 사용자는 status 체크 없이 바로 진입
+        // Email 사용자만 pending/rejected 체크
+        if (profile.auth_provider === AUTH_PROVIDER.EMAIL) {
+          if (profile.status === USER_STATUS.PENDING) {
+            console.log('[useUserProfile] Email user pending approval');
+            setViewState(VIEW_STATES.PENDING_APPROVAL);
+            return;
+          }
+          if (profile.status === USER_STATUS.REJECTED) {
+            console.log('[useUserProfile] Email user rejected');
+            setViewState(VIEW_STATES.ROLE_SELECT);
+            return;
+          }
+        }
 
         const tempMode = restoreSessionMode(profile.role);
         const newViewState = getViewStateByRole(profile.role, tempMode);

@@ -13,6 +13,7 @@ import { Spinner } from '@components/ui';
 
 // Feature Components
 import RoleSelectionPage from '@features/auth/components/RoleSelectionPage';
+import PendingApprovalPage from '@features/auth/components/PendingApprovalPage';
 import AdminDashboard from '@features/admin/components/AdminDashboard';
 import MentorDashboard from '@features/docs/components/MentorDashboard';
 import MenteeList from '@features/learning/components/MenteeList';
@@ -53,6 +54,11 @@ function App() {
   // Role selection (unauthenticated or new user)
   if (viewState === VIEW_STATES.ROLE_SELECT) {
     return <RoleSelectionPage />;
+  }
+
+  // Pending approval (Issue #105: Email users waiting for admin approval)
+  if (viewState === VIEW_STATES.PENDING_APPROVAL) {
+    return <PendingApprovalPage />;
   }
 
   // Main app with header
