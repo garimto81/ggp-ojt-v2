@@ -77,7 +77,7 @@ export function AIProvider({ children }) {
         // 2. WebLLM 확인 (Local AI 미사용 시)
         try {
           const { isWebLLMReady } = await import('@features/ai/services/webllm.js');
-          const webllmReady = await isWebLLMReady();
+          const webllmReady = isWebLLMReady(); // sync 함수
 
           setAiStatus({
             status: webllmReady ? AI_STATUS.WEBLLM_READY : AI_STATUS.NO_ENGINE,

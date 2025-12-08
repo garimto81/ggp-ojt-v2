@@ -25,7 +25,7 @@ export async function checkAIStatus() {
   // 2. WebLLM 상태 확인
   try {
     const { isWebLLMReady } = await import('./webllm.js');
-    const webllmReady = await isWebLLMReady();
+    const webllmReady = isWebLLMReady(); // sync 함수
     return {
       supported: true,
       status: webllmReady ? 'ready' : 'not_loaded',
@@ -109,12 +109,14 @@ async function generateWithLocalAIEngine(contentText, title, onProgress) {
 
 /**
  * Generate content using WebLLM (browser)
+ * webllm.js의 generateWithWebLLM은 내부에서 프롬프트를 생성하므로
+ * contentText와 title을 직접 전달해야 함
  */
 async function generateWithWebLLMEngine(contentText, title, onProgress) {
   const { generateWithWebLLM, isWebLLMReady, initWebLLM } = await import('./webllm.js');
 
   // WebLLM 준비 확인
-  const ready = await isWebLLMReady();
+  const ready = isWebLLMReady();
   if (!ready) {
     if (onProgress) onProgress('WebLLM 모델 로딩 중...');
     await initWebLLM((progress) => {
@@ -122,13 +124,11 @@ async function generateWithWebLLMEngine(contentText, title, onProgress) {
     });
   }
 
-  const prompt = buildContentPrompt(contentText, title);
-
   if (onProgress) onProgress('WebLLM으로 섹션 및 퀴즈 생성 중...');
-  const response = await generateWithWebLLM(prompt);
 
-  if (onProgress) onProgress('응답 파싱 중...');
-  const result = await parseAIResponse(response, title);
+  // webllm.js의 generateWithWebLLM은 (contentText, title, onProgress, onStream, signal)을 받음
+  // 내부에서 프롬프트 생성 및 파싱까지 처리함
+  const result = await generateWithWebLLM(contentText, title, onProgress);
 
   result.ai_engine = 'webllm';
   result.model = 'Qwen2.5-3B-Instruct';
