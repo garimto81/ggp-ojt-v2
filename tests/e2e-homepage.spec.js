@@ -2,15 +2,18 @@
 const { test, expect } = require('@playwright/test');
 
 /**
- * E2E Test Suite for OJT Master Homepage
+ * E2E Test Suite for OJT Master Homepage (Local Docker Environment)
  *
  * Tests verify:
  * 1. Page load and title
- * 2. Google login button presence
- * 3. AI status badge display (Gemini API)
+ * 2. Email login form presence (local authentication)
+ * 3. AI status badge display (Local AI or WebLLM)
  * 4. UI elements rendering
  * 5. Console errors
  * 6. Responsive design
+ *
+ * Environment: Docker (http://localhost:8080)
+ * Auth Mode: email (ID/password with admin approval)
  */
 
 test.describe('OJT Master Homepage - E2E Tests', () => {
@@ -64,52 +67,52 @@ test.describe('OJT Master Homepage - E2E Tests', () => {
     }
   });
 
-  test('2. Google Login Button - Existence and visibility', async ({ page }) => {
-    // Multiple selector strategies for robustness
-    const loginButton = page.locator('button').filter({ hasText: /google|로그인|login/i });
+  test('2. Email Login Form - Existence and visibility', async ({ page }) => {
+    // Check for email-based login form (ID/password)
+    const usernameInput = page.locator('input[id="login-username"], input[placeholder*="아이디"]');
+    const passwordInput = page.locator('input[id="login-password"], input[type="password"]');
+    const loginButton = page.locator('button[type="submit"]').filter({ hasText: /로그인/i });
 
-    // Check if button exists
-    const buttonCount = await loginButton.count();
-    console.log(`Found ${buttonCount} login button(s)`);
+    // Check if login form exists
+    const hasUsernameField = await usernameInput.count() > 0;
+    const hasPasswordField = await passwordInput.count() > 0;
+    const hasLoginButton = await loginButton.count() > 0;
 
-    if (buttonCount > 0) {
+    console.log(`Username field: ${hasUsernameField ? 'found' : 'not found'}`);
+    console.log(`Password field: ${hasPasswordField ? 'found' : 'not found'}`);
+    console.log(`Login button: ${hasLoginButton ? 'found' : 'not found'}`);
+
+    // At least password field and login button should be visible
+    if (hasPasswordField) {
+      await expect(passwordInput.first()).toBeVisible();
+    }
+
+    if (hasLoginButton) {
       await expect(loginButton.first()).toBeVisible();
-
-      // Verify button is clickable
       await expect(loginButton.first()).toBeEnabled();
 
-      // Get button text
       const buttonText = await loginButton.first().textContent();
       console.log(`Login button text: ${buttonText}`);
-
-      // Take screenshot of login button
-      await loginButton.first().screenshot({
-        path: 'test-results/02-login-button.png'
-      });
-    } else {
-      // Alternative: Check for any auth-related elements
-      const authElements = page.locator('[class*="auth"], [class*="login"], [id*="login"]');
-      const authCount = await authElements.count();
-      console.log(`Found ${authCount} auth-related element(s)`);
-
-      if (authCount > 0) {
-        await expect(authElements.first()).toBeVisible();
-      }
     }
+
+    // Check for signup tab (회원가입)
+    const signupTab = page.locator('button').filter({ hasText: /회원가입/i });
+    const hasSignupTab = await signupTab.count() > 0;
+    console.log(`Signup tab: ${hasSignupTab ? 'found' : 'not found'}`);
 
     // Screenshot of full page for manual verification
     await page.screenshot({
-      path: 'test-results/02-login-area.png',
+      path: 'test-results/02-login-form.png',
       fullPage: true
     });
   });
 
-  test('3. AI Status Badge - Display verification (Gemini API)', async ({ page }) => {
+  test('3. AI Status Badge - Display verification (Local AI or WebLLM)', async ({ page }) => {
     // Multiple selector strategies for AI status badge
     const statusBadge = page.locator(
       '[class*="status"], [class*="badge"], [class*="ai"]'
     ).or(
-      page.locator('span, div').filter({ hasText: /gemini|ai|status|온라인|online/i })
+      page.locator('span, div').filter({ hasText: /local ai|webllm|ai|status|온라인|online|사용 가능/i })
     );
 
     const badgeCount = await statusBadge.count();
@@ -121,8 +124,8 @@ test.describe('OJT Master Homepage - E2E Tests', () => {
       const badgeText = await statusBadge.first().textContent();
       console.log(`Status badge text: ${badgeText}`);
 
-      // Verify AI status (Gemini API - expected online)
-      // Note: Badge may show "온라인", "online", "Gemini" etc.
+      // Verify AI status (Local AI or WebLLM)
+      // Note: Badge may show "Local AI", "WebLLM", "온라인", "사용 가능" etc.
 
       // Screenshot of status badge
       await statusBadge.first().screenshot({
@@ -133,7 +136,7 @@ test.describe('OJT Master Homepage - E2E Tests', () => {
 
       // Check page content for AI status information
       const pageContent = await page.content();
-      const hasStatusInfo = /gemini|ai|status|연결|connection/i.test(pageContent);
+      const hasStatusInfo = /local ai|webllm|ai|status|연결|connection/i.test(pageContent);
       console.log(`Page contains status-related content: ${hasStatusInfo}`);
     }
 

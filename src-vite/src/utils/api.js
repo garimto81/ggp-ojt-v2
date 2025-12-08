@@ -1,7 +1,11 @@
-// OJT Master v2.10.0 - API Re-export Hub (Issue #59)
+// OJT Master v2.14.0 - API Re-export Hub (Issue #59, #114)
 // 모듈 분리 후 하위 호환성을 위한 re-export
 
 // Supabase Client
+// TODO (Issue #114): Replace with direct REST API calls to local PostgreSQL
+// - Current: Supabase JS client → Supabase Cloud
+// - Target: Direct fetch() → Local PostgreSQL REST endpoint (PostgREST)
+// - URL: VITE_API_URL (e.g., http://10.10.100.209/api)
 export { supabase } from './supabaseClient';
 
 // AI Services

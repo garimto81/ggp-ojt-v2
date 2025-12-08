@@ -2,7 +2,7 @@
 const { test, expect } = require('@playwright/test');
 
 /**
- * E2E Test Suite for OJT Master Signup Flow
+ * E2E Test Suite for OJT Master Signup Flow (Local Docker Environment)
  * Issue: 회원가입 시 422/500 에러 발생 검증
  *
  * Tests verify:
@@ -12,6 +12,10 @@ const { test, expect } = require('@playwright/test');
  * 4. 비밀번호 일치 검증
  * 5. 회원가입 성공 시나리오 (Supabase 연동)
  * 6. 에러 메시지 표시
+ *
+ * Environment: Docker (http://localhost:8080)
+ * Auth Mode: email (ID/password with admin approval)
+ * Note: Signup flow requires admin approval after successful registration
  */
 
 test.describe('OJT Master Signup - E2E Tests', () => {

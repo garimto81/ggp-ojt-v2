@@ -13,13 +13,17 @@ module.exports = defineConfig({
     ['list']
   ],
   use: {
-    baseURL: 'https://ggp-ojt-v2.vercel.app',  // Production
-    // baseURL: 'http://localhost:51544',  // Local testing
+    // Local Docker Environment (Issue #114: Local-Only Architecture)
+    // HTTP: http://localhost:8080
+    // HTTPS: https://localhost:8443 (self-signed cert warning expected)
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080',
     trace: 'on-first-retry',
     screenshot: 'on',
     video: 'retain-on-failure',
     actionTimeout: 10000,
     navigationTimeout: 30000,
+    // Ignore HTTPS certificate errors for self-signed certs
+    ignoreHTTPSErrors: true,
   },
   projects: [
     {
