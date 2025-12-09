@@ -208,3 +208,16 @@ export const ROLE_VIEW_MAP = {
   [ROLES.MENTOR]: VIEW_STATES.MENTOR_DASHBOARD,
   [ROLES.MENTEE]: VIEW_STATES.MENTEE_LIST,
 };
+
+// UI configuration (Issue #143: 매직 넘버 상수화)
+export const UI_CONFIG = {
+  // 페이지네이션
+  ITEMS_PER_PAGE_OPTIONS: [10, 20, 50],
+  DEFAULT_ITEMS_PER_PAGE: 20,
+  // Debounce 딜레이 (ms)
+  DEBOUNCE_DELAY: 300,
+  // Toast 표시 시간 (ms)
+  TOAST_DURATION: 3000,
+  // 로딩 타임아웃 (ms)
+  LOADING_TIMEOUT: 10000,
+};
