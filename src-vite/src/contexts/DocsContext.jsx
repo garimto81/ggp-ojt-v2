@@ -59,11 +59,17 @@ export function DocsProvider({ children }) {
 
   // Load all documents
   const loadAllDocs = useCallback(async () => {
-    console.log('[Docs] loadAllDocs called');
+    console.log('[Docs] loadAllDocs called, user:', user?.id, user?.role);
     setIsLoading(true);
     try {
       const docs = await dbGetAll('ojt_docs');
-      console.log('[Docs] Loaded docs count:', docs.length);
+      console.log('[Docs] Loaded docs:', {
+        count: docs.length,
+        statuses: docs.reduce((acc, d) => {
+          acc[d.status || 'unknown'] = (acc[d.status || 'unknown'] || 0) + 1;
+          return acc;
+        }, {}),
+      });
       const sanitizedDocs = docs.map(sanitizeDocData);
       sanitizedDocs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       setAllDocs(sanitizedDocs);
@@ -72,7 +78,7 @@ export function DocsProvider({ children }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.id, user?.role]);
 
   // Load user's documents
   const loadMyDocs = useCallback(async () => {
@@ -115,10 +121,17 @@ export function DocsProvider({ children }) {
         updated_at: new Date().toISOString(),
       };
 
-      console.log('[Docs] Saving document:', docData.id, docData.title);
+      console.log('[Docs] Saving document:', {
+        id: docData.id,
+        title: docData.title,
+        team: docData.team,
+        status: docData.status,
+        author_id: docData.author_id,
+      });
+
       const savedData = await dbSave('ojt_docs', docData);
 
-      console.log('[Docs] Document saved to server successfully');
+      console.log('[Docs] Document saved to server:', savedData);
 
       // Refresh lists
       await loadAllDocs();

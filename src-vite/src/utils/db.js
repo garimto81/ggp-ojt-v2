@@ -80,9 +80,22 @@ export async function dbSave(table, data) {
       throw new Error('서버 연결 없음. 네트워크를 확인하세요.');
     }
 
+    // Sanitize data for Supabase (remove undefined values)
+    const sanitizedData = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined)
+    );
+
+    console.log(`[dbSave] Saving to ${table}:`, {
+      id: sanitizedData.id,
+      status: sanitizedData.status,
+      team: sanitizedData.team,
+      hasQuiz: !!sanitizedData.quiz,
+      hasSections: !!sanitizedData.sections,
+    });
+
     const { data: savedData, error } = await window.supabase
       .from(table)
-      .upsert(data)
+      .upsert(sanitizedData)
       .select()
       .single();
 
