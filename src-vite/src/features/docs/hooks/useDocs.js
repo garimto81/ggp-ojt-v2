@@ -26,6 +26,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@utils/api';
 import { dbGetAll, dbSave, dbDelete } from '@utils/db';
+import { DOC_SELECT } from '@utils/security/safeFields';
 
 // Query Keys
 export const docsKeys = {
@@ -42,7 +43,8 @@ export const docsKeys = {
  */
 async function fetchDocs(filters = {}) {
   try {
-    let query = supabase.from('ojt_docs').select('*');
+    // Issue #132: 명시적 필드 선택으로 민감 정보 노출 방지
+    let query = supabase.from('ojt_docs').select(DOC_SELECT);
 
     if (filters.team) {
       query = query.eq('team', filters.team);
@@ -78,9 +80,10 @@ async function fetchMyDocs(userId) {
   if (!userId) return [];
 
   try {
+    // Issue #132: 명시적 필드 선택
     const { data, error } = await supabase
       .from('ojt_docs')
-      .select('*')
+      .select(DOC_SELECT)
       .eq('author_id', userId)
       .order('updated_at', { ascending: false });
 
@@ -146,7 +149,7 @@ async function deleteDoc(id) {
  * Fetch all documents with optional filters
  * @param {Object} filters - { team?: string, authorId?: string }
  */
-export function useDocs(filters = {}) {
+export function useDocsQuery(filters = {}) {
   return useQuery({
     queryKey: docsKeys.list(filters),
     queryFn: () => fetchDocs(filters),
@@ -173,7 +176,7 @@ export function useCreateDoc() {
 
   return useMutation({
     mutationFn: createDoc,
-    onSuccess: (newDoc) => {
+    onSuccess: () => {
       // Invalidate all docs queries to refetch
       queryClient.invalidateQueries({ queryKey: docsKeys.all });
     },
@@ -218,7 +221,7 @@ export function useDeleteDoc() {
  * Get available teams from cached docs
  */
 export function useAvailableTeams() {
-  const { data: docs = [] } = useDocs();
+  const { data: docs = [] } = useDocsQuery();
 
   const teams = [...new Set(docs.map((d) => d.team).filter(Boolean))].sort();
   return teams;

@@ -24,6 +24,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@utils/api';
+import { USER_SELECT } from '@utils/security/safeFields';
 
 // Query Keys
 export const usersKeys = {
@@ -44,7 +45,8 @@ export const usersKeys = {
  * - 프론트엔드 권한 체크는 UX용, 실제 보안은 RLS에서 처리
  */
 async function fetchUsers(filters = {}) {
-  let query = supabase.from('users').select('*');
+  // Issue #132: 명시적 필드 선택으로 민감 정보 노출 방지
+  let query = supabase.from('users').select(USER_SELECT);
 
   if (filters.role) {
     query = query.eq('role', filters.role);

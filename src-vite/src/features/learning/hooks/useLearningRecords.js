@@ -24,6 +24,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@utils/api';
+import { LEARNING_RECORD_SELECT } from '@utils/security/safeFields';
 
 // Query Keys
 export const learningKeys = {
@@ -39,7 +40,8 @@ export const learningKeys = {
  * Fetch all learning records
  */
 async function fetchLearningRecords(filters = {}) {
-  let query = supabase.from('learning_records').select('*');
+  // Issue #132: 명시적 필드 선택
+  let query = supabase.from('learning_records').select(LEARNING_RECORD_SELECT);
 
   if (filters.userId) {
     query = query.eq('user_id', filters.userId);
@@ -63,9 +65,10 @@ async function fetchLearningRecords(filters = {}) {
 async function fetchUserRecords(userId) {
   if (!userId) return [];
 
+  // Issue #132: 명시적 필드 선택
   const { data, error } = await supabase
     .from('learning_records')
-    .select('*')
+    .select(LEARNING_RECORD_SELECT)
     .eq('user_id', userId)
     .order('completed_at', { ascending: false });
 

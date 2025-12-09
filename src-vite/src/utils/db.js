@@ -89,22 +89,24 @@ export async function dbSave(table, data) {
     if (error) {
       console.error(`[dbSave] Server error for ${table}:`, error.message, error.code);
 
+      // Issue #132: 사용자에게 내부 에러 정보 노출 방지
       // RLS permission error - throw user-friendly message
       if (
         error.code === '42501' ||
         error.message?.includes('permission') ||
         error.message?.includes('policy')
       ) {
-        const permissionError = new Error(
-          `저장 권한이 없습니다. 관리자에게 문의하세요. (${error.message})`
-        );
+        const permissionError = new Error('저장 권한이 없습니다. 관리자에게 문의하세요.');
         permissionError.isPermissionError = true;
-        permissionError.originalError = error;
+        // 내부 로그용으로만 원본 에러 보존
+        if (import.meta.env.DEV) {
+          permissionError.originalError = error;
+        }
         throw permissionError;
       }
 
-      // Other errors
-      throw new Error(`저장 실패: ${error.message}`);
+      // Other errors - 사용자에게는 일반 메시지만 표시
+      throw new Error('저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     }
 
     console.info(`[dbSave] Saved to server: ${table}`, savedData?.id);
@@ -131,7 +133,8 @@ export async function dbDelete(table, id) {
 
     if (error) {
       console.error(`[dbDelete] Server error for ${table}:`, error.message);
-      throw new Error(`삭제 실패: ${error.message}`);
+      // Issue #132: 사용자에게는 일반 메시지만 표시
+      throw new Error('삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     }
 
     console.info(`[dbDelete] Deleted from server: ${table}`, id);

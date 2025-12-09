@@ -1,8 +1,15 @@
-// OJT Master v2.13.6 - Mentor Dashboard Component (Local AI + WebLLM + Fallback)
+// OJT Master v2.14.0 - Mentor Dashboard Component (Local AI + WebLLM + Fallback)
 // Issue #104: 타임아웃 및 취소 지원
+// Issue #126: React Query로 CRUD 마이그레이션
 
 import { useState, useRef, useCallback } from 'react';
-import { useDocs } from '@contexts/DocsContext';
+import { useDocsContext } from '@contexts/DocsContext';
+import {
+  useMyDocs,
+  useCreateDoc,
+  useDeleteDoc,
+  useAvailableTeams,
+} from '@features/docs/hooks/useDocs';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { useAI } from '@features/ai/hooks/AIContext';
 import { Toast } from '@contexts/ToastContext';
@@ -24,8 +31,16 @@ import {
 import AIEngineSelector from '@features/ai/components/AIEngineSelector';
 
 export default function MentorDashboard() {
-  const { myDocs, saveDocument, deleteDocument, loadMyDocs, availableTeams } = useDocs();
   const { user } = useAuth();
+
+  // React Query hooks for server data (Issue #126)
+  const { data: myDocs = [] } = useMyDocs(user?.id);
+  const availableTeams = useAvailableTeams();
+  const createDocMutation = useCreateDoc();
+  const deleteDocMutation = useDeleteDoc();
+
+  // Context for UI state only
+  const { clearDocState } = useDocsContext();
   // 방어적 코딩: AI Context가 불완전해도 페이지 로드 보장
   const { webllmStatus = { loaded: false, loading: false } } = useAI();
 
@@ -274,43 +289,35 @@ export default function MentorDashboard() {
     }
   }, []);
 
-  // Handle save
+  // Handle save - using React Query mutation (Issue #126)
   const handleSave = async () => {
     try {
-      let syncPendingCount = 0;
-
       for (const doc of generatedDocs) {
-        // source_type, source_url, source_file are already included in doc
-        const savedDoc = await saveDocument({
+        // Prepare document data
+        const docData = {
           ...doc,
+          id: doc.id || crypto.randomUUID(),
           author_id: user.id,
           author_name: user.name,
-        });
+          status: doc.status || 'review',
+          created_at: doc.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
 
-        if (savedDoc?._syncPending) {
-          syncPendingCount++;
-        }
+        await createDocMutation.mutateAsync(docData);
       }
 
-      // 저장 결과에 따른 메시지
-      if (syncPendingCount > 0) {
-        Toast.warning(
-          `${generatedDocs.length}개 문서가 로컬에 저장되었습니다. (서버 동기화 대기 중: ${syncPendingCount}개)`
-        );
-      } else {
-        Toast.success(`${generatedDocs.length}개 문서가 저장되었습니다.`);
-      }
+      Toast.success(`${generatedDocs.length}개 문서가 저장되었습니다.`);
 
+      // Reset form
       setGeneratedDocs([]);
       setRawInput('');
       setUrlInput('');
       setInputTitle('');
       setSelectedTeam('');
       removePdfFile();
-      await loadMyDocs();
     } catch (error) {
       console.error('[MentorDashboard] Save error:', error);
-      // 권한 에러인 경우 명확한 메시지 표시
       if (error.isPermissionError) {
         Toast.error(error.message);
       } else {
@@ -319,7 +326,7 @@ export default function MentorDashboard() {
     }
   };
 
-  // Handle delete
+  // Handle delete - using React Query mutation (Issue #126)
   const handleDelete = async (docId) => {
     const doc = myDocs.find((d) => d.id === docId);
     if (!doc) return;
@@ -329,9 +336,10 @@ export default function MentorDashboard() {
     }
 
     try {
-      await deleteDocument(docId);
+      await deleteDocMutation.mutateAsync(docId);
+      clearDocState(docId); // Clear UI state if deleted doc was selected
       Toast.success('문서가 삭제되었습니다.');
-    } catch (error) {
+    } catch {
       Toast.error('삭제 중 오류가 발생했습니다.');
     }
   };

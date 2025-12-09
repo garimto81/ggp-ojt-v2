@@ -1,7 +1,8 @@
-// OJT Master v2.5.0 - Mentee Study Component
+// OJT Master v2.14.0 - Mentee Study Component
+// Issue #126: useDocsContext로 UI 상태 분리
 
 import { useState } from 'react';
-import { useDocs } from '@contexts/DocsContext';
+import { useDocsContext } from '@contexts/DocsContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
 import { supabase } from '@utils/api';
@@ -10,7 +11,8 @@ import { CONFIG, VIEW_STATES } from '@/constants';
 import ReportContentModal from './ReportContentModal';
 
 export default function MenteeStudy() {
-  const { selectedDoc, setSelectedDoc } = useDocs();
+  // Context for UI state (Issue #126)
+  const { selectedDoc, setSelectedDoc } = useDocsContext();
   const { user, setViewState } = useAuth();
 
   // Report modal state
