@@ -90,8 +90,14 @@ export async function dbSave(table, data) {
       console.error(`[dbSave] Server error for ${table}:`, error.message, error.code);
 
       // RLS permission error - throw user-friendly message
-      if (error.code === '42501' || error.message?.includes('permission') || error.message?.includes('policy')) {
-        const permissionError = new Error(`저장 권한이 없습니다. 관리자에게 문의하세요. (${error.message})`);
+      if (
+        error.code === '42501' ||
+        error.message?.includes('permission') ||
+        error.message?.includes('policy')
+      ) {
+        const permissionError = new Error(
+          `저장 권한이 없습니다. 관리자에게 문의하세요. (${error.message})`
+        );
         permissionError.isPermissionError = true;
         permissionError.originalError = error;
         throw permissionError;

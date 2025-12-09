@@ -1,6 +1,6 @@
 // OJT Master v2.10.0 - Admin Dashboard Component (Issue #54, #78, Admin Redesign)
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDocs } from '@contexts/DocsContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
   // Security: Verify admin role before loading data (Issue #78)
   const isAdmin = user?.role === ROLES.ADMIN;
 
-  // Load admin data
+  // Load admin data (Issue #120: 병렬 API 호출로 개선)
   useEffect(() => {
     const loadAdminData = async () => {
       // Security check: Only admins can access this data
@@ -58,19 +58,19 @@ export default function AdminDashboard() {
 
       setIsLoading(true);
       try {
-        const { data: users, error: usersError } = await supabase
-          .from('users')
-          .select('*')
-          .order('created_at', { ascending: false });
+        // 병렬 API 호출로 초기 로딩 시간 단축
+        const [usersResult, recordsResult] = await Promise.all([
+          supabase.from('users').select('*').order('created_at', { ascending: false }),
+          supabase.from('learning_records').select('*').order('completed_at', { ascending: false }),
+        ]);
 
-        if (!usersError) setAllUsers(users || []);
+        if (!usersResult.error) setAllUsers(usersResult.data || []);
+        if (!recordsResult.error) setAllRecords(recordsResult.data || []);
 
-        const { data: records, error: recordsError } = await supabase
-          .from('learning_records')
-          .select('*')
-          .order('completed_at', { ascending: false });
-
-        if (!recordsError) setAllRecords(records || []);
+        // 에러 로깅 (하나라도 실패한 경우)
+        if (usersResult.error || recordsResult.error) {
+          console.error('Partial load error:', { usersResult, recordsResult });
+        }
       } catch (e) {
         console.error('Admin data load error:', e);
         Toast.error('관리자 데이터를 불러오는 중 오류가 발생했습니다.');
@@ -87,137 +87,151 @@ export default function AdminDashboard() {
     setUserPage(1);
   }, [debouncedUserSearch, userRoleFilter, userDeptFilter, userItemsPerPage]);
 
-  // Change user role (Issue #78: Added confirmation)
-  const handleRoleChange = async (userId, newRole) => {
-    // Security: Require admin role
-    if (!isAdmin) {
-      Toast.error('관리자 권한이 필요합니다.');
-      return;
-    }
+  // Change user role (Issue #78: Added confirmation, #128: useCallback)
+  const handleRoleChange = useCallback(
+    async (userId, newRole) => {
+      // Security: Require admin role
+      if (!isAdmin) {
+        Toast.error('관리자 권한이 필요합니다.');
+        return;
+      }
 
-    const targetUser = allUsers.find((u) => u.id === userId);
-    if (
-      !window.confirm(
-        `${sanitizeText(targetUser?.name)}님의 역할을 ${newRole}(으)로 변경하시겠습니까?`
-      )
-    ) {
-      return;
-    }
+      const targetUser = allUsers.find((u) => u.id === userId);
+      if (
+        !window.confirm(
+          `${sanitizeText(targetUser?.name)}님의 역할을 ${newRole}(으)로 변경하시겠습니까?`
+        )
+      ) {
+        return;
+      }
 
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ role: newRole, updated_at: new Date().toISOString() })
-        .eq('id', userId);
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({ role: newRole, updated_at: new Date().toISOString() })
+          .eq('id', userId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setAllUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
-      Toast.success(`역할이 ${newRole}(으)로 변경되었습니다.`);
-    } catch (e) {
-      console.error('Role change error:', e);
-      Toast.error('역할 변경에 실패했습니다: ' + e.message);
-    }
-  };
+        setAllUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+        Toast.success(`역할이 ${newRole}(으)로 변경되었습니다.`);
+      } catch (e) {
+        console.error('Role change error:', e);
+        Toast.error('역할 변경에 실패했습니다: ' + e.message);
+      }
+    },
+    [isAdmin, allUsers]
+  );
 
-  // Change user department (Issue #78: Added security check)
-  const handleDepartmentChange = async (userId, newDepartment) => {
-    // Security: Require admin role
-    if (!isAdmin) {
-      Toast.error('관리자 권한이 필요합니다.');
-      return;
-    }
+  // Change user department (Issue #78: Added security check, #128: useCallback)
+  const handleDepartmentChange = useCallback(
+    async (userId, newDepartment) => {
+      // Security: Require admin role
+      if (!isAdmin) {
+        Toast.error('관리자 권한이 필요합니다.');
+        return;
+      }
 
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ department: newDepartment || null, updated_at: new Date().toISOString() })
-        .eq('id', userId);
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({ department: newDepartment || null, updated_at: new Date().toISOString() })
+          .eq('id', userId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setAllUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, department: newDepartment || null } : u))
-      );
-      Toast.success('부서가 변경되었습니다.');
-    } catch (e) {
-      console.error('Department change error:', e);
-      Toast.error('부서 변경에 실패했습니다: ' + e.message);
-    }
-  };
+        setAllUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, department: newDepartment || null } : u))
+        );
+        Toast.success('부서가 변경되었습니다.');
+      } catch (e) {
+        console.error('Department change error:', e);
+        Toast.error('부서 변경에 실패했습니다: ' + e.message);
+      }
+    },
+    [isAdmin]
+  );
 
-  // Toggle user active status (Issue #78: Added security check)
-  const handleToggleActive = async (userId, currentStatus) => {
-    // Security: Require admin role
-    if (!isAdmin) {
-      Toast.error('관리자 권한이 필요합니다.');
-      return;
-    }
+  // Toggle user active status (Issue #78: Added security check, #128: useCallback)
+  const handleToggleActive = useCallback(
+    async (userId, currentStatus) => {
+      // Security: Require admin role
+      if (!isAdmin) {
+        Toast.error('관리자 권한이 필요합니다.');
+        return;
+      }
 
-    const newStatus = !currentStatus;
-    const targetUser = allUsers.find((u) => u.id === userId);
+      const newStatus = !currentStatus;
+      const targetUser = allUsers.find((u) => u.id === userId);
 
-    if (
-      !window.confirm(
-        `${sanitizeText(targetUser?.name)}님을 ${newStatus ? '활성화' : '정지'}하시겠습니까?`
-      )
-    ) {
-      return;
-    }
+      if (
+        !window.confirm(
+          `${sanitizeText(targetUser?.name)}님을 ${newStatus ? '활성화' : '정지'}하시겠습니까?`
+        )
+      ) {
+        return;
+      }
 
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ is_active: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', userId);
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({ is_active: newStatus, updated_at: new Date().toISOString() })
+          .eq('id', userId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setAllUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, is_active: newStatus } : u))
-      );
-      Toast.success(`사용자가 ${newStatus ? '활성화' : '정지'}되었습니다.`);
-    } catch (e) {
-      console.error('Toggle active error:', e);
-      Toast.error('상태 변경에 실패했습니다: ' + e.message);
-    }
-  };
+        setAllUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, is_active: newStatus } : u))
+        );
+        Toast.success(`사용자가 ${newStatus ? '활성화' : '정지'}되었습니다.`);
+      } catch (e) {
+        console.error('Toggle active error:', e);
+        Toast.error('상태 변경에 실패했습니다: ' + e.message);
+      }
+    },
+    [isAdmin, allUsers]
+  );
 
-  // Delete user (Issue #78: Added 2-step CSRF-like confirmation)
-  const handleDeleteUser = async (userId) => {
-    // Security: Require admin role
-    if (!isAdmin) {
-      Toast.error('관리자 권한이 필요합니다.');
-      return;
-    }
+  // Delete user (Issue #78: Added 2-step CSRF-like confirmation, #128: useCallback)
+  const handleDeleteUser = useCallback(
+    async (userId) => {
+      // Security: Require admin role
+      if (!isAdmin) {
+        Toast.error('관리자 권한이 필요합니다.');
+        return;
+      }
 
-    const targetUser = allUsers.find((u) => u.id === userId);
-    const userName = sanitizeText(targetUser?.name) || '사용자';
+      const targetUser = allUsers.find((u) => u.id === userId);
+      const userName = sanitizeText(targetUser?.name) || '사용자';
 
-    // Step 1: First confirmation
-    if (!window.confirm(`정말 ${userName}님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
-      return;
-    }
+      // Step 1: First confirmation
+      if (
+        !window.confirm(`정말 ${userName}님을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)
+      ) {
+        return;
+      }
 
-    // Step 2: Name input confirmation (CSRF-like protection)
-    const userInput = prompt(`삭제하려면 사용자 이름을 정확히 입력하세요:\n"${userName}"`);
-    if (userInput !== userName) {
-      Toast.warning('이름이 일치하지 않습니다. 삭제가 취소되었습니다.');
-      return;
-    }
+      // Step 2: Name input confirmation (CSRF-like protection)
+      const userInput = prompt(`삭제하려면 사용자 이름을 정확히 입력하세요:\n"${userName}"`);
+      if (userInput !== userName) {
+        Toast.warning('이름이 일치하지 않습니다. 삭제가 취소되었습니다.');
+        return;
+      }
 
-    try {
-      const { error } = await supabase.from('users').delete().eq('id', userId);
+      try {
+        const { error } = await supabase.from('users').delete().eq('id', userId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setAllUsers((prev) => prev.filter((u) => u.id !== userId));
-      Toast.success('사용자가 삭제되었습니다.');
-    } catch (e) {
-      console.error('Delete user error:', e);
-      Toast.error('사용자 삭제에 실패했습니다: ' + e.message);
-    }
-  };
+        setAllUsers((prev) => prev.filter((u) => u.id !== userId));
+        Toast.success('사용자가 삭제되었습니다.');
+      } catch (e) {
+        console.error('Delete user error:', e);
+        Toast.error('사용자 삭제에 실패했습니다: ' + e.message);
+      }
+    },
+    [isAdmin, allUsers]
+  );
 
   // 부서 목록 (DB 설정 + 기존 사용자 부서)
   const departmentOptions = useMemo(() => {
@@ -267,13 +281,13 @@ export default function AdminDashboard() {
     userItemsPerPage,
   ]);
 
-  // Handle sort change
-  const handleUserSort = (field) => {
+  // Handle sort change (Issue #128: useCallback)
+  const handleUserSort = useCallback((field) => {
     setUserSort((prev) => ({
       field,
       order: prev.field === field && prev.order === 'desc' ? 'asc' : 'desc',
     }));
-  };
+  }, []);
 
   // Calculate stats
   const stats = {
