@@ -1,13 +1,20 @@
-// OJT Master v2.3.0 - Mentee List Component
+// OJT Master v2.14.0 - Mentee List Component
+// Issue #126: React Query로 서버 데이터 마이그레이션
 
 import { useState, useMemo } from 'react';
-import { useDocs } from '@contexts/DocsContext';
+import { useDocsContext } from '@contexts/DocsContext';
+import { useDocsQuery, useAvailableTeams } from '@features/docs/hooks/useDocs';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { VIEW_STATES } from '@/constants';
 import { Spinner } from '@components/ui';
 
 export default function MenteeList() {
-  const { allDocs, availableTeams, setSelectedDoc, isLoading } = useDocs();
+  // React Query for server data (Issue #126)
+  const { data: allDocs = [], isLoading } = useDocsQuery();
+  const availableTeams = useAvailableTeams();
+
+  // Context for UI state
+  const { setSelectedDoc } = useDocsContext();
   const { setViewState } = useAuth();
 
   const [selectedTeam, setSelectedTeam] = useState(null);

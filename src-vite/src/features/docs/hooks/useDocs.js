@@ -146,7 +146,7 @@ async function deleteDoc(id) {
  * Fetch all documents with optional filters
  * @param {Object} filters - { team?: string, authorId?: string }
  */
-export function useDocs(filters = {}) {
+export function useDocsQuery(filters = {}) {
   return useQuery({
     queryKey: docsKeys.list(filters),
     queryFn: () => fetchDocs(filters),
@@ -173,7 +173,7 @@ export function useCreateDoc() {
 
   return useMutation({
     mutationFn: createDoc,
-    onSuccess: (newDoc) => {
+    onSuccess: () => {
       // Invalidate all docs queries to refetch
       queryClient.invalidateQueries({ queryKey: docsKeys.all });
     },
@@ -218,7 +218,7 @@ export function useDeleteDoc() {
  * Get available teams from cached docs
  */
 export function useAvailableTeams() {
-  const { data: docs = [] } = useDocs();
+  const { data: docs = [] } = useDocsQuery();
 
   const teams = [...new Set(docs.map((d) => d.team).filter(Boolean))].sort();
   return teams;

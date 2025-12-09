@@ -1,7 +1,9 @@
-// OJT Master v2.10.0 - Admin Dashboard Component (Issue #54, #78, Admin Redesign)
+// OJT Master v2.14.0 - Admin Dashboard Component (Issue #54, #78, Admin Redesign)
+// Issue #126: React Query로 CRUD 마이그레이션
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { useDocs } from '@contexts/DocsContext';
+import { useDocsContext } from '@contexts/DocsContext';
+import { useDocsQuery, useDeleteDoc } from '@features/docs/hooks/useDocs';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
 import { supabase } from '@utils/api';
@@ -24,7 +26,11 @@ import UserApprovalTab from './UserApprovalTab';
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 
 export default function AdminDashboard() {
-  const { allDocs, deleteDocument, isLoading: docsLoading } = useDocs();
+  // React Query hooks for server data (Issue #126)
+  const { data: allDocs = [], isLoading: docsLoading } = useDocsQuery();
+  const deleteDocMutation = useDeleteDoc();
+  const { clearDocState } = useDocsContext();
+
   const { user } = useAuth();
   const { departments: dbDepartments } = useDepartments();
 
@@ -540,7 +546,10 @@ export default function AdminDashboard() {
             <div role="tabpanel" id="tabpanel-docs" aria-labelledby="tab-docs">
               <ContentManagementTab
                 docs={allDocs}
-                onDocDeleted={deleteDocument}
+                onDocDeleted={async (docId) => {
+                  await deleteDocMutation.mutateAsync(docId);
+                  clearDocState(docId);
+                }}
                 isAdmin={isAdmin}
               />
             </div>
