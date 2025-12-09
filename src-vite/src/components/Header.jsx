@@ -1,8 +1,9 @@
-// OJT Master v2.3.0 - Header Component
+// OJT Master v2.16.1 - Header Component
 
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES, ROLE_THEMES, DEFAULT_THEME } from '../constants';
+import { APP_VERSION, BUILD_HASH } from '../version';
 
 export default function Header({ aiStatus }) {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();
@@ -20,7 +21,7 @@ export default function Header({ aiStatus }) {
   }, [user, isTempMentorMode]);
 
   return (
-    <header className={`shadow-sm border-b ${currentTheme.header}`}>
+    <header className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
@@ -29,9 +30,9 @@ export default function Header({ aiStatus }) {
               <span className="text-white font-bold text-lg">OJT</span>
             </div>
             <div>
-              <h1 className={`text-xl font-bold ${currentTheme.headerText}`}>OJT Master</h1>
+              <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
               <p className="text-xs text-gray-500">
-                {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.3.0'}
+                {isTempMentorMode ? 'MENTOR MODE (임시)' : `v${APP_VERSION} (${BUILD_HASH})`}
               </p>
             </div>
           </div>
@@ -88,18 +89,27 @@ export default function Header({ aiStatus }) {
               </div>
             )}
 
-            {/* User info */}
+            {/* User info with Role/Department Badges (Issue #170) */}
             {user && (
               <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-800">{user.name}</p>
-                  <p className="text-xs capitalize">
-                    {isTempMentorMode ? (
-                      <span className="text-amber-600 font-medium">Mentor (임시)</span>
-                    ) : (
-                      <span className={currentTheme.headerText}>{displayRole}</span>
-                    )}
-                  </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-800">{user.name}</span>
+                  {/* Role Badge */}
+                  {isTempMentorMode ? (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                      Mentor (임시)
+                    </span>
+                  ) : (
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${currentTheme.badge} border ${currentTheme.border}`}>
+                      {displayRole}
+                    </span>
+                  )}
+                  {/* Department Badge */}
+                  {user.department && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                      {user.department}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={handleLogout}
