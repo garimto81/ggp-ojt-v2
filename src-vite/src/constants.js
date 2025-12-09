@@ -178,6 +178,41 @@ export const DEFAULT_THEME = {
   ring: 'ring-gray-500',
 };
 
+// Department-based theme configuration (Issue #170)
+// 부서별 시각적 구분을 위한 컬러 테마
+export const DEPARTMENT_THEMES = {
+  개발팀: {
+    badge: 'bg-indigo-100 text-indigo-700',
+    border: 'border-indigo-300',
+  },
+  디자인팀: {
+    badge: 'bg-pink-100 text-pink-700',
+    border: 'border-pink-300',
+  },
+  기획팀: {
+    badge: 'bg-purple-100 text-purple-700',
+    border: 'border-purple-300',
+  },
+  마케팅팀: {
+    badge: 'bg-orange-100 text-orange-700',
+    border: 'border-orange-300',
+  },
+  운영팀: {
+    badge: 'bg-teal-100 text-teal-700',
+    border: 'border-teal-300',
+  },
+  인사팀: {
+    badge: 'bg-cyan-100 text-cyan-700',
+    border: 'border-cyan-300',
+  },
+};
+
+// Default department theme
+export const DEFAULT_DEPARTMENT_THEME = {
+  badge: 'bg-gray-100 text-gray-600',
+  border: 'border-gray-200',
+};
+
 // View states
 export const VIEW_STATES = {
   LOADING: 'loading',
