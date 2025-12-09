@@ -260,7 +260,9 @@ docker-compose --env-file .env.docker up -d
 # 5. 접속: https://localhost:8443
 ```
 
-## Feature-Based Architecture (Block Agent System)
+## Block Agent System v1.2.0
+
+### Frontend Agents (Feature-Based)
 
 App.jsx에서 React.lazy()를 통한 코드 분할:
 
@@ -271,15 +273,29 @@ const AdminDashboard = lazy(() =>
 );
 ```
 
-| Feature | 경로 | 주요 컴포넌트 |
-|---------|------|--------------|
-| auth | `features/auth/` | RoleSelectionPage, AuthContext |
-| content/create | `features/content/create/` | MentorDashboard, ContentInputPanel |
-| content/manage | `features/content/manage/` | MyDocsList, DocsContext |
-| learning/study | `features/learning/study/` | MenteeList, MenteeStudy, SectionViewer |
-| learning/quiz | `features/learning/quiz/` | QuizSession, QuizResult, useLearningRecord |
-| ai | `features/ai/` | AIEngineSelector, AIContext, webllm.js |
-| admin | `features/admin/` | AdminDashboard, useUsers, useAnalytics |
+| Agent | 경로 | 주요 컴포넌트 |
+|-------|------|--------------|
+| auth-agent | `features/auth/` | RoleSelectionPage, AuthContext |
+| content-create-agent | `features/content/create/` | MentorDashboard, ContentInputPanel |
+| content-manage-agent | `features/content/manage/` | MyDocsList, DocsContext |
+| learning-study-agent | `features/learning/study/` | MenteeList, MenteeStudy, SectionViewer |
+| learning-quiz-agent | `features/learning/quiz/` | QuizSession, QuizResult, useLearningRecord |
+| ai-agent | `features/ai/` | AIEngineSelector, AIContext, webllm.js |
+| admin-agent | `features/admin/` | AdminDashboard, useUsers, useAnalytics |
+
+### Backend Agent (Database)
+
+| Agent | 경로 | 역할 |
+|-------|------|------|
+| **supabase-agent** | `database/agents/supabase/` | DB 스키마, 마이그레이션, RLS 정책 관리 |
+
+**supabase-agent 책임**:
+- 테이블 스키마 설계 및 변경
+- SQL 마이그레이션 스크립트 작성 (`database/migrations/`)
+- RLS 정책 관리 (`rls_is_admin()`, `rls_is_mentor_or_admin()`)
+- 인덱스 최적화, FK 제약조건 관리
+
+**관련 파일**: `database/agents/supabase/README.md`, `database/agents/supabase/SCHEMA.md`
 
 **상세 문서**: `docs/BLOCK_AGENT_SYSTEM.md`
 

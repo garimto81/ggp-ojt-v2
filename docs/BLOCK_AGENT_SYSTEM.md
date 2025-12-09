@@ -1,10 +1,14 @@
-# Block Agent System v1.1.0
+# Block Agent System v1.2.0
 
 OJT Master 프로젝트의 모듈화된 컴포넌트 아키텍처 가이드입니다.
 
 ## 개요
 
-Block Agent System은 기능별로 분리된 7개의 전문화된 에이전트로 구성됩니다. 각 에이전트는 독립적인 책임 영역을 가지며, 명확한 인터페이스를 통해 협업합니다.
+Block Agent System은 기능별로 분리된 **8개의 전문화된 에이전트**로 구성됩니다:
+- **Frontend Agents (7개)**: UI 컴포넌트 담당
+- **Backend Agent (1개)**: Database 담당 (supabase-agent)
+
+각 에이전트는 독립적인 책임 영역을 가지며, 명확한 인터페이스를 통해 협업합니다.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -112,6 +116,32 @@ import { useLearningRecord } from '@features/learning/quiz';
 | Components | `AdminDashboard.jsx` | 관리자 대시보드 |
 | Hooks | `useAnalytics.js` | 분석 데이터 |
 | | `useUsers.js` | 사용자 관리 |
+
+### 8. supabase-agent (데이터베이스) - NEW
+**경로**: `database/agents/supabase/`
+
+| 구성요소 | 파일 | 역할 |
+|----------|------|------|
+| Docs | `README.md` | 에이전트 가이드, 마이그레이션 규칙 |
+| | `SCHEMA.md` | 현재 스키마 레퍼런스 |
+| Migrations | `database/migrations/*.sql` | 스키마 변경 SQL |
+| | `database/fixes/*.sql` | 핫픽스 SQL |
+
+**책임 영역**:
+- 테이블 스키마 설계 및 변경
+- RLS (Row Level Security) 정책 관리
+- SQL 마이그레이션 스크립트 작성
+- 인덱스 최적화, FK 제약조건 관리
+- Supabase CLI 명령 (`npx supabase db dump`, `npx supabase db push`)
+
+**RLS Helper 함수**:
+```sql
+public.rls_is_admin() → BOOLEAN      -- Admin 여부 확인
+public.rls_is_mentor_or_admin() → BOOLEAN  -- Mentor/Admin 여부
+public.rls_get_role() → TEXT         -- 현재 사용자 역할
+```
+
+**주의**: `is_admin()` 함수는 삭제됨. 반드시 `rls_is_admin()` 사용!
 
 ## 폴더 구조
 
@@ -285,5 +315,6 @@ export { useAuth, AuthProvider } from '@features/auth';
 
 | 버전 | 날짜 | 변경 사항 |
 |------|------|----------|
+| v1.2.0 | 2025-12 | supabase-agent 추가 (DB 전담), 8개 에이전트 체계 |
 | v1.1.0 | 2024-12 | Lazy loading, chunk 분할, 테스트 추가 |
 | v1.0.0 | 2024-12 | 초기 아키텍처 설계, 7개 에이전트 구조 |
