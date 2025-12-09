@@ -1,8 +1,8 @@
 // OJT Master v2.3.0 - Header Component
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ROLES } from '../constants';
+import { ROLES, ROLE_THEMES, DEFAULT_THEME } from '../constants';
 
 export default function Header({ aiStatus }) {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();
@@ -11,8 +11,16 @@ export default function Header({ aiStatus }) {
   const isAdmin = user?.role === ROLES.ADMIN;
   const isTempMentorMode = sessionMode === 'mentor';
 
+  // 현재 역할에 따른 테마 결정 (Issue #170)
+  // Admin이 임시 Mentor 모드일 때는 Mentor 테마 적용
+  const currentTheme = useMemo(() => {
+    if (!user) return DEFAULT_THEME;
+    if (isTempMentorMode) return ROLE_THEMES[ROLES.MENTOR];
+    return ROLE_THEMES[user.role] || DEFAULT_THEME;
+  }, [user, isTempMentorMode]);
+
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className={`shadow-sm border-b ${currentTheme.header}`}>
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
@@ -21,7 +29,7 @@ export default function Header({ aiStatus }) {
               <span className="text-white font-bold text-lg">OJT</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
+              <h1 className={`text-xl font-bold ${currentTheme.headerText}`}>OJT Master</h1>
               <p className="text-xs text-gray-500">
                 {isTempMentorMode ? 'MENTOR MODE (임시)' : 'v2.3.0'}
               </p>
@@ -85,11 +93,11 @@ export default function Header({ aiStatus }) {
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-800">{user.name}</p>
-                  <p className="text-xs text-gray-500 capitalize">
+                  <p className="text-xs capitalize">
                     {isTempMentorMode ? (
-                      <span className="text-amber-600">Mentor (임시)</span>
+                      <span className="text-amber-600 font-medium">Mentor (임시)</span>
                     ) : (
-                      displayRole
+                      <span className={currentTheme.headerText}>{displayRole}</span>
                     )}
                   </p>
                 </div>

@@ -5,6 +5,30 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Toast } from '@/contexts/ToastContext';
 import { ROLES } from '@/constants';
 
+// 역할별 카드 스타일 설정 (Issue #170)
+const ROLE_CARD_STYLES = {
+  [ROLES.MENTOR]: {
+    borderHover: 'hover:border-blue-500',
+    bgHover: 'hover:bg-blue-50',
+    iconBg: 'bg-blue-100',
+    iconBgHover: 'group-hover:bg-blue-200',
+    textHover: 'group-hover:text-blue-600',
+    emoji: '👨‍🏫',
+    title: 'Mentor (교육 담당자)',
+    description: '교육 자료를 생성하고 관리합니다',
+  },
+  [ROLES.MENTEE]: {
+    borderHover: 'hover:border-green-500',
+    bgHover: 'hover:bg-green-50',
+    iconBg: 'bg-green-100',
+    iconBgHover: 'group-hover:bg-green-200',
+    textHover: 'group-hover:text-green-600',
+    emoji: '👨‍🎓',
+    title: 'Mentee (학습자)',
+    description: '교육 자료를 학습하고 퀴즈를 풀어봅니다',
+  },
+};
+
 export default function RoleSelectionPage() {
   const { user, handleGoogleLogin, handleRoleSelect } = useAuth();
 
@@ -79,39 +103,29 @@ export default function RoleSelectionPage() {
         </div>
 
         <div className="space-y-4">
-          <button
-            onClick={() => onRoleSelect(ROLES.MENTOR)}
-            className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition">
-                <span className="text-2xl">👨‍🏫</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-800 group-hover:text-blue-600">
-                  Mentor (교육 담당자)
-                </h3>
-                <p className="text-sm text-gray-500">교육 자료를 생성하고 관리합니다</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => onRoleSelect(ROLES.MENTEE)}
-            className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition text-left group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-200 transition">
-                <span className="text-2xl">👨‍🎓</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-800 group-hover:text-green-600">
-                  Mentee (학습자)
-                </h3>
-                <p className="text-sm text-gray-500">교육 자료를 학습하고 퀴즈를 풀어봅니다</p>
-              </div>
-            </div>
-          </button>
+          {/* Role Selection Cards - Issue #170 테마 시스템 적용 */}
+          {[ROLES.MENTOR, ROLES.MENTEE].map((role) => {
+            const style = ROLE_CARD_STYLES[role];
+            return (
+              <button
+                key={role}
+                onClick={() => onRoleSelect(role)}
+                className={`w-full p-6 border-2 border-gray-200 rounded-xl ${style.borderHover} ${style.bgHover} transition text-left group`}
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`w-12 h-12 ${style.iconBg} rounded-xl flex items-center justify-center ${style.iconBgHover} transition`}
+                  >
+                    <span className="text-2xl">{style.emoji}</span>
+                  </div>
+                  <div>
+                    <h3 className={`font-bold text-gray-800 ${style.textHover}`}>{style.title}</h3>
+                    <p className="text-sm text-gray-500">{style.description}</p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
