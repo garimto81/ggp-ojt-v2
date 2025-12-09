@@ -11,7 +11,7 @@ import { ROLES, ROLE_THEMES, DEFAULT_THEME, DEPARTMENT_THEMES, DEFAULT_DEPARTMEN
 import UserDetailPanel from './UserDetailPanel';
 import BulkActionsBar from './BulkActionsBar';
 
-const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
+const FALLBACK_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];
 
 export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isAdmin }) {
@@ -31,8 +31,33 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
   // Bulk selection state
   const [selectedUserIds, setSelectedUserIds] = useState([]);
 
+  // Admin settings departments (loaded from DB)
+  const [adminDepartments, setAdminDepartments] = useState(FALLBACK_DEPARTMENTS);
+
   // Debounced search
   const debouncedUserSearch = useDebounce(userSearch, 300);
+
+  // Load departments from admin_settings
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('admin_settings')
+          .select('value')
+          .eq('key', 'default_departments')
+          .single();
+
+        if (!error && data?.value && Array.isArray(data.value)) {
+          setAdminDepartments(data.value);
+        }
+      } catch (e) {
+        console.error('Failed to load departments from admin_settings:', e);
+        // Keep fallback departments on error
+      }
+    };
+
+    loadDepartments();
+  }, []);
 
   // Reset page when filters change
   useEffect(() => {
@@ -167,13 +192,13 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
     }
   };
 
-  // Department options (default + existing)
+  // Department options (admin settings + existing user departments)
   const departmentOptions = useMemo(() => {
     const existingDepts = allUsers
       .map((u) => u.department)
-      .filter((d) => d && !DEFAULT_DEPARTMENTS.includes(d));
-    return [...new Set([...DEFAULT_DEPARTMENTS, ...existingDepts])].sort();
-  }, [allUsers]);
+      .filter((d) => d && !adminDepartments.includes(d));
+    return [...new Set([...adminDepartments, ...existingDepts])].sort();
+  }, [allUsers, adminDepartments]);
 
   // Filtered and paginated users
   const { filteredUsers, paginatedUsers, totalUserPages } = useMemo(() => {
