@@ -128,6 +128,56 @@ export const ROLES = {
   MENTEE: 'mentee',
 };
 
+// Role-based theme configuration (Issue #170)
+// 역할별 시각적 구분을 위한 컬러 테마
+export const ROLE_THEMES = {
+  [ROLES.ADMIN]: {
+    // Rose/Red 계열 - 관리자 권한 강조
+    primary: 'rose',
+    header: 'bg-rose-50 border-rose-200',
+    headerText: 'text-rose-800',
+    accent: 'bg-rose-500',
+    accentHover: 'hover:bg-rose-600',
+    badge: 'bg-rose-100 text-rose-700',
+    border: 'border-rose-300',
+    ring: 'ring-rose-500',
+  },
+  [ROLES.MENTOR]: {
+    // Blue 계열 - 전문성/신뢰 강조
+    primary: 'blue',
+    header: 'bg-blue-50 border-blue-200',
+    headerText: 'text-blue-800',
+    accent: 'bg-blue-500',
+    accentHover: 'hover:bg-blue-600',
+    badge: 'bg-blue-100 text-blue-700',
+    border: 'border-blue-300',
+    ring: 'ring-blue-500',
+  },
+  [ROLES.MENTEE]: {
+    // Green 계열 - 성장/학습 강조
+    primary: 'green',
+    header: 'bg-green-50 border-green-200',
+    headerText: 'text-green-800',
+    accent: 'bg-green-500',
+    accentHover: 'hover:bg-green-600',
+    badge: 'bg-green-100 text-green-700',
+    border: 'border-green-300',
+    ring: 'ring-green-500',
+  },
+};
+
+// Default theme (for unauthenticated or unknown roles)
+export const DEFAULT_THEME = {
+  primary: 'gray',
+  header: 'bg-white border-gray-200',
+  headerText: 'text-gray-800',
+  accent: 'bg-gray-500',
+  accentHover: 'hover:bg-gray-600',
+  badge: 'bg-gray-100 text-gray-700',
+  border: 'border-gray-300',
+  ring: 'ring-gray-500',
+};
+
 // View states
 export const VIEW_STATES = {
   LOADING: 'loading',
