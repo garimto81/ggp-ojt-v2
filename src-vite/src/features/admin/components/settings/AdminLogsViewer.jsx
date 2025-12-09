@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@utils/api';
 import { Toast } from '@contexts/ToastContext';
-import { useAuth } from '@features/auth/hooks/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ROLES } from '@/constants';
 
 const LOG_TYPE_ICONS = {

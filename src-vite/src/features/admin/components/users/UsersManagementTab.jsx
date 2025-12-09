@@ -2,7 +2,7 @@
 // Manages user list, filtering, pagination, and integrates with side panel and bulk actions
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@features/auth/hooks/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Toast } from '@contexts/ToastContext';
 import { supabase } from '@utils/api';
 import { formatDate, sanitizeText } from '@utils/helpers';

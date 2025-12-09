@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useDocs } from '@contexts/DocsContext';
-import { useAuth } from '@features/auth/hooks/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Toast } from '@contexts/ToastContext';
 import { supabase } from '@utils/api';
 import { formatDate, sanitizeText } from '@utils/helpers';
