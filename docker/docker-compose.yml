@@ -1,24 +1,112 @@
-# OJT Master - Docker Compose Configuration (Issue #104)
-# Frontend Only - 외부 Local AI 서버 사용
+# ============================================================
+# OJT Master - Local-Only Docker Compose (Issue #114)
+# ============================================================
 #
-# ⚠️ 중요: vLLM은 별도 서버(ojt-local-ai)에서 실행 중입니다.
-#    이 docker-compose에서는 vLLM을 실행하지 않습니다.
-#    AI 서버: http://10.10.100.209:8001 (ojt-local-ai 컨테이너)
-#
-# 사용법:
-#   1. SSL 인증서 설정: docker/ssl/cert.pem, docker/ssl/key.pem
-#   2. 프론트엔드 빌드: cd src-vite && npm run build
-#   3. 실행: docker-compose up -d
+# 목적: Vercel 배포 폐기, 순수 로컬 네트워크 Docker 배포
 #
 # 구조:
-#   nginx:8443 (HTTPS) ── / → frontend (정적 파일)
-#   프론트엔드 → VITE_LOCAL_AI_URL → 외부 AI 서버 (10.10.100.209:8001)
+#   1. PostgreSQL (Self-hosted, Supabase 클라우드 대체)
+#   2. PostgREST (PostgreSQL REST API)
+#   3. nginx (프론트엔드 서빙 + API 프록시)
+#   4. vLLM (외부 서버 10.10.100.209:8001 연결)
+#
+# 사용법:
+#   1. 환경 변수 설정: cp .env.docker.example .env.docker
+#   2. 프론트엔드 빌드: cd ../src-vite && npm run build
+#   3. 실행: docker-compose --env-file .env.docker up -d
+#
+# 접속:
+#   - Frontend: https://localhost:8443
+#   - PostgreSQL: localhost:5432
+#   - PostgREST API: http://localhost:3000
+#
+# ============================================================
+
+version: '3.8'
 
 services:
-  # Nginx: SSL termination + Static File Server
+  # ========================================
+  # PostgreSQL Database
+  # ========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: ojt-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ojt_master}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - ojt-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=1GB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+
+  # ========================================
+  # PostgREST (PostgreSQL REST API)
+  # ========================================
+  postgrest:
+    image: postgrest/postgrest:v12.0.2
+    container_name: ojt-postgrest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ojt_master}
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS:-public}
+      PGRST_DB_ANON_ROLE: ${PGRST_DB_ANON_ROLE:-anon}
+      PGRST_JWT_SECRET: ${PGRST_JWT_SECRET}
+      PGRST_DB_CHANNEL_ENABLED: "true"
+      PGRST_DB_POOL: 20
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: 10
+      PGRST_SERVER_TIMING_ENABLED: "true"
+    ports:
+      - "3000:3000"
+    networks:
+      - ojt-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ========================================
+  # Nginx (Frontend + API Proxy)
+  # ========================================
   nginx:
     image: nginx:alpine
     container_name: ojt-nginx
+    depends_on:
+      - postgrest
     ports:
       - "8080:80"
       - "8443:443"
@@ -34,33 +122,55 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    extra_hosts:
+      # vLLM 외부 서버 연결
+      - "vllm-server:${VLLM_HOST:-10.10.100.209}"
 
+# ========================================
+# Networks
+# ========================================
 networks:
   ojt-network:
     driver: bridge
     name: ojt-network
 
+# ========================================
+# Volumes
+# ========================================
+volumes:
+  postgres_data:
+    driver: local
+    name: ojt_postgres_data
+
 # ============================================================
-# ⚠️ vLLM 서비스는 별도로 관리됩니다 (ojt-local-ai 컨테이너)
+# Notes
 # ============================================================
 #
-# 이 프로젝트에서는 vLLM을 docker-compose로 실행하지 않습니다.
-# 기존에 실행 중인 ojt-local-ai 컨테이너를 사용합니다.
+# 1. vLLM 외부 서버
+#    - AI 서버는 별도 호스트(10.10.100.209:8001)에서 실행
+#    - nginx가 /api/v1/* 요청을 프록시
+#    - 환경 변수 VLLM_HOST로 설정 가능
 #
-# AI 서버 상태 확인:
-#   docker ps | grep ojt-local-ai
-#   curl http://10.10.100.209:8001/health
+# 2. PostgreSQL 초기화
+#    - database/init/*.sql 파일이 자동 실행됨
+#    - 01_init.sql: 기본 스키마 생성
+#    - 02_auth.sql: 인증 관련 설정
+#    - 03_rls.sql: Row Level Security 정책
 #
-# AI 서버가 없는 경우 별도로 실행:
-#   docker run -d --name ojt-local-ai \
-#     --gpus all \
-#     -p 8001:8000 \
-#     vllm/vllm-openai:latest \
-#     --model Qwen/Qwen3-4B \
-#     --host 0.0.0.0 \
-#     --port 8000 \
-#     --max-model-len 4096 \
-#     --gpu-memory-utilization 0.7 \
-#     --enforce-eager
+# 3. PostgREST
+#    - Supabase REST API 대체
+#    - JWT 인증 사용 (PGRST_JWT_SECRET 필수)
+#    - 엔드포인트: http://localhost:3000
+#
+# 4. SSL 인증서
+#    - docker/ssl/cert.pem, docker/ssl/key.pem 필요
+#    - 자체 서명 인증서 생성:
+#      openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+#        -keyout ssl/key.pem -out ssl/cert.pem \
+#        -subj "/CN=localhost"
+#
+# 5. 환경 변수
+#    - .env.docker 파일 사용 (.env.docker.example 참조)
+#    - PGRST_JWT_SECRET은 반드시 설정 필요 (최소 32자)
 #
 # ============================================================

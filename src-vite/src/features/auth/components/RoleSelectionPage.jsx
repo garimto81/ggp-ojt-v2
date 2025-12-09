@@ -1,4 +1,5 @@
-// OJT Master v2.13.6 - Role Selection Page (Issue #105: Email Auth Integration)
+// OJT Master v2.14.0 - Role Selection Page (Local-Only Architecture)
+// Issue #114: 이메일 인증만 지원, Google OAuth 제거
 
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
@@ -17,7 +18,7 @@ export default function RoleSelectionPage() {
     }
   };
 
-  // Not logged in - show AuthLoginPage (Issue #105: Google + Email)
+  // Not logged in - show AuthLoginPage (Email Authentication)
   if (!user) {
     return <AuthLoginPage />;
   }

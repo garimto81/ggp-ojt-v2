@@ -1,4 +1,4 @@
-// OJT Master v2.13.0 - Constants and Configuration (Local AI + WebLLM)
+// OJT Master v2.14.0 - Constants and Configuration (Local-Only Architecture)
 
 export const CONFIG = {
   // Time limits
@@ -24,7 +24,15 @@ export const CONFIG = {
   SESSION_EXPIRY_MS: 30 * 60 * 1000, // 30 minutes
 };
 
-// Supabase configuration
+// API configuration (Issue #114: Local-Only Architecture)
+// TODO: Replace with direct PostgreSQL REST API endpoint
+// Target: VITE_API_URL (e.g., http://10.10.100.209/api)
+export const API_CONFIG = {
+  // Current: Supabase client (temporary, will be replaced)
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://10.10.100.209',
+};
+
+// Supabase configuration (DEPRECATED - will be replaced with direct REST API)
 // 2025년 11월 이후 신규 프로젝트: VITE_SUPABASE_PUBLISHABLE_KEY 사용
 // 레거시 프로젝트: VITE_SUPABASE_ANON_KEY 계속 사용 가능
 export const SUPABASE_CONFIG = {
@@ -34,17 +42,18 @@ export const SUPABASE_CONFIG = {
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '',
 };
 
-// R2 Upload configuration
+// R2 Upload configuration (DEPRECATED - Cloud-specific, Issue #114)
+// TODO: Replace with local file storage or MinIO
 export const R2_CONFIG = {
   WORKER_URL: import.meta.env.VITE_R2_WORKER_URL || 'https://ojt-r2-upload.your-worker.workers.dev',
   ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'],
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
 };
 
-// CORS Proxies for URL extraction (fallback only)
+// CORS Proxies for URL extraction (DEPRECATED - Not needed in local network)
 export const CORS_PROXIES = ['https://api.allorigins.win/raw?url=', 'https://corsproxy.io/?'];
 
-// CORS Proxy configuration (FR-801)
+// CORS Proxy configuration (DEPRECATED - Cloud-specific, FR-801)
 export const CORS_CONFIG = {
   // 자체 R2 Worker 프록시 사용 (constants.js의 R2_CONFIG.WORKER_URL + /proxy)
   USE_SELF_PROXY: true,
@@ -54,7 +63,8 @@ export const CORS_CONFIG = {
   CACHE_TTL: 300,
 };
 
-// WebLLM configuration (Issue #30, #45)
+// WebLLM configuration (OPTIONAL fallback, Issue #30, #45)
+// Primary: Local AI (vLLM), Fallback: WebLLM (browser-based)
 export const WEBLLM_CONFIG = {
   // 기본 모델 (한국어 우수, 2.4GB)
   DEFAULT_MODEL: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
@@ -160,14 +170,10 @@ export const ROLE_COLORS = {
   },
 };
 
-// Auth configuration (Issue #105)
-// MODE: 'google' | 'email' | 'hybrid'
-// - google: Google OAuth만 (Vercel 기본)
-// - email: Email 인증만 (Docker 사내 배포)
-// - hybrid: 둘 다 (기본값)
+// Auth configuration (Issue #114: Local-Only Architecture)
+// 이메일/비밀번호 인증만 사용 (Google OAuth 제거)
 export const AUTH_CONFIG = {
-  MODE: import.meta.env.VITE_AUTH_MODE || 'hybrid',
-  // Email 인증 시 관리자 승인 필요 여부
+  // 관리자 승인 필요 여부
   REQUIRE_APPROVAL: true,
 };
 
@@ -179,6 +185,7 @@ export const USER_STATUS = {
 };
 
 // Auth provider constants (Issue #105)
+// DEPRECATED (Issue #114): auth_provider 필드 더 이상 사용 안함, 하위 호환성만 유지
 export const AUTH_PROVIDER = {
   GOOGLE: 'google',
   EMAIL: 'email',

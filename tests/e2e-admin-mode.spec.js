@@ -3,6 +3,7 @@ const { test, expect } = require('@playwright/test');
 
 /**
  * E2E Test Suite for Admin Mode Switch Feature (#25)
+ * (Local Docker Environment)
  *
  * Tests verify:
  * 1. Admin user sees mode switch button in header
@@ -11,6 +12,10 @@ const { test, expect } = require('@playwright/test');
  * 4. Admin mode return works
  * 5. Session persistence on refresh
  * 6. Warning banner displays in temp mode
+ *
+ * Environment: Docker (http://localhost:8080)
+ * Auth Mode: email (requires admin login)
+ * Note: These tests require authentication - may skip if not logged in
  */
 
 test.describe('Admin Mode Switch - E2E Tests', () => {
@@ -43,7 +48,7 @@ test.describe('Admin Mode Switch - E2E Tests', () => {
 
     // Check if we're on login page or dashboard
     const pageContent = await page.content();
-    const isLoginPage = pageContent.includes('Google로 로그인') || pageContent.includes('google');
+    const isLoginPage = pageContent.includes('로그인') || pageContent.includes('login');
     const isAdminDashboard = pageContent.includes('admin_dashboard') || pageContent.includes('관리자') || pageContent.includes('Admin');
 
     console.log('=== Page State ===');
@@ -222,15 +227,16 @@ test.describe('Admin Mode Switch - E2E Tests', () => {
     // Note: This test requires actual authentication
     // For now, we document the expected flow
 
-    console.log('=== Expected Admin Mode Switch Flow ===');
-    console.log('1. Admin logs in via Google OAuth');
-    console.log('2. Redirected to Admin Dashboard');
-    console.log('3. Header shows "모드" button next to AI status');
-    console.log('4. Click "모드" -> Dropdown appears');
-    console.log('5. Select "Mentor 작업실" -> View changes to mentor_dashboard');
-    console.log('6. Header shows "MENTOR MODE (임시)"');
-    console.log('7. Amber warning banner appears below header');
-    console.log('8. Click "Admin으로 돌아가기" -> Returns to admin_dashboard');
+    console.log('=== Expected Admin Mode Switch Flow (Local Docker) ===');
+    console.log('1. Admin logs in via email authentication (ID/password)');
+    console.log('2. Account must be approved by admin (status=approved)');
+    console.log('3. Redirected to Admin Dashboard');
+    console.log('4. Header shows "모드" button next to AI status');
+    console.log('5. Click "모드" -> Dropdown appears');
+    console.log('6. Select "Mentor 작업실" -> View changes to mentor_dashboard');
+    console.log('7. Header shows "MENTOR MODE (임시)"');
+    console.log('8. Amber warning banner appears below header');
+    console.log('9. Click "Admin으로 돌아가기" -> Returns to admin_dashboard');
 
     // Navigate and capture current state
     await page.goto('/', { waitUntil: 'networkidle' });

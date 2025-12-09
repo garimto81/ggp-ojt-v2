@@ -1,10 +1,10 @@
-// OJT Master v2.11.1 - Authentication Context (Refactored)
+// OJT Master v2.14.0 - Authentication Context (Local-Only Architecture)
 /**
  * ROLE: Context API - Client State Management
  *
  * PURPOSE:
  * - 현재 로그인 사용자의 인증 상태 관리 (전역 클라이언트 상태)
- * - Supabase 인증 세션과 동기화
+ * - 이메일/비밀번호 인증만 지원 (Google OAuth 제거)
  * - 뷰 상태(viewState) 및 모드(sessionMode) 관리
  *
  * RESPONSIBILITY:
@@ -12,23 +12,24 @@
  * ✅ 뷰 상태 관리 (viewState: LOADING → ROLE_SELECT → DASHBOARD)
  * ✅ 관리자 모드 전환 (sessionMode: admin ↔ mentor)
  * ✅ 인증 액션 (로그인, 로그아웃, 역할 선택)
- * ✅ Supabase auth 이벤트 리스너 및 세션 동기화
+ * ✅ 인증 세션 동기화
  *
  * NOT RESPONSIBLE FOR:
  * ❌ 사용자 목록 조회 → useUsers (React Query) 사용
  * ❌ 사용자 CRUD → useUsers mutation 사용
  * ❌ 서버 데이터 캐싱 → React Query 사용
  *
- * REFACTORED (Issue #83):
- * - loadUserProfile 로직 → useUserProfile Hook으로 분리
- * - 단일 책임 원칙(SRP) 적용
+ * REFACTORED (Issue #114):
+ * - Google OAuth 완전 제거
+ * - 이메일/비밀번호 인증만 유지
+ * - Supabase Auth 의존성을 자체 인증 API로 전환 준비 (TODO 표시)
  */
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@utils/api';
 import { dbSave } from '@utils/db';
 import { SecureSession, getViewStateByRole } from '@utils/helpers';
-import { VIEW_STATES, ROLES, USER_STATUS, AUTH_PROVIDER } from '@/constants';
+import { VIEW_STATES, ROLES, USER_STATUS } from '@/constants';
 import { useUserProfile } from './useUserProfile';
 
 const AuthContext = createContext(null);
@@ -48,8 +49,8 @@ export function AuthProvider({ children }) {
   const displayRole = sessionMode || user?.role;
 
   // Initialize auth state (runs only on mount)
-  // Supabase 권장 패턴: onAuthStateChange를 먼저 등록 후 getSession() 호출
-  // https://supabase.com/docs/reference/javascript/auth-onauthstatechange
+  // TODO(Issue #114): Supabase Auth → 자체 인증 API로 전환
+  // 현재는 Supabase Auth 사용, 추후 JWT 기반 자체 인증으로 교체 예정
   useEffect(() => {
     let isMounted = true;
     let initialSessionHandled = false; // 초기 세션 처리 완료 플래그
@@ -67,6 +68,7 @@ export function AuthProvider({ children }) {
       }
     }, 15000);
 
+    // TODO(Issue #114): Supabase onAuthStateChange → 자체 세션 관리로 교체
     // 1. 먼저 onAuthStateChange 리스너 등록
     const {
       data: { subscription },
@@ -86,8 +88,8 @@ export function AuthProvider({ children }) {
       setSessionInitialized(true);
     });
 
+    // TODO(Issue #114): getSession() → localStorage JWT 검증으로 교체
     // 2. getSession()은 onAuthStateChange가 INITIAL_SESSION을 발생시키도록 트리거
-    // Supabase v2에서는 getSession() 호출 시 onAuthStateChange(INITIAL_SESSION)가 발생함
     console.log('[Auth] getSession() 호출 - INITIAL_SESSION 트리거');
     supabase.auth.getSession().catch((error) => {
       console.error('[Auth] getSession() 에러:', error);
@@ -107,35 +109,22 @@ export function AuthProvider({ children }) {
     };
   }, []); // Intentionally empty - only run on mount
 
-  // Google login
-  const handleGoogleLogin = useCallback(async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) throw error;
-    } catch (error) {
-      console.error('[Auth] Google login error:', error);
-      throw error;
-    }
-  }, []);
-
-  // Email login (Issue #105)
+  // Email login - 이메일/비밀번호 인증 (Local-Only Architecture)
   const handleEmailLogin = useCallback(async (email, password) => {
     try {
+      // TODO(Issue #114): Supabase Auth → 자체 JWT 인증 API로 교체
+      // POST /api/auth/login { email, password }
+      // Response: { token, user }
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
 
-      // 사용자 status 확인 (Email 인증 사용자만)
+      // 사용자 status 확인
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('status, auth_provider')
+        .select('status')
         .eq('id', data.user.id)
         .single();
 
@@ -145,14 +134,14 @@ export function AuthProvider({ children }) {
         return { user: data.user, needsRoleSelect: true };
       }
 
-      // Email 사용자이고 승인 대기 중인 경우
-      if (userData.auth_provider === AUTH_PROVIDER.EMAIL && userData.status === USER_STATUS.PENDING) {
-        console.log('[Auth] Email user pending approval');
+      // 승인 대기 중인 경우
+      if (userData.status === USER_STATUS.PENDING) {
+        console.log('[Auth] User pending approval');
         return { user: data.user, status: USER_STATUS.PENDING };
       }
 
-      // Email 사용자이고 거부된 경우
-      if (userData.auth_provider === AUTH_PROVIDER.EMAIL && userData.status === USER_STATUS.REJECTED) {
+      // 거부된 경우
+      if (userData.status === USER_STATUS.REJECTED) {
         await supabase.auth.signOut();
         throw new Error('계정이 승인 거부되었습니다. 관리자에게 문의하세요.');
       }
@@ -164,10 +153,14 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Email signup (Issue #105)
+  // Email signup - 회원가입 (관리자 승인 필요)
   const handleEmailSignup = useCallback(async ({ name, email, password, role }) => {
     try {
-      // 1. Supabase Auth 계정 생성
+      // TODO(Issue #114): Supabase Auth → 자체 JWT 인증 API로 교체
+      // POST /api/auth/signup { name, email, password, role }
+      // Response: { token, user }
+
+      // 1. Auth 계정 생성
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -183,7 +176,6 @@ export function AuthProvider({ children }) {
         name,
         role,
         department: null,
-        auth_provider: AUTH_PROVIDER.EMAIL,
         status: USER_STATUS.PENDING,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -213,7 +205,10 @@ export function AuthProvider({ children }) {
   const handleLogout = useCallback(async () => {
     SecureSession.remove('ojt_sessionMode');
     setSessionMode(null);
+
+    // TODO(Issue #114): Supabase signOut → localStorage JWT 삭제로 교체
     await supabase.auth.signOut();
+
     setUser(null);
     setSession(null);
     setViewState(VIEW_STATES.ROLE_SELECT);
@@ -237,13 +232,13 @@ export function AuthProvider({ children }) {
           name: user.name,
           role: selectedRole,
           department: null,
-          auth_provider: AUTH_PROVIDER.GOOGLE, // Google OAuth 사용자
-          status: USER_STATUS.APPROVED, // Google OAuth는 즉시 승인
+          status: USER_STATUS.APPROVED, // 역할 선택 시 즉시 승인 (이메일 인증만 사용)
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
 
-        // Save to Supabase first (source of truth)
+        // TODO(Issue #114): Supabase upsert → 자체 API로 교체
+        // PUT /api/users/:id { role }
         const { error: supabaseError } = await supabase
           .from('users')
           .upsert(userData, { onConflict: 'id' });
@@ -291,9 +286,8 @@ export function AuthProvider({ children }) {
     sessionMode,
     displayRole,
     isLoading,
-    handleGoogleLogin,
-    handleEmailLogin, // Issue #105: Email 로그인
-    handleEmailSignup, // Issue #105: Email 회원가입
+    handleEmailLogin, // 이메일/비밀번호 로그인
+    handleEmailSignup, // 이메일/비밀번호 회원가입
     handleLogout,
     handleRoleSelect,
     handleModeSwitch,

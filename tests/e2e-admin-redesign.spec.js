@@ -3,6 +3,7 @@ const { test, expect } = require('@playwright/test');
 
 /**
  * E2E Test Suite for Admin Page Redesign (#79)
+ * (Local Docker Environment)
  *
  * Tests verify:
  * 1. Content Management Tab - Split View layout
@@ -11,6 +12,10 @@ const { test, expect } = require('@playwright/test');
  * 4. User Management Tab improvements
  * 5. Settings Tab (new)
  * 6. Statistics Tab with export
+ *
+ * Environment: Docker (http://localhost:8080)
+ * Auth Mode: email (requires admin login)
+ * Note: These tests require admin authentication - may skip if not logged in
  */
 
 test.describe('Admin Page Redesign - E2E Tests', () => {
