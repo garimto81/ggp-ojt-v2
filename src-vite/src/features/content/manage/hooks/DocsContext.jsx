@@ -81,7 +81,7 @@ export function DocsProvider({ children }) {
         author_id: doc.author_id || user.id,
         author_name: doc.author_name || user.name,
         created_at: doc.created_at || Date.now(),
-        updated_at: Date.now(),
+        updated_at: new Date().toISOString(),
       };
 
       await dbSave('ojt_docs', docData);

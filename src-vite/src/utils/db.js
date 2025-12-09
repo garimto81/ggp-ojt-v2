@@ -161,7 +161,7 @@ async function addToSyncQueue(table, action, data) {
     table,
     action,
     data,
-    created_at: Date.now(),
+    created_at: new Date().toISOString(),
   });
 }
 

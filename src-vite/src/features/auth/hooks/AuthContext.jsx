@@ -151,8 +151,8 @@ export function AuthProvider({ children }) {
         name: user.name,
         role: selectedRole,
         department: null,
-        created_at: Date.now(),
-        updated_at: Date.now(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       await dbSave('users', userData);
