@@ -62,24 +62,27 @@ CREATE POLICY "departments_select_policy"
 CREATE POLICY "departments_insert_policy"
   ON public.departments FOR INSERT
   TO authenticated
-  WITH CHECK (public.is_admin());
+  WITH CHECK (public.rls_is_admin());
 
 -- UPDATE 정책: Admin만 가능
 CREATE POLICY "departments_update_policy"
   ON public.departments FOR UPDATE
   TO authenticated
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
+  USING (public.rls_is_admin())
+  WITH CHECK (public.rls_is_admin());
 
 -- DELETE 정책: Admin만 가능
 CREATE POLICY "departments_delete_policy"
   ON public.departments FOR DELETE
   TO authenticated
-  USING (public.is_admin());
+  USING (public.rls_is_admin());
 
 -- ============================================
 -- Phase 4: updated_at 트리거
 -- ============================================
+
+-- 기존 트리거 삭제 (재실행 시 충돌 방지)
+DROP TRIGGER IF EXISTS departments_updated_at ON public.departments;
 
 CREATE TRIGGER departments_updated_at
   BEFORE UPDATE ON public.departments
