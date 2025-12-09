@@ -1,5 +1,5 @@
-// OJT Master v2.13.5 - API Utilities Tests (Local AI + WebLLM)
-import { describe, it, expect } from 'vitest';
+// OJT Master v2.5.0 - API Utilities Tests
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { validateQuizQuality, generateOJTContent, checkAIStatus } from './api';
 
 describe('validateQuizQuality', () => {
@@ -100,69 +100,133 @@ describe('validateQuizQuality', () => {
   });
 });
 
-describe('checkAIStatus (Local AI + WebLLM)', () => {
-  // Local AI 우선, WebLLM fallback 구조
-
-  it('returns AI status structure with required fields', async () => {
-    const result = await checkAIStatus();
-
-    // 필수 필드 존재 확인 (새로운 구조)
-    expect(result).toHaveProperty('supported');
-    expect(result).toHaveProperty('status');
-    expect(result).toHaveProperty('ready');
-    expect(result).toHaveProperty('engine');
-    expect(result).toHaveProperty('model');
+describe('generateOJTContent - Graceful Degradation', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
   });
 
-  it('returns valid engine type', async () => {
-    const result = await checkAIStatus();
-
-    // engine은 'localai', 'webllm', 또는 null
-    const validEngines = ['localai', 'webllm', null];
-    expect(validEngines).toContain(result.engine);
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it('returns valid status value', async () => {
-    const result = await checkAIStatus();
+  it('returns fallback content when AI request fails', async () => {
+    // Mock fetch to simulate API error
+    global.fetch.mockRejectedValueOnce(new Error('API 결제 정지'));
 
-    // status 값 검증
-    const validStatuses = ['available', 'ready', 'not_loaded', null];
-    expect(validStatuses).toContain(result.status);
+    const result = await generateOJTContent(
+      '테스트 콘텐츠 내용입니다. 이것은 원문 텍스트입니다.',
+      '테스트 문서'
+    );
+
+    // Should return fallback structure
+    expect(result.ai_processed).toBe(false);
+    expect(result.ai_error).toBe('API 결제 정지');
+    expect(result.title).toBe('테스트 문서');
+    expect(result.team).toBe('미분류');
+    expect(result.sections).toHaveLength(1);
+    expect(result.sections[0].title).toBe('원문 내용');
+    expect(result.quiz).toEqual([]);
   });
 
-  it('returns boolean for supported and ready', async () => {
-    const result = await checkAIStatus();
+  it('returns fallback content when AI response is not ok', async () => {
+    // Mock fetch to simulate 402 Payment Required
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 402,
+    });
 
-    expect(typeof result.supported).toBe('boolean');
-    expect(typeof result.ready).toBe('boolean');
+    const result = await generateOJTContent('콘텐츠', '테스트');
+
+    expect(result.ai_processed).toBe(false);
+    expect(result.ai_error).toContain('402');
+    expect(result.quiz).toEqual([]);
   });
 
-  it('has consistent ready and status values', async () => {
-    const result = await checkAIStatus();
+  it('returns fallback content when AI response is empty', async () => {
+    // Mock fetch to simulate empty response
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ candidates: [] }),
+    });
 
-    // ready가 true면 status는 'available' 또는 'ready'
-    if (result.ready) {
-      expect(['available', 'ready']).toContain(result.status);
-    }
-    // ready가 false면 engine이 null이거나 status가 'not_loaded'
-    if (!result.ready) {
-      expect(result.engine === null || result.status === 'not_loaded').toBe(true);
-    }
+    const result = await generateOJTContent('콘텐츠', '테스트');
+
+    expect(result.ai_processed).toBe(false);
+    expect(result.quiz).toEqual([]);
+  });
+
+  it('sanitizes HTML content in fallback mode', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('API error'));
+
+    const maliciousContent = '<script>alert("xss")</script><p>정상 콘텐츠</p>';
+    const result = await generateOJTContent(maliciousContent, '테스트');
+
+    // Script tags should be removed
+    expect(result.sections[0].content).not.toContain('<script>');
+    expect(result.sections[0].content).toContain('정상 콘텐츠');
+  });
+
+  it('converts plain text to HTML paragraphs in fallback mode', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('API error'));
+
+    const plainText = '첫 번째 문단\n\n두 번째 문단';
+    const result = await generateOJTContent(plainText, '테스트');
+
+    expect(result.sections[0].content).toContain('<p>');
+    expect(result.sections[0].content).toContain('첫 번째 문단');
+    expect(result.sections[0].content).toContain('두 번째 문단');
+  });
+
+  it('uses default title when not provided', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('API error'));
+
+    const result = await generateOJTContent('콘텐츠', '');
+
+    expect(result.title).toBe('제목 없음');
+  });
+
+  it('calls onProgress callback with fallback message', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('API error'));
+
+    const onProgress = vi.fn();
+    await generateOJTContent('콘텐츠', '테스트', 1, 1, onProgress);
+
+    expect(onProgress).toHaveBeenCalledWith('AI 분석 중...');
+    expect(onProgress).toHaveBeenCalledWith('AI 분석 실패 - 원문으로 등록 중...');
   });
 });
 
-describe('generateOJTContent - Function Signature', () => {
-  // generateOJTContent 함수 시그니처 및 기본 동작 테스트
-  // 실제 AI 생성 테스트는 localAI.test.js의 Integration 테스트에서 수행
-
-  it('is a function that accepts contentText and title', () => {
-    expect(typeof generateOJTContent).toBe('function');
-    expect(generateOJTContent.length).toBeGreaterThanOrEqual(2);
+describe('checkAIStatus', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
   });
 
-  it('returns a promise', () => {
-    const result = generateOJTContent('test', 'test');
-    expect(result).toBeInstanceOf(Promise);
-    // 테스트 후 정리 (Promise는 실행되지만 결과는 기다리지 않음)
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns online: false when API fails', async () => {
+    global.fetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const result = await checkAIStatus();
+
+    expect(result.online).toBe(false);
+    expect(result.model).toBeDefined();
+  });
+
+  it('returns online: false when response is not ok', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: false });
+
+    const result = await checkAIStatus();
+
+    expect(result.online).toBe(false);
+  });
+
+  it('returns online: true when API responds ok', async () => {
+    global.fetch.mockResolvedValueOnce({ ok: true });
+
+    const result = await checkAIStatus();
+
+    expect(result.online).toBe(true);
   });
 });

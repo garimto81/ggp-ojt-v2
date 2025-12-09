@@ -1,16 +1,23 @@
-// OJT Master v2.14.0 - Database Utilities (Local-Only Architecture)
-// Issue #114: Simplified for direct server fetch, removed IndexedDB cache
+// OJT Master v2.3.0 - Database Utilities (Dexie.js)
 
-/**
- * ARCHITECTURE CHANGE (Issue #114):
- * - Removed: Dexie.js (IndexedDB) local cache
- * - Removed: Offline sync queue
- * - Changed: All operations directly fetch from PostgreSQL via REST API
- * - Benefit: Simplified codebase, single source of truth (server)
- */
+import Dexie from 'dexie';
 
-// Default timeout for server queries
-const SERVER_QUERY_TIMEOUT = 10000; // 10 seconds
+// Initialize Dexie database
+export const localDb = new Dexie('OJT_LocalDB');
+
+// Schema with compound indexes for optimized queries
+localDb.version(2).stores({
+  users: 'id, name, role, department',
+  ojt_docs: 'id, team, step, author_id, updated_at, [team+step], [author_id+updated_at]',
+  learning_records: 'id, user_id, doc_id, completed_at, [user_id+doc_id], [user_id+completed_at]',
+  sync_queue: '++id, table, action, created_at',
+});
+
+// Sync queue processing flag
+let isSyncQueueProcessing = false;
+
+// Default timeout for Supabase queries
+const SUPABASE_QUERY_TIMEOUT = 10000; // 10 seconds
 
 /**
  * Wrap a promise with a timeout
@@ -30,10 +37,11 @@ function withTimeout(promise, ms) {
  */
 export async function dbGetAll(table, filter = null) {
   try {
-    // Check Supabase connection
+    const localData = await localDb[table].toArray();
+
+    // Return local data if no supabase connection
     if (!window.supabase) {
-      console.error(`[dbGetAll] No Supabase connection for ${table}`);
-      return [];
+      return localData;
     }
 
     // Build Supabase query
@@ -48,116 +56,161 @@ export async function dbGetAll(table, filter = null) {
     }
 
     // Execute with timeout to prevent infinite loading
-    const { data, error } = await withTimeout(query, SERVER_QUERY_TIMEOUT);
+    const { data: remoteData, error } = await withTimeout(query, SUPABASE_QUERY_TIMEOUT);
 
     if (error) {
-      console.error(`[dbGetAll] Server error for ${table}:`, error.message, error.code);
-      // RLS permission error
-      if (error.code === '42501' || error.message?.includes('permission')) {
-        console.error(`[dbGetAll] RLS permission denied for ${table}. Check database policies.`);
-      }
-      return [];
+      console.warn(`Supabase error for ${table}:`, error);
+      return localData;
     }
 
-    console.log(`[dbGetAll] Server returned ${data?.length || 0} items for ${table}`);
-    return data || [];
+    // Sync local cache with remote data
+    if (remoteData && remoteData.length > 0) {
+      await Promise.all(remoteData.map((item) => localDb[table].put(item)));
+
+      // Remove items that no longer exist on remote (for filtered queries)
+      if (filter) {
+        const remoteIds = new Set(remoteData.map((item) => item.id));
+        const toDelete = localData.filter((item) => !remoteIds.has(item.id));
+        if (toDelete.length > 0) {
+          await Promise.all(toDelete.map((item) => localDb[table].delete(item.id)));
+        }
+      }
+
+      return remoteData;
+    }
+
+    return localData;
   } catch (error) {
-    console.error(`[dbGetAll] Error for ${table}:`, error);
+    console.error(`dbGetAll error for ${table}:`, error);
     return [];
   }
 }
 
 /**
- * Save a record to the server database
+ * Save a record to both local and remote database
  * @param {string} table - Table name
  * @param {Object} data - Data to save
  * @returns {Promise<Object>} - Saved data
  */
 export async function dbSave(table, data) {
   try {
-    // Check Supabase connection
-    if (!window.supabase) {
-      throw new Error('서버 연결 없음. 네트워크를 확인하세요.');
-    }
+    // Save to local first
+    await localDb[table].put(data);
 
-    const { data: savedData, error } = await window.supabase
-      .from(table)
-      .upsert(data)
-      .select()
-      .single();
+    // Try to save to remote
+    if (window.supabase) {
+      const { data: savedData, error } = await window.supabase
+        .from(table)
+        .upsert(data)
+        .select()
+        .single();
 
-    if (error) {
-      console.error(`[dbSave] Server error for ${table}:`, error.message, error.code);
-
-      // Issue #132: 사용자에게 내부 에러 정보 노출 방지
-      // RLS permission error - throw user-friendly message
-      if (
-        error.code === '42501' ||
-        error.message?.includes('permission') ||
-        error.message?.includes('policy')
-      ) {
-        const permissionError = new Error('저장 권한이 없습니다. 관리자에게 문의하세요.');
-        permissionError.isPermissionError = true;
-        // 내부 로그용으로만 원본 에러 보존
-        if (import.meta.env.DEV) {
-          permissionError.originalError = error;
-        }
-        throw permissionError;
+      if (error) {
+        // Queue for later sync
+        await addToSyncQueue(table, 'upsert', data);
+        console.warn(`Queued ${table} for sync:`, error);
+      } else {
+        return savedData;
       }
-
-      // Other errors - 사용자에게는 일반 메시지만 표시
-      throw new Error('저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+    } else {
+      // Queue for later sync
+      await addToSyncQueue(table, 'upsert', data);
     }
 
-    console.info(`[dbSave] Saved to server: ${table}`, savedData?.id);
-    return savedData;
+    return data;
   } catch (error) {
-    console.error(`[dbSave] Error for ${table}:`, error);
+    console.error(`dbSave error for ${table}:`, error);
     throw error;
   }
 }
 
 /**
- * Delete a record from the server database
+ * Delete a record from both local and remote database
  * @param {string} table - Table name
  * @param {string} id - Record ID
  */
 export async function dbDelete(table, id) {
   try {
-    // Check Supabase connection
-    if (!window.supabase) {
-      throw new Error('서버 연결 없음. 네트워크를 확인하세요.');
+    // Delete from local first
+    await localDb[table].delete(id);
+
+    // Try to delete from remote
+    if (window.supabase) {
+      const { error } = await window.supabase.from(table).delete().eq('id', id);
+
+      if (error) {
+        // Queue for later sync
+        await addToSyncQueue(table, 'delete', { id });
+        console.warn(`Queued delete for ${table}:`, error);
+      }
+    } else {
+      // Queue for later sync
+      await addToSyncQueue(table, 'delete', { id });
     }
-
-    const { error } = await window.supabase.from(table).delete().eq('id', id);
-
-    if (error) {
-      console.error(`[dbDelete] Server error for ${table}:`, error.message);
-      // Issue #132: 사용자에게는 일반 메시지만 표시
-      throw new Error('삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-    }
-
-    console.info(`[dbDelete] Deleted from server: ${table}`, id);
   } catch (error) {
-    console.error(`[dbDelete] Error for ${table}:`, error);
+    console.error(`dbDelete error for ${table}:`, error);
     throw error;
   }
 }
 
 /**
- * DEPRECATED: Local cache functions removed
- * Use React Query for client-side caching instead
+ * Add an action to the sync queue
+ */
+async function addToSyncQueue(table, action, data) {
+  await localDb.sync_queue.add({
+    table,
+    action,
+    data,
+    created_at: Date.now(),
+  });
+}
+
+/**
+ * Process the sync queue
+ */
+export async function processSyncQueue() {
+  // Prevent concurrent processing
+  if (isSyncQueueProcessing) return;
+  isSyncQueueProcessing = true;
+
+  try {
+    const queue = await localDb.sync_queue.toArray();
+
+    for (const item of queue) {
+      try {
+        if (item.action === 'upsert') {
+          const { error } = await window.supabase.from(item.table).upsert(item.data);
+          if (!error) {
+            await localDb.sync_queue.delete(item.id);
+          }
+        } else if (item.action === 'delete') {
+          const { error } = await window.supabase.from(item.table).delete().eq('id', item.data.id);
+          if (!error) {
+            await localDb.sync_queue.delete(item.id);
+          }
+        }
+      } catch (error) {
+        console.error('Sync queue item error:', error);
+        // Keep item in queue for retry
+      }
+    }
+  } finally {
+    isSyncQueueProcessing = false;
+  }
+}
+
+/**
+ * Clear all local cache
  */
 export async function clearAllCache() {
-  console.warn('[DB] clearAllCache is deprecated (no local cache in local-only architecture)');
+  await localDb.users.clear();
+  await localDb.ojt_docs.clear();
+  await localDb.learning_records.clear();
+  await localDb.sync_queue.clear();
+  console.log('All cache cleared');
 }
 
-export async function getSyncQueueStatus() {
-  console.warn('[DB] getSyncQueueStatus is deprecated (no sync queue in local-only architecture)');
-  return { pending: 0, processing: false };
-}
-
-export async function processSyncQueue() {
-  console.warn('[DB] processSyncQueue is deprecated (no sync queue in local-only architecture)');
-  return { success: 0, failed: 0, deprecated: true };
+// Auto-process sync queue when online
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', processSyncQueue);
 }
