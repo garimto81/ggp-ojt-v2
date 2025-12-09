@@ -1,11 +1,12 @@
 // OJT Master v2.3.0 - Admin Dashboard Component
+// @agent admin-agent
 
 import { useState, useEffect } from 'react';
-import { useDocs } from '../contexts/DocsContext';
-import { useAuth } from '../contexts/AuthContext';
-import { Toast } from '../contexts/ToastContext';
-import { supabase } from '../utils/api';
-import { confirmDeleteWithCSRF, formatDate } from '../utils/helpers';
+import { useDocs } from '@/contexts/DocsContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { Toast } from '@/contexts/ToastContext';
+import { supabase } from '@/utils/api';
+import { confirmDeleteWithCSRF, formatDate } from '@/utils/helpers';
 
 export default function AdminDashboard() {
   const { allDocs, deleteDocument, isLoading: docsLoading } = useDocs();

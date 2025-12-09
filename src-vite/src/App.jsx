@@ -1,17 +1,39 @@
-// OJT Master v2.3.0 - Main Application Component
+// OJT Master v2.9.0 - Main Application Component
+// Block Agent System v1.1.0 - Feature-based imports with lazy loading
 
-import { useEffect, useState } from 'react';
-import { useAuth } from './contexts/AuthContext';
-import { checkAIStatus } from './utils/api';
-import { VIEW_STATES } from './constants';
+import { useEffect, useState, Suspense, lazy } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { checkAIStatus } from '@/utils/api';
+import { VIEW_STATES } from '@/constants';
 
-// Placeholder components (to be implemented)
-import Header from './components/Header';
-import RoleSelectionPage from './components/RoleSelectionPage';
-import AdminDashboard from './components/AdminDashboard';
-import MentorDashboard from './components/MentorDashboard';
-import MenteeList from './components/MenteeList';
-import MenteeStudy from './components/MenteeStudy';
+// Shared layouts (always loaded)
+import Header from '@/components/Header';
+
+// Feature-based components with lazy loading
+const RoleSelectionPage = lazy(() =>
+  import('@features/auth').then((m) => ({ default: m.RoleSelectionPage }))
+);
+const AdminDashboard = lazy(() =>
+  import('@features/admin').then((m) => ({ default: m.AdminDashboard }))
+);
+const MentorDashboard = lazy(() =>
+  import('@features/content/create').then((m) => ({ default: m.MentorDashboard }))
+);
+const MenteeList = lazy(() =>
+  import('@features/learning/study').then((m) => ({ default: m.MenteeList }))
+);
+const MenteeStudy = lazy(() =>
+  import('@features/learning/study').then((m) => ({ default: m.MenteeStudy }))
+);
+
+// Loading fallback component
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function App() {
   const { viewState, isLoading } = useAuth();
@@ -40,7 +62,11 @@ function App() {
 
   // Role selection (unauthenticated or new user)
   if (viewState === VIEW_STATES.ROLE_SELECT) {
-    return <RoleSelectionPage />;
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <RoleSelectionPage />
+      </Suspense>
+    );
   }
 
   // Main app with header
@@ -49,10 +75,12 @@ function App() {
       <Header aiStatus={aiStatus} />
 
       <main className="container mx-auto px-4 py-6">
-        {viewState === VIEW_STATES.ADMIN_DASHBOARD && <AdminDashboard />}
-        {viewState === VIEW_STATES.MENTOR_DASHBOARD && <MentorDashboard aiStatus={aiStatus} />}
-        {viewState === VIEW_STATES.MENTEE_LIST && <MenteeList />}
-        {viewState === VIEW_STATES.MENTEE_STUDY && <MenteeStudy />}
+        <Suspense fallback={<LoadingSpinner />}>
+          {viewState === VIEW_STATES.ADMIN_DASHBOARD && <AdminDashboard />}
+          {viewState === VIEW_STATES.MENTOR_DASHBOARD && <MentorDashboard aiStatus={aiStatus} />}
+          {viewState === VIEW_STATES.MENTEE_LIST && <MenteeList />}
+          {viewState === VIEW_STATES.MENTEE_STUDY && <MenteeStudy />}
+        </Suspense>
       </main>
     </div>
   );

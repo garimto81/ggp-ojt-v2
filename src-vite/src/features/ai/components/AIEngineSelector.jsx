@@ -1,8 +1,9 @@
 // OJT Master - AI Engine Selector (Issue #30, #45)
 // Gemini / WebLLM 엔진 선택 UI
+// @agent ai-agent
 
 import { useState } from 'react';
-import { useAI } from '../contexts/AIContext';
+import { useAI } from '@/contexts/AIContext';
 
 /**
  * AI 엔진 선택 컴포넌트

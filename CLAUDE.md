@@ -261,11 +261,27 @@ docker-compose --env-file .env.docker up -d
 # 5. 접속: https://localhost:8443
 ```
 
+## Block Agent System v1.1.0
+
+Feature-based 아키텍처로 7개 전문화된 에이전트 구성:
+
+| Agent | 경로 | 역할 |
+|-------|------|------|
+| auth-agent | `features/auth/` | 인증 및 역할 관리 |
+| content-create-agent | `features/content/create/` | AI 콘텐츠 생성 |
+| content-manage-agent | `features/content/manage/` | 문서 CRUD |
+| learning-study-agent | `features/learning/study/` | 학습 진행 |
+| learning-quiz-agent | `features/learning/quiz/` | 퀴즈 응시/결과 |
+| ai-agent | `features/ai/` | AI 엔진 관리 |
+| admin-agent | `features/admin/` | 관리자 대시보드 |
+
+**상세 문서**: `docs/BLOCK_AGENT_SYSTEM.md`
+
 ## Technical Debt
 
 | 영역 | 문제 | 심각도 |
 |------|------|--------|
-| 테스트 | Context/컴포넌트 테스트 부족 (~10% 커버리지) | MEDIUM |
+| 테스트 | 컴포넌트 테스트 커버리지 확대 필요 | MEDIUM |
 
 ## 주의사항
 
