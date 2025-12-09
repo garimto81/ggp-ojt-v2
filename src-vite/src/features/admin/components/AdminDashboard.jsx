@@ -7,6 +7,7 @@ import { useDocsQuery, useDeleteDoc } from '@features/docs/hooks/useDocs';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
 import { supabase } from '@utils/api';
+import { USER_SELECT, LEARNING_RECORD_SELECT } from '@utils/security/safeFields';
 import { formatDate, sanitizeText } from '@utils/helpers';
 import { useDebounce } from '@hooks/useDebounce';
 import { ROLES } from '@/constants';
@@ -65,9 +66,10 @@ export default function AdminDashboard() {
       setIsLoading(true);
       try {
         // 병렬 API 호출로 초기 로딩 시간 단축
+        // Issue #132: 명시적 필드 선택으로 민감 정보 노출 방지
         const [usersResult, recordsResult] = await Promise.all([
-          supabase.from('users').select('*').order('created_at', { ascending: false }),
-          supabase.from('learning_records').select('*').order('completed_at', { ascending: false }),
+          supabase.from('users').select(USER_SELECT).order('created_at', { ascending: false }),
+          supabase.from('learning_records').select(LEARNING_RECORD_SELECT).order('completed_at', { ascending: false }),
         ]);
 
         if (!usersResult.error) setAllUsers(usersResult.data || []);

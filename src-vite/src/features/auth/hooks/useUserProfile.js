@@ -22,6 +22,7 @@ import { supabase } from '@utils/api';
 import { dbGetAll, dbSave } from '@utils/db';
 import { SecureSession, getViewStateByRole } from '@utils/helpers';
 import { VIEW_STATES, ROLES, USER_STATUS } from '@/constants';
+import { USER_SELECT } from '@utils/security/safeFields';
 
 /**
  * @typedef {Object} UserProfile
@@ -60,7 +61,8 @@ export function useUserProfile(session) {
    * @returns {Promise<Object|null>}
    */
   const fetchFromSupabase = async (userId) => {
-    const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
+    // Issue #132: 명시적 필드 선택으로 민감 정보 노출 방지
+    const { data, error } = await supabase.from('users').select(USER_SELECT).eq('id', userId).single();
 
     if (error && error.code !== 'PGRST116') {
       // PGRST116 = no rows returned (new user)
