@@ -1,6 +1,6 @@
 // OJT Master v2.10.0 - Admin Dashboard Component (Issue #54, #78, Admin Redesign)
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useDocs } from '@contexts/DocsContext';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
@@ -570,9 +570,10 @@ export default function AdminDashboard() {
   );
 }
 
-// Pagination Component
-function Pagination({ currentPage, totalPages, onPageChange }) {
-  const getPageNumbers = () => {
+// Pagination Component (Issue #129: React.memo, #130: 인라인 함수 최적화)
+const Pagination = memo(function Pagination({ currentPage, totalPages, onPageChange }) {
+  // 페이지 번호 계산을 useMemo로 메모이제이션
+  const pageNumbers = useMemo(() => {
     const pages = [];
     const showEllipsis = totalPages > 7;
 
@@ -581,37 +582,29 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
         pages.push(i);
       }
     } else {
-      // Always show first page
       pages.push(1);
+      if (currentPage > 3) pages.push('...');
 
-      if (currentPage > 3) {
-        pages.push('...');
-      }
-
-      // Pages around current
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
 
-      if (currentPage < totalPages - 2) {
-        pages.push('...');
-      }
-
-      // Always show last page
-      if (totalPages > 1) {
-        pages.push(totalPages);
-      }
+      if (currentPage < totalPages - 2) pages.push('...');
+      if (totalPages > 1) pages.push(totalPages);
     }
-
     return pages;
-  };
+  }, [currentPage, totalPages]);
+
+  // 이전/다음 핸들러를 useCallback으로 메모이제이션
+  const handlePrev = useCallback(() => onPageChange(currentPage - 1), [onPageChange, currentPage]);
+  const handleNext = useCallback(() => onPageChange(currentPage + 1), [onPageChange, currentPage]);
 
   return (
     <nav className="flex items-center justify-center gap-1 mt-4" aria-label="페이지네이션">
       <button
-        onClick={() => onPageChange(currentPage - 1)}
+        onClick={handlePrev}
         disabled={currentPage === 1}
         className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="이전 페이지"
@@ -619,7 +612,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
         이전
       </button>
 
-      {getPageNumbers().map((page, index) =>
+      {pageNumbers.map((page, index) =>
         page === '...' ? (
           <span key={`ellipsis-${index}`} className="px-2 text-gray-400">
             ...
@@ -642,7 +635,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
       )}
 
       <button
-        onClick={() => onPageChange(currentPage + 1)}
+        onClick={handleNext}
         disabled={currentPage === totalPages}
         className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label="다음 페이지"
@@ -651,4 +644,4 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
       </button>
     </nav>
   );
-}
+});

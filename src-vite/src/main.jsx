@@ -1,10 +1,11 @@
-// OJT Master v2.10.0 - Application Entry Point
+// OJT Master v2.14.0 - Application Entry Point
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from '@/App';
+import { ErrorBoundary } from '@components/ErrorBoundary';
 import { AuthProvider } from '@features/auth/hooks/AuthContext';
 import { AIProvider } from '@features/ai/hooks/AIContext';
 import { DocsProvider } from '@contexts/DocsContext';
@@ -25,17 +26,19 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <AuthProvider>
-          <AIProvider>
-            <DocsProvider>
-              <App />
-            </DocsProvider>
-          </AIProvider>
-        </AuthProvider>
-      </ToastProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <AuthProvider>
+            <AIProvider>
+              <DocsProvider>
+                <App />
+              </DocsProvider>
+            </AIProvider>
+          </AuthProvider>
+        </ToastProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>
 );
