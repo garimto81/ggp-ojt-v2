@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ROLES, ROLE_THEMES, DEFAULT_THEME, DEPARTMENT_THEMES, DEFAULT_DEPARTMENT_THEME } from '../constants';
-import { APP_VERSION, BUILD_HASH } from '../version';
+import { APP_VERSION, BUILD_HASH, BUILD_SUMMARY } from '../version';
 
 export default function Header({ aiStatus }) {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();
@@ -38,7 +38,7 @@ export default function Header({ aiStatus }) {
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
               <p className="text-xs text-gray-500">
-                {isTempMentorMode ? 'MENTOR MODE (임시)' : `v${APP_VERSION} (${BUILD_HASH})`}
+                {isTempMentorMode ? 'MENTOR MODE (임시)' : `v${APP_VERSION} (${BUILD_HASH} - ${BUILD_SUMMARY})`}
               </p>
             </div>
           </div>
