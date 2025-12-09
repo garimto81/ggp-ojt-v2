@@ -7,7 +7,7 @@ import { Toast } from '@contexts/ToastContext';
 import { supabase } from '@utils/api';
 import { formatDate, sanitizeText } from '@utils/helpers';
 import { useDebounce } from '@hooks/useDebounce';
-import { ROLES } from '@/constants';
+import { ROLES, ROLE_THEMES, DEFAULT_THEME, DEPARTMENT_THEMES, DEFAULT_DEPARTMENT_THEME } from '@/constants';
 import UserDetailPanel from './UserDetailPanel';
 import BulkActionsBar from './BulkActionsBar';
 
@@ -391,30 +391,42 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
                     )}
                   </td>
                   <td className="py-3" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={u.role || ''}
-                      onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                      className="px-2 py-1 border rounded text-sm"
-                      disabled={u.id === currentUser?.id}
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="mentor">Mentor</option>
-                      <option value="mentee">Mentee</option>
-                    </select>
+                    {(() => {
+                      const roleTheme = ROLE_THEMES[u.role] || DEFAULT_THEME;
+                      return (
+                        <select
+                          value={u.role || ''}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          className={`px-2 py-1 rounded-full text-xs font-medium border cursor-pointer ${roleTheme.badge} ${roleTheme.border}`}
+                          disabled={u.id === currentUser?.id}
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="mentor">Mentor</option>
+                          <option value="mentee">Mentee</option>
+                        </select>
+                      );
+                    })()}
                   </td>
                   <td className="py-3" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={u.department || ''}
-                      onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
-                      className="px-2 py-1 border rounded text-sm"
-                    >
-                      <option value="">선택 안함</option>
-                      {departmentOptions.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
+                    {(() => {
+                      const deptTheme = u.department
+                        ? (DEPARTMENT_THEMES[u.department] || DEFAULT_DEPARTMENT_THEME)
+                        : DEFAULT_DEPARTMENT_THEME;
+                      return (
+                        <select
+                          value={u.department || ''}
+                          onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
+                          className={`px-2 py-1 rounded-full text-xs font-medium border cursor-pointer ${deptTheme.badge} ${deptTheme.border}`}
+                        >
+                          <option value="">선택 안함</option>
+                          {departmentOptions.map((dept) => (
+                            <option key={dept} value={dept}>
+                              {dept}
+                            </option>
+                          ))}
+                        </select>
+                      );
+                    })()}
                   </td>
                   <td className="py-3 text-sm text-gray-500">{formatDate(u.created_at)}</td>
                   <td className="py-3" onClick={(e) => e.stopPropagation()}>
