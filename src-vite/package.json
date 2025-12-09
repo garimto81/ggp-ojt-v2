@@ -19,12 +19,14 @@
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.80",
     "@supabase/supabase-js": "^2.86.0",
+    "allotment": "^1.20.4",
     "chart.js": "^4.5.1",
     "dexie": "^4.2.1",
     "dompurify": "^3.3.0",
     "pdfjs-dist": "^5.4.449",
     "quill": "^2.0.3",
     "react": "^19.2.0",
+    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0"
   },
