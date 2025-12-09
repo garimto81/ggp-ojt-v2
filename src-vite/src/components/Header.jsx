@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ROLES, ROLE_THEMES, DEFAULT_THEME } from '../constants';
+import { ROLES, ROLE_THEMES, DEFAULT_THEME, DEPARTMENT_THEMES, DEFAULT_DEPARTMENT_THEME } from '../constants';
 import { APP_VERSION, BUILD_HASH } from '../version';
 
 export default function Header({ aiStatus }) {
@@ -19,6 +19,12 @@ export default function Header({ aiStatus }) {
     if (isTempMentorMode) return ROLE_THEMES[ROLES.MENTOR];
     return ROLE_THEMES[user.role] || DEFAULT_THEME;
   }, [user, isTempMentorMode]);
+
+  // 부서에 따른 테마 결정 (Issue #170)
+  const departmentTheme = useMemo(() => {
+    if (!user?.department) return DEFAULT_DEPARTMENT_THEME;
+    return DEPARTMENT_THEMES[user.department] || DEFAULT_DEPARTMENT_THEME;
+  }, [user?.department]);
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -106,7 +112,7 @@ export default function Header({ aiStatus }) {
                   )}
                   {/* Department Badge */}
                   {user.department && (
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${departmentTheme.badge} border ${departmentTheme.border}`}>
                       {user.department}
                     </span>
                   )}
