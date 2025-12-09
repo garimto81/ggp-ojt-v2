@@ -1,11 +1,12 @@
-# Block Agent System v1.2.0
+# Block Agent System v1.3.0
 
 OJT Master 프로젝트의 모듈화된 컴포넌트 아키텍처 가이드입니다.
 
 ## 개요
 
-Block Agent System은 기능별로 분리된 **8개의 전문화된 에이전트**로 구성됩니다:
+Block Agent System은 기능별로 분리된 **9개의 전문화된 에이전트**로 구성됩니다:
 - **Frontend Agents (7개)**: UI 컴포넌트 담당
+- **Service Agent (1개)**: Gemini AI API 전담 (gemini-agent)
 - **Backend Agent (1개)**: Database 담당 (supabase-agent)
 
 각 에이전트는 독립적인 책임 영역을 가지며, 명확한 인터페이스를 통해 협업합니다.
@@ -103,10 +104,41 @@ import { useLearningRecord } from '@features/learning/quiz';
 |----------|------|------|
 | Components | `AIEngineSelector.jsx` | AI 엔진 선택 UI |
 | Hooks | `AIContext.jsx` | AI 상태 관리 |
-| Services | `chromeAI.js` | Chrome AI (Gemini Nano) |
-| | `webllm.js` | WebLLM 폴백 |
-| | `contentGenerator.js` | 콘텐츠 생성 로직 |
-| | `quizValidator.js` | 퀴즈 검증 |
+| Services | `webllm.js` | WebLLM 폴백 |
+| Sub-Agent | `agents/gemini/` | Gemini API 전담 (gemini-agent) |
+
+**AI 엔진 우선순위**: Gemini API → WebLLM (fallback)
+
+### 6-1. gemini-agent (Gemini AI) - NEW
+**경로**: `src/features/ai/agents/gemini/`
+**Issue**: #179
+
+| 구성요소 | 파일 | 역할 |
+|----------|------|------|
+| Entry | `index.js` | 모듈 진입점 (barrel export) |
+| Client | `client.js` | Gemini API 클라이언트 |
+| Prompts | `prompts.js` | OJT 생성 프롬프트 템플릿 |
+| Parser | `parser.js` | JSON 응답 파싱, 정규화 |
+| Validator | `validator.js` | 퀴즈/콘텐츠 품질 검증 |
+| Tests | `*.test.js` | 단위 테스트 |
+
+```javascript
+// 사용 예시
+import { generateOJTContent, regenerateQuiz, checkStatus } from '@features/ai/agents/gemini';
+
+const result = await generateOJTContent({
+  contentText: '원본 텍스트...',
+  title: '문서 제목',
+  onProgress: (msg) => console.log(msg)
+});
+```
+
+**책임 영역**:
+- Gemini API 요청/응답 처리
+- OJT 콘텐츠 생성 프롬프트 관리
+- AI 응답 JSON 파싱 및 정규화
+- 퀴즈 품질 검증 및 보완
+- 에러 핸들링 및 fallback 지원
 
 ### 7. admin-agent (관리자)
 **경로**: `src/features/admin/`
@@ -315,6 +347,7 @@ export { useAuth, AuthProvider } from '@features/auth';
 
 | 버전 | 날짜 | 변경 사항 |
 |------|------|----------|
+| v1.3.0 | 2025-12 | gemini-agent 추가 (AI API 전담), 9개 에이전트 체계 (#179) |
 | v1.2.0 | 2025-12 | supabase-agent 추가 (DB 전담), 8개 에이전트 체계 |
 | v1.1.0 | 2024-12 | Lazy loading, chunk 분할, 테스트 추가 |
 | v1.0.0 | 2024-12 | 초기 아키텍처 설계, 7개 에이전트 구조 |
