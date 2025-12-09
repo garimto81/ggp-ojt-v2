@@ -449,9 +449,50 @@ git log -1 --format='%h'
 >
 > **마스터 플랜**: `tasks/prds/refactoring-master-plan.md` 참조
 
+## Docker 사내 배포 (현재 운영)
+
+### 서버 주소
+
+| 서비스 | URL | 설명 |
+|--------|-----|------|
+| **Frontend** | https://localhost:8443 | nginx (자체 서명 인증서) |
+| **Backend API** | http://localhost:3000 | ojt-master 컨테이너 |
+| **Local AI** | http://10.10.100.209:8001 | vLLM 서버 (Qwen3-4B) |
+
+### 컨테이너 상태 확인
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+```
+
+### Local AI API 테스트
+
+```bash
+curl http://10.10.100.209:8001/health
+curl http://10.10.100.209:8001/v1/models
+```
+
+## Known Issues (2025-12-09)
+
+### 활성 이슈
+
+| # | 제목 | 우선순위 | 상태 |
+|---|------|----------|------|
+| #117 | 문서 저장 후 검토 대기 목록에 표시되지 않음 | HIGH | 디버깅 중 |
+| #116 | LLM 콘텐츠 구조화 미작동 | HIGH | 조사 필요 |
+| #114 | Local-Only 아키텍처 전환 (PR #115) | MEDIUM | PR 리뷰 대기 |
+| #112 | AI 퀴즈 생성 프롬프트 품질 개선 | LOW | 대기 |
+
+### 해결 방법
+
+- **#117 디버깅**: 브라우저 콘솔에서 `[Docs]`, `[dbSave]` 로그 확인
+- **#116**: AI 프롬프트 응답 파싱 로직 점검 필요
+- **#114**: PR #115 머지 후 PostgreSQL + PostgREST로 전환 예정
+
 ## 작업 시 주의사항
 
 1. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수
 2. **퀴즈 정답 인덱스**: 0 처리 주의 (`=== 0` 대신 `hasOwnProperty` 사용)
 3. **SSRF 방어**: `validateUrlForSSRF()` - localhost, 내부 IP 차단됨
 4. **AI 엔진**: Local AI 우선 (vLLM), 미설정 시 WebLLM fallback (WebGPU 필요)
+5. **RLS 에러**: 403/500 에러 시 `database/fixes/rls_complete_redesign.sql` 적용
