@@ -1,6 +1,6 @@
 {
   "name": "ggp_ojt_v2",
-  "version": "2.13.6",
+  "version": "2.14.0",
   "description": "OJT Master - AI 기반 신입사원 온보딩 교육 시스템",
   "private": true,
   "packageManager": "pnpm@9.15.0",
@@ -12,8 +12,7 @@
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "test:report": "playwright show-report",
-    "test:vite": "pnpm --filter src-vite test:run",
-    "test:worker": "pnpm --filter ojt-r2-upload test"
+    "test:vite": "pnpm --filter src-vite test:run"
   },
   "repository": {
     "type": "git",
