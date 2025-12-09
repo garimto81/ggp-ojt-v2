@@ -6,6 +6,12 @@ import { useState } from 'react';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
 import { validatePassword, getPasswordStrength } from '@utils/security/passwordPolicy';
+import {
+  checkLoginAllowed,
+  recordLoginFailure,
+  resetLoginAttempts,
+  formatLockoutTime,
+} from '@utils/security/loginRateLimit';
 
 // 탭 상수
 const AUTH_TABS = {
@@ -99,15 +105,31 @@ function LoginForm({ onSubmit, isLoading, setIsLoading }) {
       return;
     }
 
+    // Issue #131: 로그인 시도 제한 확인
+    const loginCheck = checkLoginAllowed(username);
+    if (!loginCheck.canLogin) {
+      setError(`로그인이 일시적으로 차단되었습니다.\n${formatLockoutTime(loginCheck.remainingTime)} 후에 다시 시도해주세요.`);
+      return;
+    }
+
     setIsLoading(true);
     try {
       // 아이디에 @가 없으면 @local 추가 (내부 계정)
       const email = username.includes('@') ? username : `${username}@local`;
       await onSubmit(email, password);
+      // 로그인 성공 시 시도 횟수 초기화
+      resetLoginAttempts(username);
     } catch (err) {
+      // 로그인 실패 기록 (Issue #131)
+      const failureResult = recordLoginFailure(username);
+
       // 에러 메시지 한글화
       if (err.message?.includes('Invalid login credentials')) {
-        setError('아이디 또는 비밀번호가 올바르지 않습니다.');
+        if (failureResult.isLocked) {
+          setError('로그인 시도 횟수를 초과했습니다. 15분 후에 다시 시도해주세요.');
+        } else {
+          setError(`아이디 또는 비밀번호가 올바르지 않습니다. (남은 시도: ${failureResult.remainingAttempts}회)`);
+        }
       } else if (err.message?.includes('Email not confirmed')) {
         setError('계정 인증이 완료되지 않았습니다.');
       } else if (err.message?.includes('pending')) {
