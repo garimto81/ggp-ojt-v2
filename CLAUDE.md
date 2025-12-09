@@ -4,22 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템 (v2.16.0)
+OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Architecture**: Local-Only Docker 배포 (Issue #114 - Vercel 폐기)
+**Architecture**: Local-Only Docker 배포 (PostgreSQL + PostgREST + nginx)
 
 ## Tech Stack
 
 | 영역 | 기술 |
 |------|------|
 | **Frontend** | React 19 + Vite 7 + Tailwind CSS 4 |
-| **State** | React Query (TanStack Query v5) |
+| **State** | Supabase Client (PostgREST 호환) |
 | **Backend** | PostgreSQL 16 + PostgREST v12 (Self-hosted) |
 | **AI** | Local AI (vLLM Qwen3-4B) + WebLLM fallback |
 | **Proxy** | nginx (SPA 서빙 + API 프록시) |
 | **Editor** | Quill 2.0 (Rich Text) |
 | **PDF** | pdfjs-dist |
 | **Charts** | Chart.js + react-chartjs-2 |
+| **Package Manager** | pnpm 9.15+ |
 
 ## Architecture (Local-Only)
 
@@ -53,32 +54,32 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 ## Commands
 
 ```bash
-# === Docker 배포 (권장) ===
+# === 개발 서버 ===
+cd src-vite
+npm run dev                                    # http://localhost:5173
+
+# === 프론트엔드 빌드 ===
+npm run build                                  # dist/ → Docker nginx 서빙
+
+# === 단위 테스트 (Vitest) - src-vite 디렉토리에서 ===
+npm run test                                   # Watch 모드
+npm run test:run                               # 1회 실행
+npx vitest run src/utils/api.test.js           # 단일 파일
+npx vitest run src/features/learning/quiz/     # 디렉토리 테스트
+
+# === E2E 테스트 (Playwright) - 루트 디렉토리에서 ===
+pnpm test                                      # 전체 E2E
+npx playwright test tests/e2e-homepage.spec.js # 단일 파일
+npx playwright test --headed                   # 브라우저 표시
+
+# === 코드 품질 (src-vite 디렉토리) ===
+npm run lint:fix                               # ESLint 자동 수정
+npm run format                                 # Prettier 포맷팅
+
+# === Docker 배포 ===
 cd docker
 docker-compose --env-file .env.docker up -d    # 전체 시작
 docker-compose logs -f                          # 로그 확인
-docker-compose down                             # 전체 중지
-
-# === 개발 서버 (로컬) ===
-cd src-vite
-npm run dev                     # http://localhost:5173
-
-# === 프론트엔드 빌드 ===
-npm run build                   # dist/ 생성 → nginx 서빙
-
-# === 테스트 ===
-# Unit (Vitest)
-npm run test                    # Watch 모드
-npm run test:run                # 1회 실행
-npx vitest run src/utils/api.test.js  # 단일 파일
-
-# E2E (Playwright) - 루트에서 실행
-pnpm test                       # 전체 E2E
-npx playwright test tests/e2e-homepage.spec.js  # 단일 파일
-
-# === 코드 품질 ===
-npm run lint:fix                # ESLint 자동 수정
-npm run format                  # Prettier 포맷팅
 ```
 
 ## Environment Variables
@@ -112,27 +113,25 @@ VLLM_HOST=10.10.100.209                       # AI 서버 IP
 
 ```
 ggp_ojt_v2/
-├── src-vite/                    # React 앱
+├── src-vite/                    # React 앱 (메인 코드베이스)
 │   └── src/
-│       ├── features/            # Feature-Based 모듈
-│       │   ├── admin/           # 관리자 (AdminDashboard, 사용자 승인)
+│       ├── features/            # Feature-Based 모듈 (Block Agent System)
+│       │   ├── admin/           # 관리자 대시보드, 사용자 승인
 │       │   ├── ai/              # AI 콘텐츠 생성 (vLLM + WebLLM)
 │       │   ├── auth/            # 인증 (이메일/비밀번호)
-│       │   ├── docs/            # 문서 관리 (MentorDashboard)
-│       │   └── learning/        # 학습 기능 (MenteeStudy)
-│       ├── contexts/            # 공유 Context (Toast, Docs)
-│       ├── utils/               # 유틸리티 (api, db, helpers)
-│       └── constants.js         # 설정값
-├── docker/                      # Docker 배포
-│   ├── docker-compose.yml       # PostgreSQL + PostgREST + nginx
-│   ├── nginx.conf               # API 프록시 설정
-│   └── ssl/                     # SSL 인증서 (cert.pem, key.pem)
-├── database/                    # SQL 스키마
-│   └── init/                    # Docker 초기화 스크립트
-│       ├── 01_init.sql          # 스키마 생성
-│       ├── 02_rls.sql           # RLS 정책
-│       └── 03_seed.sql          # 초기 데이터
-└── tests/                       # Playwright E2E 테스트
+│       │   ├── content/         # 콘텐츠 관리
+│       │   │   ├── create/      # MentorDashboard (AI 생성)
+│       │   │   └── manage/      # 문서 CRUD
+│       │   └── learning/        # 학습 기능
+│       │       ├── study/       # MenteeList, MenteeStudy
+│       │       └── quiz/        # QuizSession, QuizResult
+│       ├── shared/              # 공유 컴포넌트/유틸리티
+│       ├── contexts/            # 전역 Context (Auth, AI, Toast)
+│       └── utils/               # API, helpers, logger
+├── docker/                      # Docker 배포 설정
+├── database/init/               # PostgreSQL 초기화 SQL
+├── tests/                       # Playwright E2E 테스트
+└── playwright.config.js         # E2E 설정 (baseURL: localhost:8080)
 ```
 
 ## Provider 계층
@@ -154,13 +153,13 @@ ggp_ojt_v2/
 ## Data Flow
 
 ```
-[React Component] ──→ [React Query Hook] ──→ [PostgREST API]
-     │                       │                     │
-     ▼                       ▼                     │
-[UI 업데이트] ◄──────── [QueryClient Cache] ◄──────┘
+[React Component] ──→ [Supabase Client] ──→ [nginx /rest/v1/*] ──→ [PostgREST]
+     │                                                                   │
+     ▼                                                                   │
+[UI 업데이트] ◄─────────────────────────────────────────────────────────┘
 ```
 
-**Note**: Dexie.js (IndexedDB) 제거됨 - 서버 직접 통신만 사용
+**API 패턴**: `supabase.from('table').select()` - PostgREST 호환 Supabase JS 클라이언트 사용
 
 ## Database Schema
 
@@ -261,31 +260,33 @@ docker-compose --env-file .env.docker up -d
 # 5. 접속: https://localhost:8443
 ```
 
-## Block Agent System v1.1.0
+## Feature-Based Architecture (Block Agent System)
 
-Feature-based 아키텍처로 7개 전문화된 에이전트 구성:
+App.jsx에서 React.lazy()를 통한 코드 분할:
 
-| Agent | 경로 | 역할 |
-|-------|------|------|
-| auth-agent | `features/auth/` | 인증 및 역할 관리 |
-| content-create-agent | `features/content/create/` | AI 콘텐츠 생성 |
-| content-manage-agent | `features/content/manage/` | 문서 CRUD |
-| learning-study-agent | `features/learning/study/` | 학습 진행 |
-| learning-quiz-agent | `features/learning/quiz/` | 퀴즈 응시/결과 |
-| ai-agent | `features/ai/` | AI 엔진 관리 |
-| admin-agent | `features/admin/` | 관리자 대시보드 |
+```javascript
+// Lazy loading 패턴 (App.jsx:13-27)
+const AdminDashboard = lazy(() =>
+  import('@features/admin').then((m) => ({ default: m.AdminDashboard }))
+);
+```
+
+| Feature | 경로 | 주요 컴포넌트 |
+|---------|------|--------------|
+| auth | `features/auth/` | RoleSelectionPage, AuthContext |
+| content/create | `features/content/create/` | MentorDashboard, ContentInputPanel |
+| content/manage | `features/content/manage/` | MyDocsList, DocsContext |
+| learning/study | `features/learning/study/` | MenteeList, MenteeStudy, SectionViewer |
+| learning/quiz | `features/learning/quiz/` | QuizSession, QuizResult, useLearningRecord |
+| ai | `features/ai/` | AIEngineSelector, AIContext, webllm.js |
+| admin | `features/admin/` | AdminDashboard, useUsers, useAnalytics |
 
 **상세 문서**: `docs/BLOCK_AGENT_SYSTEM.md`
 
-## Technical Debt
-
-| 영역 | 문제 | 심각도 |
-|------|------|--------|
-| 테스트 | 컴포넌트 테스트 커버리지 확대 필요 | MEDIUM |
-
 ## 주의사항
 
-1. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수
-2. **퀴즈 정답 인덱스**: 0 처리 주의 (`hasOwnProperty` 사용)
-3. **vLLM 서버**: 외부 서버 `10.10.100.209:8001` - Docker에 포함 안됨
-4. **SSL**: 자체 서명 인증서 사용 시 브라우저 경고 무시 필요
+1. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수 (`import DOMPurify from 'dompurify'`)
+2. **퀴즈 정답 인덱스**: 0 처리 주의 (`hasOwnProperty` 또는 `!== undefined` 사용)
+3. **vLLM 서버**: 외부 서버 `10.10.100.209:8001` - Docker에 포함 안됨, nginx에서 프록시
+4. **E2E 테스트**: Docker 서버 실행 필요 (baseURL: `localhost:8080`)
+5. **테스트 파일 위치**: `*.test.jsx` / `*.test.js` - 컴포넌트/훅과 동일 디렉토리
