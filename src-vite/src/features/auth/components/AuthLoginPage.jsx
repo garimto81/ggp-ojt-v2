@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { useAuth } from '@features/auth/hooks/AuthContext';
 import { Toast } from '@contexts/ToastContext';
+import { validatePassword, getPasswordStrength } from '@utils/security/passwordPolicy';
 
 // 탭 상수
 const AUTH_TABS = {
@@ -172,6 +173,7 @@ function LoginForm({ onSubmit, isLoading, setIsLoading }) {
 
 // ============================================================
 // SignupForm 컴포넌트 (간소화: 아이디/비밀번호만)
+// Issue #122: 비밀번호 정책 강화
 // ============================================================
 function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
   const [username, setUsername] = useState('');
@@ -179,6 +181,9 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // 비밀번호 강도 표시
+  const passwordStrength = getPasswordStrength(password);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -195,8 +200,10 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
       return;
     }
 
-    if (password.length < 6) {
-      setError('비밀번호는 6자 이상이어야 합니다.');
+    // Issue #122: 강화된 비밀번호 정책 적용
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.errors.join('\n'));
       return;
     }
 
@@ -228,14 +235,17 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
     return (
       <div className="text-center py-6">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="w-8 h-8 text-green-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
         <h3 className="text-lg font-bold text-gray-800 mb-2">회원가입 완료</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          관리자 승인 후 로그인할 수 있습니다.
-        </p>
+        <p className="text-sm text-gray-600 mb-4">관리자 승인 후 로그인할 수 있습니다.</p>
         <button
           onClick={onSuccess}
           className="text-blue-600 hover:text-blue-700 font-medium text-sm"
@@ -273,11 +283,27 @@ function SignupForm({ onSubmit, isLoading, setIsLoading, onSuccess }) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="비밀번호 입력"
+          placeholder="8자 이상, 대소문자/숫자 포함"
           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={isLoading}
           autoComplete="new-password"
         />
+        {/* 비밀번호 강도 표시 (Issue #122) */}
+        {password && (
+          <div className="mt-2">
+            <div className="flex gap-1 mb-1">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={`h-1 flex-1 rounded ${
+                    i <= passwordStrength.score ? passwordStrength.color : 'bg-gray-200'
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="text-xs text-gray-500">{passwordStrength.label}</p>
+          </div>
+        )}
       </div>
 
       <div>

@@ -147,7 +147,10 @@ export default function UserApprovalTab() {
         className: 'bg-red-100 text-red-700 border-red-200',
       },
     };
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-700' };
+    const config = statusConfig[status] || {
+      label: status,
+      className: 'bg-gray-100 text-gray-700',
+    };
     return (
       <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${config.className}`}>
         {config.label}
@@ -216,7 +219,9 @@ export default function UserApprovalTab() {
                     <td className="px-4 py-3">
                       <RoleBadge role={user.role} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">{formatDate(user.created_at)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {formatDate(user.created_at)}
+                    </td>
                     <td className="px-4 py-3 text-right space-x-2">
                       <button
                         onClick={() => handleApprove(user.id)}
