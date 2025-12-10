@@ -140,14 +140,76 @@ const result = await generateOJTContent({
 - 퀴즈 품질 검증 및 보완
 - 에러 핸들링 및 fallback 지원
 
-### 7. admin-agent (관리자)
+### 7. admin-agent (관리자) → 블럭 분리 예정
 **경로**: `src/features/admin/`
+**PRD**: `tasks/prds/0009-admin-block-agent-system.md`
+**Issue**: #197
+
+#### 현재 구조 (모놀리식)
 
 | 구성요소 | 파일 | 역할 |
 |----------|------|------|
-| Components | `AdminDashboard.jsx` | 관리자 대시보드 |
+| Components | `AdminDashboard.jsx` | 관리자 대시보드 (4탭 통합) |
 | Hooks | `useAnalytics.js` | 분석 데이터 |
 | | `useUsers.js` | 사용자 관리 |
+
+#### 계획된 블럭 구조 (v2.0.0)
+
+```
+features/admin/
+├── AdminDashboard.jsx      # 탭 컨테이너만 (라우팅)
+├── blocks/
+│   ├── users/              # admin-users-agent
+│   │   ├── components/
+│   │   │   ├── UsersBlock.jsx
+│   │   │   ├── UsersList.jsx
+│   │   │   └── UserDetailPanel.jsx
+│   │   ├── hooks/
+│   │   │   └── useUsersManagement.js
+│   │   └── index.js
+│   │
+│   ├── content/            # admin-content-agent
+│   │   ├── components/
+│   │   │   ├── ContentBlock.jsx
+│   │   │   ├── ContentList.jsx
+│   │   │   └── ContentPreview.jsx
+│   │   ├── hooks/
+│   │   │   └── useContentManagement.js
+│   │   └── index.js
+│   │
+│   ├── stats/              # admin-stats-agent
+│   │   ├── components/
+│   │   │   ├── StatsBlock.jsx
+│   │   │   └── charts/
+│   │   ├── hooks/
+│   │   │   └── useAnalytics.js
+│   │   └── index.js
+│   │
+│   └── settings/           # admin-settings-agent
+│       ├── components/
+│       │   ├── SettingsBlock.jsx
+│       │   ├── DepartmentSettings.jsx
+│       │   └── AuditLogs.jsx
+│       ├── hooks/
+│       │   └── useSettings.js
+│       └── index.js
+│
+├── shared/                 # 공유 컴포넌트
+│   ├── AdminHeader.jsx
+│   ├── AdminTabs.jsx
+│   └── ConfirmModal.jsx
+│
+└── index.js
+```
+
+#### 블럭별 에이전트 정의
+
+| Agent | 경로 | 책임 | Blocks |
+|-------|------|------|--------|
+| `admin-users-agent` | `blocks/users/` | 사용자 CRUD, 역할/부서 관리 | `admin.users` |
+| `admin-content-agent` | `blocks/content/` | 콘텐츠 검토/승인/삭제 | `admin.content` |
+| `admin-stats-agent` | `blocks/stats/` | 통계 분석, 차트 | `admin.stats` |
+| `admin-settings-agent` | `blocks/settings/` | 시스템 설정, 로그 | `admin.settings` |
 
 ### 8. supabase-agent (데이터베이스) - NEW
 **경로**: `database/agents/supabase/`
@@ -347,6 +409,7 @@ export { useAuth, AuthProvider } from '@features/auth';
 
 | 버전 | 날짜 | 변경 사항 |
 |------|------|----------|
+| v2.0.0 | 2025-12 | admin-agent 블럭 분리 예정 (4개 서브 에이전트), PRD #197 |
 | v1.3.0 | 2025-12 | gemini-agent 추가 (AI API 전담), 9개 에이전트 체계 (#179) |
 | v1.2.0 | 2025-12 | supabase-agent 추가 (DB 전담), 8개 에이전트 체계 |
 | v1.1.0 | 2024-12 | Lazy loading, chunk 분할, 테스트 추가 |
