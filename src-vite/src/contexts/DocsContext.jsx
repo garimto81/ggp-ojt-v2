@@ -75,11 +75,16 @@ export function DocsProvider({ children }) {
     async (doc) => {
       if (!user) throw new Error('로그인이 필요합니다.');
 
+      // 신규 문서는 'review' 상태로 저장 (Issue #186)
+      // 기존 문서 수정 시에는 기존 status 유지
+      const isNewDoc = !doc.id;
+
       const docData = {
         ...doc,
         id: doc.id || crypto.randomUUID(),
         author_id: doc.author_id || user.id,
         author_name: doc.author_name || user.name,
+        status: doc.status || (isNewDoc ? 'review' : 'published'),
         created_at: doc.created_at || Date.now(),
         updated_at: new Date().toISOString(),
       };
