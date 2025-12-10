@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Version**: 1.6.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
+**Version**: 1.7.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
 
 **Production URL**: https://ggp-ojt-v2.vercel.app
 
@@ -357,6 +357,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|-----------|
+| v1.7.0 | 2025-12-10 | 신규 콘텐츠 status='review' 기본값 설정 (#186) |
 | v1.6.0 | 2025-12-10 | SSOT 패턴 적용, Context 중복 제거, import 경로 정규화 (#182) |
 | v1.5.0 | 2025-12-10 | 문서 Vercel 기준 정리 (#183) |
 | v1.4.0 | 2025-12-10 | gemini-agent Rate Limiting, 43개 테스트 (#179, #181) |
@@ -368,32 +369,19 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ## 현재 진행 중인 작업 (2025-12-10)
 
+### Issue #186: 콘텐츠 검토대기 표시 ✅
+
+**상태**: 완료
+
+- 신규 콘텐츠 저장 시 `status='review'` 기본값 설정
+- Admin '검토대기' 필터에 정상 표시
+
 ### Issue #182: AuthContext 오염 수정 ✅
 
-**상태**: 완료 (Vercel 배포 대기)
+**상태**: 완료
 
-#### 수정 내역
-
-| 작업 | 상세 |
-|------|------|
-| **Context 중복 제거** | `features/auth/hooks/AuthContext.jsx` 삭제 |
-| **SSOT 패턴 적용** | `features/auth/index.js` → `@/contexts/AuthContext` re-export |
-| **Import 경로 정규화** | `@contexts/` → `@/contexts/` (13개 파일) |
-| **삭제된 중복 파일** | AuthContext.jsx, AIContext.jsx, DocsContext.jsx (features 내) |
-
-#### 검증 결과
-
-| 항목 | 결과 |
-|------|------|
-| ESLint | ✅ 경로 오류 0개 |
-| Vite Build | ✅ 성공 (3.06s) |
-| Unit Tests | ✅ 104/108 통과 |
-
-#### 다음 단계
-
-1. PR 생성 및 머지
-2. Vercel 자동 배포
-3. Production 환경 검증
+- SSOT 패턴 적용, Context 중복 제거
+- Import 경로 정규화 (`@/contexts/` 형식)
 
 ### Issue #178: Supabase DB 정리
 
