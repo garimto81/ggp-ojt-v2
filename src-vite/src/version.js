@@ -1,6 +1,9 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.17.2 - 2025-12-10
+//   - fix(admin): admin_logs → audit_logs 테이블 참조 수정 (#191)
+//   - fix(admin): 설정 탭 404 에러 graceful 처리
 // 2.17.1 (181c482) - 2025-12-10
 //   - fix(docs): 저장 데이터 타입 검증 및 디버깅 로그 강화 (#188)
 // 2.17.0 - 2025-12-10
@@ -16,7 +19,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.17.1';
-export const BUILD_HASH = '181c482';
-export const BUILD_SUMMARY = '타입 검증 강화';
+export const APP_VERSION = '2.17.2';
+export const BUILD_HASH = '6fe302f';
+export const BUILD_SUMMARY = 'audit_logs 통합';
 export const BUILD_DATE = '2025-12-10';

@@ -124,18 +124,23 @@ export function SystemSettings() {
         if (error) throw error;
       }
 
-      // Log admin action
-      await supabase.from('admin_logs').insert({
-        admin_id: user.id,
-        action: 'update_settings',
-        target_type: 'setting',
-        details: {
-          departments: departments.length,
-          defaultRole,
-          quizPassScore,
-          autoHideReportCount,
-        },
-      });
+      // Log admin action (audit_logs - 실패해도 설정 저장은 성공)
+      try {
+        await supabase.from('audit_logs').insert({
+          admin_id: user.id,
+          action: 'update_settings',
+          target_type: 'setting',
+          details: {
+            departments: departments.length,
+            defaultRole,
+            quizPassScore,
+            autoHideReportCount,
+          },
+        });
+      } catch (logError) {
+        console.warn('Audit log insert failed:', logError);
+        // 로그 실패는 무시하고 계속 진행
+      }
 
       Toast.success('설정이 저장되었습니다.');
     } catch (error) {

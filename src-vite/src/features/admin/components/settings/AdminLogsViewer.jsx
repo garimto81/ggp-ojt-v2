@@ -16,7 +16,7 @@ const ITEMS_PER_PAGE = 20;
 
 /**
  * Admin Logs Viewer Component
- * - admin_logs 테이블 조회
+ * - audit_logs 테이블 조회 (admin_logs 통합됨)
  * - 최신 20개 표시
  * - 더 보기 버튼
  * - 로그 타입별 아이콘
@@ -29,6 +29,7 @@ export function AdminLogsViewer() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(1);
+  const [tableError, setTableError] = useState(null);
 
   // Load logs from Supabase
   useEffect(() => {
@@ -36,20 +37,28 @@ export function AdminLogsViewer() {
       if (!isAdmin) return;
 
       setIsLoading(true);
+      setTableError(null);
       try {
         const { data, error, count } = await supabase
-          .from('admin_logs')
+          .from('audit_logs')
           .select('*', { count: 'exact' })
           .order('created_at', { ascending: false })
           .range(0, ITEMS_PER_PAGE * page - 1);
 
-        if (error) throw error;
+        if (error) {
+          // 테이블 없음 에러 처리 (404)
+          if (error.code === 'PGRST116' || error.message?.includes('404')) {
+            setTableError('로그 테이블이 아직 생성되지 않았습니다.');
+            return;
+          }
+          throw error;
+        }
 
         setLogs(data || []);
         setHasMore((count || 0) > ITEMS_PER_PAGE * page);
       } catch (error) {
         console.error('Logs load error:', error);
-        Toast.error('로그를 불러오는 중 오류가 발생했습니다.');
+        setTableError('로그를 불러오는 중 오류가 발생했습니다.');
       } finally {
         setIsLoading(false);
       }
@@ -87,6 +96,19 @@ export function AdminLogsViewer() {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // 테이블 에러 시 안내 메시지 표시
+  if (tableError) {
+    return (
+      <div className="bg-white border rounded-lg p-6">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">시스템 로그</h3>
+        <div className="py-8 text-center text-gray-500">
+          <p className="text-amber-600">{tableError}</p>
+          <p className="text-sm mt-2">관리자에게 문의하세요.</p>
+        </div>
       </div>
     );
   }
