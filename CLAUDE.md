@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Architecture**: Local-Only Docker 배포 (PostgreSQL + PostgREST + nginx)
+**Version**: 1.4.0 | **Architecture**: Local-Only Docker 배포 (PostgreSQL + PostgREST + nginx)
 
 ## Tech Stack
 
@@ -311,3 +311,69 @@ cd ../docker && docker-compose --env-file .env.docker up -d
 
 # 5. 접속: https://localhost:8443
 ```
+
+---
+
+## 버전 관리 (필수)
+
+### PR/Issue 생성·업데이트 시 필수 항목
+
+| 항목 | 형식 | 예시 |
+|------|------|------|
+| **버전** | Semantic Versioning | `v1.4.0` |
+| **커밋 해시** | 7자리 short hash | `e9b4a29` |
+| **이슈/PR 태그** | `#번호` 또는 `Closes #번호` | `#181`, `Closes #179` |
+
+### 버전 업데이트 규칙
+
+```
+MAJOR.MINOR.PATCH (Semantic Versioning)
+├── MAJOR: 호환성 깨지는 변경 (API 변경, DB 스키마 변경)
+├── MINOR: 새 기능 추가 (하위 호환) - 새 에이전트, 새 컴포넌트
+└── PATCH: 버그 수정, 문서 수정
+```
+
+### 워크플로우
+
+```
+1. Issue 생성 → 이슈 번호 발급 (#N)
+2. 브랜치 생성 → feat/issue-N-desc
+3. 작업 완료 → 커밋 (해시 생성)
+4. PR 생성 → 이슈 태그 연결 (Closes #N)
+5. 머지 전 → CLAUDE.md 버전 범프, CHANGELOG.md 업데이트
+6. 머지 후 → git tag vX.Y.Z
+```
+
+### 커밋 메시지 형식
+
+```
+<type>(<scope>): <subject> (#issue)
+
+- 변경 내용 설명
+
+Refs: #issue1, #issue2
+Closes #issue (PR에서 이슈 자동 종료 시)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+### 코멘트 태깅 규칙
+
+| 상황 | 태그 형식 |
+|------|-----------|
+| 이슈 참조 | `Refs: #123` |
+| 이슈 종료 | `Closes #123`, `Fixes #123` |
+| PR 참조 | `PR #456` |
+| 커밋 참조 | `e9b4a29` (7자리 해시) |
+
+### 버전 히스토리
+
+| 버전 | 날짜 | 주요 변경 |
+|------|------|-----------|
+| v1.4.0 | 2025-12-10 | gemini-agent Rate Limiting, 43개 테스트 (#179, #181) |
+| v1.3.0 | 2025-12-10 | gemini-agent 신설 (Block Agent System v1.3.0) |
+| v1.2.0 | 2025-12 | supabase-agent 추가, departments 테이블 |
+| v1.1.0 | 2025-12 | Local AI (vLLM) 통합, Docker 배포 |
+| v1.0.0 | 2025-12 | 초기 릴리스 |
