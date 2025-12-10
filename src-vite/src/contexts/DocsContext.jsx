@@ -93,7 +93,7 @@ export function DocsProvider({ children }) {
         author_id: doc.author_id || user.id,
         author_name: doc.author_name || user.name,
         status: doc.status || (isNewDoc ? 'review' : 'published'),
-        created_at: doc.created_at || Date.now(),
+        created_at: doc.created_at || new Date().toISOString(),  // ISO 문자열 (Issue #188)
         updated_at: new Date().toISOString(),
       };
 
