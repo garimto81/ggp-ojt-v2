@@ -1,6 +1,19 @@
 # OJT Master - 사내 Docker 배포
 
-Vercel 배포 대신 사내 서버에 Docker로 배포하기 위한 패키지입니다.
+> ⚠️ **DEPRECATED** (2025-12-10)
+>
+> 이 문서는 더 이상 사용되지 않습니다.
+> 현재 AI는 **Google Gemini API**를 사용합니다.
+>
+> - Production: Gemini API (gemini-2.0-flash-exp)
+> - Fallback: WebLLM (브라우저 내 로컬 AI)
+> - 관련 이슈: #183
+>
+> 이 폴더는 레거시 참조용으로 보존됩니다.
+
+---
+
+Vercel 배포 대신 사내 서버에 Docker로 배포하기 위한 패키지입니다. (레거시)
 
 ## 아키텍처
 

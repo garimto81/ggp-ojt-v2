@@ -1,4 +1,4 @@
-// OJT Master v2.3.0 - Constants and Configuration
+// OJT Master v2.4.0 - Constants and Configuration
 
 export const CONFIG = {
   // Time limits
@@ -18,10 +18,10 @@ export const CONFIG = {
   AI_TEMPERATURE: 0.3,
   AI_MAX_TOKENS: 8192,
 
-  // Security
+  // Security - Vercel Deployment
   ALLOWED_ORIGINS: [
-    'https://ggp-ojt-v2.vercel.app',
-    'http://localhost:3000',
+    'https://ggp-ojt-v2.vercel.app', // Production
+    'https://ggp-ojt-v2-*.vercel.app', // Preview deployments
     'http://localhost:5173', // Vite dev server
   ],
 
