@@ -36,7 +36,7 @@
 
 현재 OJT Master 앱에서 **실제 사용 중**인 테이블입니다.
 
-### 1.1 users (12 컬럼)
+### 1.1 users (13 컬럼)
 
 사용자 프로필 테이블. `auth.users`와 1:1 관계.
 
@@ -49,6 +49,7 @@ CREATE TABLE public.users (
   department_id UUID REFERENCES departments(id), -- 신규 FK (#178)
   auth_provider TEXT DEFAULT 'google' CHECK (auth_provider IN ('google', 'email')),
   status TEXT DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
+  is_active BOOLEAN DEFAULT true,               -- 활성화 상태 (#196)
   approved_by UUID REFERENCES users(id),
   approved_at TIMESTAMPTZ,
   last_active_at TIMESTAMPTZ,
@@ -57,7 +58,7 @@ CREATE TABLE public.users (
 );
 ```
 
-**인덱스**: `idx_users_role`, `idx_users_status`, `idx_users_department_id`
+**인덱스**: `idx_users_role`, `idx_users_status`, `idx_users_department_id`, `idx_users_is_active`
 
 ### 1.2 teams (7 컬럼)
 

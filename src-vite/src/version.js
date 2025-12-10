@@ -1,6 +1,11 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.17.7 - 2025-12-10
+//   - fix(db): users.is_active 컬럼 마이그레이션 추가 (#196)
+//   - fix(docs): ai_processed, ai_error 필드도 DB 저장 시 제거
+//   - fix(learning): completed_at ISO 문자열로 통일
+//   - Supabase 스키마 vs 코드 전체 검증 완료
 // 2.17.6 - 2025-12-10
 //   - fix(docs): ai_engine 필드 DB 저장 시 제거 (#195)
 //   - 스키마에 없는 필드로 인한 저장 실패 해결
@@ -35,7 +40,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.17.6';
-export const BUILD_HASH = '72bcc17';
-export const BUILD_SUMMARY = 'ai_engine 저장 오류 수정';
+export const APP_VERSION = '2.17.7';
+export const BUILD_HASH = '2d1a0ef';
+export const BUILD_SUMMARY = '스키마 불일치 전체 검증 (#196)';
 export const BUILD_DATE = '2025-12-10';

@@ -29,7 +29,7 @@ export function useLearningRecord() {
         score: score,
         total_questions: totalQuestions,
         passed: passed,
-        completed_at: Date.now(),
+        completed_at: new Date().toISOString(), // ISO 문자열로 통일 (timestamptz)
       });
 
       if (passed) {

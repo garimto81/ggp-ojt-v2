@@ -87,12 +87,15 @@ export function DocsProvider({ children }) {
       // 기존 문서 수정 시에는 기존 status 유지
       const isNewDoc = !doc.id;
 
-      // DB 스키마에 없는 필드 제거 (ai_engine은 UI 표시용)
+      // DB 스키마에 없는 필드 제거 (UI 표시용 필드들)
+      // ai_engine: Gemini/WebLLM 뱃지 표시용
+      // ai_processed: AI 처리 성공 여부 표시용
+      // ai_error: AI 에러 메시지 표시용
       // eslint-disable-next-line no-unused-vars
-      const { ai_engine, ...docWithoutAiEngine } = doc;
+      const { ai_engine, ai_processed, ai_error, ...docWithoutUIFields } = doc;
 
       const docData = {
-        ...docWithoutAiEngine,
+        ...docWithoutUIFields,
         id: doc.id || crypto.randomUUID(),
         author_id: doc.author_id || user.id,
         author_name: doc.author_name || user.name,
