@@ -7,11 +7,7 @@
 import { useState } from 'react';
 import { sanitizeHtml } from '@/utils/helpers';
 
-export default function SectionViewer({
-  doc,
-  onStudyComplete,
-  onBackToList,
-}) {
+export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
   const [currentSection, setCurrentSection] = useState(0);
   const [studyCompleted, setStudyCompleted] = useState(false);
 
@@ -59,10 +55,7 @@ export default function SectionViewer({
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={onBackToList}
-            className="text-gray-500 hover:text-gray-700 transition"
-          >
+          <button onClick={onBackToList} className="text-gray-500 hover:text-gray-700 transition">
             ← 목록으로
           </button>
           <span className="text-sm text-gray-500">Step {doc.step || 1}</span>

@@ -3,8 +3,8 @@
 import { useState, useMemo } from 'react';
 import ContentStatusBadge from './ContentStatusBadge';
 import ContentQuickActions from './ContentQuickActions';
-import { formatDate } from '@utils/helpers';
-import { useDebounce } from '@hooks/useDebounce';
+import { formatDate } from '@/utils/helpers';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const STATUS_TABS = [
   { key: 'all', label: '전체' },

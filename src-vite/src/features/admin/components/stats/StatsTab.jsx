@@ -18,11 +18,9 @@ export default function StatsTab({
   teamStats,
   quizWeakness,
 }) {
-
   return (
     <div role="tabpanel" id="tabpanel-stats" aria-labelledby="tab-stats">
       <div className="space-y-6">
-
         {/* Overview Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-blue-50 rounded-lg p-4">

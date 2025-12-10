@@ -52,9 +52,7 @@ export class ErrorBoundary extends Component {
             </div>
 
             {/* 에러 메시지 */}
-            <h1 className="text-xl font-bold text-gray-800 mb-2">
-              문제가 발생했습니다
-            </h1>
+            <h1 className="text-xl font-bold text-gray-800 mb-2">문제가 발생했습니다</h1>
             <p className="text-gray-600 mb-6">
               예기치 않은 오류가 발생했습니다. 불편을 드려 죄송합니다.
             </p>

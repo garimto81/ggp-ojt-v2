@@ -80,9 +80,7 @@ export default function MentorDashboard({ aiStatus }) {
     });
 
     // Update preview doc
-    setPreviewingDoc((prev) =>
-      prev ? { ...prev, quiz: updatedQuiz } : null
-    );
+    setPreviewingDoc((prev) => (prev ? { ...prev, quiz: updatedQuiz } : null));
   };
 
   return (

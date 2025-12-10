@@ -8,12 +8,7 @@ import { useState } from 'react';
 import { Toast } from '@/contexts/ToastContext';
 import { validateQuizQuality, regenerateQuizQuestions } from '@/utils/api';
 
-export default function QuizPreviewModal({
-  previewingDoc,
-  onClose,
-  onQuizUpdated,
-  rawInput,
-}) {
+export default function QuizPreviewModal({ previewingDoc, onClose, onQuizUpdated, rawInput }) {
   const [quizValidation, setQuizValidation] = useState(() =>
     previewingDoc ? validateQuizQuality(previewingDoc.quiz) : null
   );
@@ -82,9 +77,7 @@ export default function QuizPreviewModal({
         {/* Modal Header */}
         <div className="p-6 border-b flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-gray-800">
-              퀴즈 검증: {previewingDoc.title}
-            </h3>
+            <h3 className="text-lg font-bold text-gray-800">퀴즈 검증: {previewingDoc.title}</h3>
             {quizValidation && (
               <p className="text-sm text-gray-500 mt-1">
                 총 {quizValidation.stats.total}개 중 {quizValidation.stats.validCount}개 유효
@@ -96,10 +89,7 @@ export default function QuizPreviewModal({
               </p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">
             &times;
           </button>
         </div>
@@ -185,10 +175,7 @@ export default function QuizPreviewModal({
 
         {/* Modal Footer */}
         <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-          >
+          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800">
             닫기
           </button>
         </div>

@@ -52,41 +52,25 @@ describe('QuizSession', () => {
   });
 
   it('should render quiz question', () => {
-    render(
-      <QuizSession
-        doc={mockDoc}
-        userId="user-1"
-        onBackToList={mockOnBackToList}
-      />
-    );
+    render(<QuizSession doc={mockDoc} userId="user-1" onBackToList={mockOnBackToList} />);
 
     expect(screen.getByText('테스트 퀴즈')).toBeInTheDocument();
     expect(screen.getByText('질문 1')).toBeInTheDocument();
   });
 
   it('should show progress indicator', () => {
-    render(
-      <QuizSession
-        doc={mockDoc}
-        userId="user-1"
-        onBackToList={mockOnBackToList}
-      />
-    );
+    render(<QuizSession doc={mockDoc} userId="user-1" onBackToList={mockOnBackToList} />);
 
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
   });
 
   it('should allow selecting an answer', () => {
-    render(
-      <QuizSession
-        doc={mockDoc}
-        userId="user-1"
-        onBackToList={mockOnBackToList}
-      />
-    );
+    render(<QuizSession doc={mockDoc} userId="user-1" onBackToList={mockOnBackToList} />);
 
     // Find option button containing "A."
-    const optionButtons = screen.getAllByRole('button').filter(btn => btn.textContent.includes('A.'));
+    const optionButtons = screen
+      .getAllByRole('button')
+      .filter((btn) => btn.textContent.includes('A.'));
     const optionA = optionButtons[0];
     fireEvent.click(optionA);
 
@@ -97,13 +81,7 @@ describe('QuizSession', () => {
   it('should show warning when submitting without selection', async () => {
     const { Toast } = await import('@/contexts/ToastContext');
 
-    render(
-      <QuizSession
-        doc={mockDoc}
-        userId="user-1"
-        onBackToList={mockOnBackToList}
-      />
-    );
+    render(<QuizSession doc={mockDoc} userId="user-1" onBackToList={mockOnBackToList} />);
 
     fireEvent.click(screen.getByText('정답 확인'));
 
@@ -111,16 +89,12 @@ describe('QuizSession', () => {
   });
 
   it('should show correct answer feedback', () => {
-    render(
-      <QuizSession
-        doc={mockDoc}
-        userId="user-1"
-        onBackToList={mockOnBackToList}
-      />
-    );
+    render(<QuizSession doc={mockDoc} userId="user-1" onBackToList={mockOnBackToList} />);
 
     // Select correct answer (first option)
-    const optionButtons = screen.getAllByRole('button').filter(btn => btn.textContent.includes('A.'));
+    const optionButtons = screen
+      .getAllByRole('button')
+      .filter((btn) => btn.textContent.includes('A.'));
     fireEvent.click(optionButtons[0]);
     fireEvent.click(screen.getByText('정답 확인'));
 
@@ -128,16 +102,12 @@ describe('QuizSession', () => {
   });
 
   it('should show incorrect answer feedback', () => {
-    render(
-      <QuizSession
-        doc={mockDoc}
-        userId="user-1"
-        onBackToList={mockOnBackToList}
-      />
-    );
+    render(<QuizSession doc={mockDoc} userId="user-1" onBackToList={mockOnBackToList} />);
 
     // Select wrong answer (second option)
-    const optionButtons = screen.getAllByRole('button').filter(btn => btn.textContent.includes('B.'));
+    const optionButtons = screen
+      .getAllByRole('button')
+      .filter((btn) => btn.textContent.includes('B.'));
     fireEvent.click(optionButtons[0]);
     fireEvent.click(screen.getByText('정답 확인'));
 
@@ -145,16 +115,12 @@ describe('QuizSession', () => {
   });
 
   it('should progress to next question', () => {
-    render(
-      <QuizSession
-        doc={mockDoc}
-        userId="user-1"
-        onBackToList={mockOnBackToList}
-      />
-    );
+    render(<QuizSession doc={mockDoc} userId="user-1" onBackToList={mockOnBackToList} />);
 
     // Answer first question
-    const optionButtons = screen.getAllByRole('button').filter(btn => btn.textContent.includes('A.'));
+    const optionButtons = screen
+      .getAllByRole('button')
+      .filter((btn) => btn.textContent.includes('A.'));
     fireEvent.click(optionButtons[0]);
     fireEvent.click(screen.getByText('정답 확인'));
     fireEvent.click(screen.getByText('다음 문제'));
@@ -165,22 +131,18 @@ describe('QuizSession', () => {
   });
 
   it('should show result screen after last question', async () => {
-    render(
-      <QuizSession
-        doc={mockDoc}
-        userId="user-1"
-        onBackToList={mockOnBackToList}
-      />
-    );
+    render(<QuizSession doc={mockDoc} userId="user-1" onBackToList={mockOnBackToList} />);
 
     // Answer first question
-    let optionButtons = screen.getAllByRole('button').filter(btn => btn.textContent.includes('A.'));
+    let optionButtons = screen
+      .getAllByRole('button')
+      .filter((btn) => btn.textContent.includes('A.'));
     fireEvent.click(optionButtons[0]);
     fireEvent.click(screen.getByText('정답 확인'));
     fireEvent.click(screen.getByText('다음 문제'));
 
     // Answer second question
-    optionButtons = screen.getAllByRole('button').filter(btn => btn.textContent.includes('A.'));
+    optionButtons = screen.getAllByRole('button').filter((btn) => btn.textContent.includes('A.'));
     fireEvent.click(optionButtons[0]);
     fireEvent.click(screen.getByText('정답 확인'));
     fireEvent.click(screen.getByText('결과 보기'));

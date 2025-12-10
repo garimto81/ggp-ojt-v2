@@ -6,12 +6,7 @@
 
 import { CONFIG } from '@/constants';
 
-export default function QuizResult({
-  score,
-  totalQuestions,
-  onRetry,
-  onBackToList,
-}) {
+export default function QuizResult({ score, totalQuestions, onRetry, onBackToList }) {
   const passed = score >= CONFIG.QUIZ_PASS_THRESHOLD;
 
   return (
@@ -36,9 +31,7 @@ export default function QuizResult({
 
         <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
           <div
-            className={`h-3 rounded-full transition-all ${
-              passed ? 'bg-green-500' : 'bg-red-500'
-            }`}
+            className={`h-3 rounded-full transition-all ${passed ? 'bg-green-500' : 'bg-red-500'}`}
             style={{
               width: `${(score / totalQuestions) * 100}%`,
             }}

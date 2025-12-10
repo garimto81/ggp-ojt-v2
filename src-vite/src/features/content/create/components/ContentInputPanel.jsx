@@ -8,15 +8,8 @@ import { useState } from 'react';
 import { useAuth } from '@features/auth';
 import { useAI } from '@features/ai';
 import { Toast } from '@/contexts/ToastContext';
-import {
-  generateOJTContent,
-  extractUrlText,
-} from '@/utils/api';
-import {
-  estimateReadingTime,
-  calculateRequiredSteps,
-  splitContentForSteps,
-} from '@/utils/helpers';
+import { generateOJTContent, extractUrlText } from '@/utils/api';
+import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
 import AIEngineSelector from '@features/ai/components/AIEngineSelector';
 
 export default function ContentInputPanel({

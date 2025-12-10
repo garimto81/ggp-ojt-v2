@@ -11,12 +11,7 @@ import { CONFIG } from '@/constants';
 import QuizResult from './QuizResult';
 import { useLearningRecord } from '../hooks/useLearningRecord';
 
-export default function QuizSession({
-  doc,
-  userId,
-  onBackToList,
-  onExitQuiz,
-}) {
+export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
   const { saveLearningRecord } = useLearningRecord();
 
   // Quiz state
