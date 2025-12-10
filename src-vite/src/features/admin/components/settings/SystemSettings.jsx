@@ -125,9 +125,10 @@ export function SystemSettings() {
       }
 
       // Log admin action (audit_logs 실제 스키마에 맞춤 - 실패해도 설정 저장은 성공)
+      // DB CHECK 허용값: ROLE_CHANGE, LOGIN, LOGOUT, DOC_CREATE, DOC_UPDATE, DOC_DELETE, SECURITY_ALERT, SETTINGS_UPDATE
       try {
         await supabase.from('audit_logs').insert({
-          event_type: 'update_settings',
+          event_type: 'SETTINGS_UPDATE',
           table_name: 'admin_settings',
           performed_by: user.id,
           metadata: {
@@ -139,7 +140,6 @@ export function SystemSettings() {
         });
       } catch (logError) {
         console.warn('Audit log insert failed:', logError);
-        // 로그 실패는 무시하고 계속 진행
       }
 
       Toast.success('설정이 저장되었습니다.');

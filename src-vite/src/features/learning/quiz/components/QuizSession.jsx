@@ -11,6 +11,25 @@ import { CONFIG } from '@/constants';
 import QuizResult from './QuizResult';
 import { useLearningRecord } from '../hooks/useLearningRecord';
 
+// Prepare quiz questions (컴포넌트 외부로 이동 - 호이스팅 문제 해결)
+function prepareQuestions(quiz) {
+  if (!quiz || quiz.length === 0) return [];
+
+  // Shuffle and pick questions
+  const shuffled = shuffleArray([...quiz]);
+  const selected = shuffled.slice(0, CONFIG.QUIZ_QUESTIONS_PER_TEST);
+
+  // Normalize quiz format and shuffle answers
+  return selected.map((q) => {
+    const correctAnswer = q.answer || q.options[q.correct] || q.options[0];
+    return {
+      ...q,
+      answer: correctAnswer,
+      shuffledOptions: shuffleArray([...q.options]),
+    };
+  });
+}
+
 export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
   const { saveLearningRecord } = useLearningRecord();
 
@@ -21,25 +40,6 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
   const [quizFinished, setQuizFinished] = useState(false);
-
-  // Prepare quiz questions
-  function prepareQuestions(quiz) {
-    if (!quiz || quiz.length === 0) return [];
-
-    // Shuffle and pick questions
-    const shuffled = shuffleArray([...quiz]);
-    const selected = shuffled.slice(0, CONFIG.QUIZ_QUESTIONS_PER_TEST);
-
-    // Normalize quiz format and shuffle answers
-    return selected.map((q) => {
-      const correctAnswer = q.answer || q.options[q.correct] || q.options[0];
-      return {
-        ...q,
-        answer: correctAnswer,
-        shuffledOptions: shuffleArray([...q.options]),
-      };
-    });
-  }
 
   // Handle answer selection
   const handleAnswerSelect = (answer) => {

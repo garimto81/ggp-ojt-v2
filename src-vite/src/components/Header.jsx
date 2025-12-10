@@ -30,7 +30,7 @@ export default function Header({ aiStatus }) {
   const departmentTheme = useMemo(() => {
     if (!user?.department) return DEFAULT_DEPARTMENT_THEME;
     return DEPARTMENT_THEMES[user.department] || DEFAULT_DEPARTMENT_THEME;
-  }, [user?.department]);
+  }, [user]);
 
   return (
     <header className="bg-white shadow-sm border-b">

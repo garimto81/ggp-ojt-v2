@@ -13,6 +13,7 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.es2021,
+        ...globals.node, // vite.config.js, vitest.config.js용
       },
       parserOptions: {
         ecmaVersion: 'latest',

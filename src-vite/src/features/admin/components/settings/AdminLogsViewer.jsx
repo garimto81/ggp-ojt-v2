@@ -46,7 +46,11 @@ export function AdminLogsViewer() {
 
         if (error) {
           // 테이블 없음 또는 권한 에러 처리
-          if (error.code === 'PGRST116' || error.code === '42501' || error.message?.includes('404')) {
+          if (
+            error.code === 'PGRST116' ||
+            error.code === '42501' ||
+            error.message?.includes('404')
+          ) {
             setTableError('로그 테이블에 접근할 수 없습니다.');
             return;
           }
@@ -71,28 +75,31 @@ export function AdminLogsViewer() {
     setPage((prev) => prev + 1);
   };
 
-  // Get log type based on event_type (실제 스키마 필드)
+  // Get log type based on event_type (UPPERCASE 기준)
   const getLogType = (eventType) => {
     if (!eventType) return 'INFO';
-    if (eventType.includes('delete') || eventType.includes('error')) return 'ERROR';
-    if (eventType.includes('update') || eventType.includes('change')) return 'WARN';
+    const upper = eventType.toUpperCase();
+    if (upper.includes('DELETE') || upper.includes('ERROR')) return 'ERROR';
+    if (upper.includes('UPDATE') || upper.includes('CHANGE')) return 'WARN';
     return 'INFO';
   };
 
-  // Format event_type text (실제 스키마 필드)
+  // Format event_type text (DB CHECK 제약조건 기준)
+  // 허용값: ROLE_CHANGE, LOGIN, LOGOUT, DOC_CREATE, DOC_UPDATE, DOC_DELETE, SECURITY_ALERT, SETTINGS_UPDATE
   const formatEventType = (eventType) => {
+    if (!eventType) return '알 수 없음';
     const eventMap = {
-      update_settings: '시스템 설정 변경',
-      change_role: '사용자 역할 변경',
-      delete_user: '사용자 삭제',
-      delete_doc: '문서 삭제',
-      update_doc_status: '문서 상태 변경',
-      resolve_report: '신고 처리',
-      INSERT: '데이터 추가',
-      UPDATE: '데이터 수정',
-      DELETE: '데이터 삭제',
+      // DB CHECK 제약조건 허용 타입
+      ROLE_CHANGE: '사용자 역할 변경',
+      LOGIN: '로그인',
+      LOGOUT: '로그아웃',
+      DOC_CREATE: '문서 생성',
+      DOC_UPDATE: '문서 수정',
+      DOC_DELETE: '문서 삭제',
+      SECURITY_ALERT: '보안 경고',
+      SETTINGS_UPDATE: '시스템 설정 변경',
     };
-    return eventMap[eventType] || eventType || '알 수 없음';
+    return eventMap[eventType] || eventType;
   };
 
   // Format table_name (실제 스키마 필드)

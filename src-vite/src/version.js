@@ -1,6 +1,15 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.17.5 - 2025-12-10
+//   - fix(db): audit_logs SELECT RLS 정책 추가 (#192)
+//   - fix(db): audit_logs CHECK 제약조건에 SETTINGS_UPDATE 추가 (#193)
+//   - fix(lint): ESLint __dirname, global, 호이스팅 에러 수정 (#194)
+//   - chore: 린트 에러 0개 달성
+// 2.17.4 - 2025-12-10
+//   - fix(admin): audit_logs CHECK 제약조건 준수 (DOC_UPDATE 사용)
+//   - fix(admin): event_type UPPERCASE 통일 및 DB 제약조건 매핑
+//   - docs: RLS 정책 Supabase CLI 검증 완료
 // 2.17.3 - 2025-12-10
 //   - fix(admin): audit_logs 실제 스키마 적용 (event_type, table_name, metadata)
 //   - fix(admin): content_reports 테이블 누락 graceful 처리
@@ -23,7 +32,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.17.3';
-export const BUILD_HASH = '96dd26c';
-export const BUILD_SUMMARY = 'DB 스키마 검증';
+export const APP_VERSION = '2.17.5';
+export const BUILD_HASH = '097f3bc';
+export const BUILD_SUMMARY = 'DB/린트 이슈 해결';
 export const BUILD_DATE = '2025-12-10';

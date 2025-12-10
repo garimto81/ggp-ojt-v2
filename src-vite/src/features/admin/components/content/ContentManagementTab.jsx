@@ -45,7 +45,11 @@ export default function ContentManagementTab({ docs, onDocDeleted, isAdmin }) {
 
         // 테이블 없음 에러 (404) 또는 권한 에러 - 빈 배열 반환
         if (error) {
-          if (error.code === 'PGRST116' || error.code === '42501' || error.message?.includes('404')) {
+          if (
+            error.code === 'PGRST116' ||
+            error.code === '42501' ||
+            error.message?.includes('404')
+          ) {
             console.warn('content_reports 테이블 접근 불가:', error.message);
             setReports([]);
             return;
