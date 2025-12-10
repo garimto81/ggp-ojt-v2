@@ -13,8 +13,14 @@ import {
   validateQuizQuality as geminiValidateQuizQuality,
 } from '@features/ai/agents/gemini';
 
-// Initialize Supabase client
-export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY);
+// Initialize Supabase client with session auto-refresh (Issue #188)
+export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY, {
+  auth: {
+    autoRefreshToken: true,      // 토큰 자동 갱신
+    persistSession: true,        // 세션 localStorage 저장
+    detectSessionInUrl: true,    // OAuth 리다이렉트 시 URL에서 세션 감지
+  },
+});
 
 // Make supabase available globally for db.js
 if (typeof window !== 'undefined') {
