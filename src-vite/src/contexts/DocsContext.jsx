@@ -87,8 +87,12 @@ export function DocsProvider({ children }) {
       // 기존 문서 수정 시에는 기존 status 유지
       const isNewDoc = !doc.id;
 
+      // DB 스키마에 없는 필드 제거 (ai_engine은 UI 표시용)
+      // eslint-disable-next-line no-unused-vars
+      const { ai_engine, ...docWithoutAiEngine } = doc;
+
       const docData = {
-        ...doc,
+        ...docWithoutAiEngine,
         id: doc.id || crypto.randomUUID(),
         author_id: doc.author_id || user.id,
         author_name: doc.author_name || user.name,

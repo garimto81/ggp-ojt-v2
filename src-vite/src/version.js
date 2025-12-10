@@ -1,6 +1,9 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.17.6 - 2025-12-10
+//   - fix(docs): ai_engine 필드 DB 저장 시 제거 (#195)
+//   - 스키마에 없는 필드로 인한 저장 실패 해결
 // 2.17.5 - 2025-12-10
 //   - fix(db): audit_logs SELECT RLS 정책 추가 (#192)
 //   - fix(db): audit_logs CHECK 제약조건에 SETTINGS_UPDATE 추가 (#193)
@@ -32,7 +35,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.17.5';
-export const BUILD_HASH = '097f3bc';
-export const BUILD_SUMMARY = 'DB/린트 이슈 해결';
+export const APP_VERSION = '2.17.6';
+export const BUILD_HASH = '72bcc17';
+export const BUILD_SUMMARY = 'ai_engine 저장 오류 수정';
 export const BUILD_DATE = '2025-12-10';
