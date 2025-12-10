@@ -17,45 +17,107 @@ import {
   normalizeQuizQuestion,
 } from './parser';
 
+/** Rate Limiting 설정 */
+const RATE_LIMIT_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  retryableStatuses: [429, 503, 500],
+};
+
 /**
- * Gemini API 기본 요청
+ * 지연 함수 (테스트 가능하도록 export)
+ * @param {number} ms - 대기 시간 (밀리초)
+ * @returns {Promise<void>}
+ */
+export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Exponential backoff 대기 시간 계산
+ * @param {number} attempt - 현재 시도 횟수 (0부터 시작)
+ * @returns {number} 대기 시간 (밀리초)
+ */
+export const calculateBackoff = (attempt) => {
+  return Math.pow(2, attempt) * RATE_LIMIT_CONFIG.baseDelayMs;
+};
+
+/**
+ * Gemini API 기본 요청 (Rate Limiting 포함)
  * @param {string} prompt - 프롬프트 텍스트
  * @param {Object} options - 생성 옵션
+ * @param {number} options.temperature - 생성 온도
+ * @param {number} options.maxTokens - 최대 토큰 수
+ * @param {number} options.maxRetries - 최대 재시도 횟수 (기본: 3)
  * @returns {Promise<string>} AI 응답 텍스트
  */
 async function callGeminiAPI(prompt, options = {}) {
-  const { temperature = CONFIG.AI_TEMPERATURE, maxTokens = CONFIG.AI_MAX_TOKENS } = options;
+  const {
+    temperature = CONFIG.AI_TEMPERATURE,
+    maxTokens = CONFIG.AI_MAX_TOKENS,
+    maxRetries = RATE_LIMIT_CONFIG.maxRetries,
+  } = options;
 
-  const response = await fetch(
-    `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature,
-          maxOutputTokens: maxTokens,
-        },
-      }),
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(
+        `${GEMINI_CONFIG.API_URL}/${GEMINI_CONFIG.MODEL}:generateContent?key=${GEMINI_CONFIG.API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature,
+              maxOutputTokens: maxTokens,
+            },
+          }),
+        }
+      );
+
+      // Rate Limit 또는 일시적 오류 시 재시도
+      if (RATE_LIMIT_CONFIG.retryableStatuses.includes(response.status)) {
+        if (attempt < maxRetries) {
+          const waitTime = calculateBackoff(attempt);
+          console.warn(
+            `Gemini API ${response.status} 오류, ${waitTime}ms 후 재시도 (${attempt + 1}/${maxRetries})`
+          );
+          await delay(waitTime);
+          continue;
+        }
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          `Gemini API 오류: ${response.status} - ${errorData.error?.message || 'Unknown error'}`
+        );
+      }
+
+      const data = await response.json();
+      const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!responseText) {
+        throw new Error('AI 응답이 비어있습니다.');
+      }
+
+      return responseText;
+    } catch (error) {
+      lastError = error;
+
+      // 네트워크 오류 시 재시도
+      if (error.name === 'TypeError' && attempt < maxRetries) {
+        const waitTime = calculateBackoff(attempt);
+        console.warn(`네트워크 오류, ${waitTime}ms 후 재시도 (${attempt + 1}/${maxRetries})`);
+        await delay(waitTime);
+        continue;
+      }
+
+      throw error;
     }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      `Gemini API 오류: ${response.status} - ${errorData.error?.message || 'Unknown error'}`
-    );
   }
 
-  const data = await response.json();
-  const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!responseText) {
-    throw new Error('AI 응답이 비어있습니다.');
-  }
-
-  return responseText;
+  throw lastError || new Error('Rate limit 초과: 최대 재시도 횟수 도달');
 }
 
 /**

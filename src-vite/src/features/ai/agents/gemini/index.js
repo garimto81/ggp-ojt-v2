@@ -6,7 +6,14 @@
  */
 
 // Client (Core API)
-export { generateOJTContent, regenerateQuiz, checkStatus, getConfig } from './client';
+export {
+  generateOJTContent,
+  regenerateQuiz,
+  checkStatus,
+  getConfig,
+  delay,
+  calculateBackoff,
+} from './client';
 
 // Prompts
 export {
