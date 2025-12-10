@@ -1,8 +1,8 @@
 // OJT Master - Admin Logs Viewer Component
+// audit_logs 실제 스키마 기반 (v2.17.3)
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/utils/api';
-import { Toast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLES } from '@/constants';
 
@@ -16,10 +16,9 @@ const ITEMS_PER_PAGE = 20;
 
 /**
  * Admin Logs Viewer Component
- * - audit_logs 테이블 조회 (admin_logs 통합됨)
- * - 최신 20개 표시
- * - 더 보기 버튼
- * - 로그 타입별 아이콘
+ * - audit_logs 테이블 조회 (실제 스키마 기반)
+ * - 스키마: id, event_type, table_name, record_id, old_value, new_value,
+ *          performed_by, ip_address, user_agent, metadata, created_at
  */
 export function AdminLogsViewer() {
   const { user } = useAuth();
@@ -46,9 +45,9 @@ export function AdminLogsViewer() {
           .range(0, ITEMS_PER_PAGE * page - 1);
 
         if (error) {
-          // 테이블 없음 에러 처리 (404)
-          if (error.code === 'PGRST116' || error.message?.includes('404')) {
-            setTableError('로그 테이블이 아직 생성되지 않았습니다.');
+          // 테이블 없음 또는 권한 에러 처리
+          if (error.code === 'PGRST116' || error.code === '42501' || error.message?.includes('404')) {
+            setTableError('로그 테이블에 접근할 수 없습니다.');
             return;
           }
           throw error;
@@ -72,24 +71,40 @@ export function AdminLogsViewer() {
     setPage((prev) => prev + 1);
   };
 
-  // Get log type based on action
-  const getLogType = (action) => {
-    if (action.includes('delete') || action.includes('error')) return 'ERROR';
-    if (action.includes('update') || action.includes('change')) return 'WARN';
+  // Get log type based on event_type (실제 스키마 필드)
+  const getLogType = (eventType) => {
+    if (!eventType) return 'INFO';
+    if (eventType.includes('delete') || eventType.includes('error')) return 'ERROR';
+    if (eventType.includes('update') || eventType.includes('change')) return 'WARN';
     return 'INFO';
   };
 
-  // Format action text
-  const formatAction = (action) => {
-    const actionMap = {
+  // Format event_type text (실제 스키마 필드)
+  const formatEventType = (eventType) => {
+    const eventMap = {
       update_settings: '시스템 설정 변경',
       change_role: '사용자 역할 변경',
       delete_user: '사용자 삭제',
       delete_doc: '문서 삭제',
       update_doc_status: '문서 상태 변경',
       resolve_report: '신고 처리',
+      INSERT: '데이터 추가',
+      UPDATE: '데이터 수정',
+      DELETE: '데이터 삭제',
     };
-    return actionMap[action] || action;
+    return eventMap[eventType] || eventType || '알 수 없음';
+  };
+
+  // Format table_name (실제 스키마 필드)
+  const formatTableName = (tableName) => {
+    const tableMap = {
+      users: '사용자',
+      ojt_docs: 'OJT 문서',
+      admin_settings: '시스템 설정',
+      learning_records: '학습 기록',
+      teams: '팀',
+    };
+    return tableMap[tableName] || tableName || '';
   };
 
   if (isLoading && page === 1) {
@@ -126,7 +141,8 @@ export function AdminLogsViewer() {
         <>
           <div className="space-y-2">
             {logs.map((log) => {
-              const logType = getLogType(log.action);
+              // 실제 스키마 필드 사용: event_type, table_name, metadata
+              const logType = getLogType(log.event_type);
               const typeStyle = LOG_TYPE_ICONS[logType];
 
               return (
@@ -141,10 +157,15 @@ export function AdminLogsViewer() {
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className={`font-medium ${typeStyle.color}`}>
-                        {formatAction(log.action)}
+                        {formatEventType(log.event_type)}
                       </span>
+                      {log.table_name && (
+                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                          {formatTableName(log.table_name)}
+                        </span>
+                      )}
                       <span className="text-xs text-gray-500">
                         {new Date(log.created_at).toLocaleString('ko-KR', {
                           year: 'numeric',
@@ -156,31 +177,34 @@ export function AdminLogsViewer() {
                       </span>
                     </div>
 
-                    {/* Details */}
-                    {log.details && (
+                    {/* Metadata details (실제 스키마 필드) */}
+                    {log.metadata && Object.keys(log.metadata).length > 0 && (
                       <div className="mt-1 text-sm text-gray-600">
-                        {log.target_type === 'user' && log.details.userName && (
-                          <span>사용자: {log.details.userName}</span>
-                        )}
-                        {log.target_type === 'doc' && log.details.docTitle && (
-                          <span>문서: {log.details.docTitle}</span>
-                        )}
-                        {log.target_type === 'setting' && (
+                        {log.table_name === 'admin_settings' && (
                           <span>
-                            부서: {log.details.departments || 0}개, 기본 역할:{' '}
-                            {log.details.defaultRole}, 통과 점수: {log.details.quizPassScore}
+                            부서: {log.metadata.departments || 0}개, 기본 역할:{' '}
+                            {log.metadata.defaultRole}, 통과 점수: {log.metadata.quizPassScore}
                           </span>
                         )}
-                        {log.target_type === 'report' && log.details.reason && (
-                          <span>사유: {log.details.reason}</span>
+                        {log.table_name === 'users' && log.metadata.userName && (
+                          <span>사용자: {log.metadata.userName}</span>
+                        )}
+                        {log.table_name === 'ojt_docs' && log.metadata.docTitle && (
+                          <span>문서: {log.metadata.docTitle}</span>
+                        )}
+                        {/* 기타 metadata 표시 */}
+                        {!['admin_settings', 'users', 'ojt_docs'].includes(log.table_name) && (
+                          <span className="text-xs text-gray-400">
+                            {JSON.stringify(log.metadata).substring(0, 100)}
+                          </span>
                         )}
                       </div>
                     )}
 
-                    {/* Target ID (for debugging) */}
-                    {log.target_id && (
+                    {/* Record ID (for debugging) */}
+                    {log.record_id && (
                       <div className="mt-1 text-xs text-gray-400 font-mono">
-                        ID: {log.target_id.substring(0, 8)}...
+                        ID: {log.record_id.substring(0, 8)}...
                       </div>
                     )}
                   </div>

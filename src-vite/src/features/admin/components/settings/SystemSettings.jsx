@@ -124,13 +124,13 @@ export function SystemSettings() {
         if (error) throw error;
       }
 
-      // Log admin action (audit_logs - 실패해도 설정 저장은 성공)
+      // Log admin action (audit_logs 실제 스키마에 맞춤 - 실패해도 설정 저장은 성공)
       try {
         await supabase.from('audit_logs').insert({
-          admin_id: user.id,
-          action: 'update_settings',
-          target_type: 'setting',
-          details: {
+          event_type: 'update_settings',
+          table_name: 'admin_settings',
+          performed_by: user.id,
+          metadata: {
             departments: departments.length,
             defaultRole,
             quizPassScore,

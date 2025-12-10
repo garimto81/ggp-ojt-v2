@@ -30,6 +30,7 @@ export default function ContentManagementTab({ docs, onDocDeleted, isAdmin }) {
   }, [docs]);
 
   // 문서 선택 시 신고 목록 로드
+  // NOTE: content_reports 테이블이 DB에 없을 수 있음 - graceful 처리
   const handleSelectDoc = useCallback(async (doc) => {
     setSelectedDoc(doc);
 
@@ -42,7 +43,15 @@ export default function ContentManagementTab({ docs, onDocDeleted, isAdmin }) {
           .eq('doc_id', doc.id)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        // 테이블 없음 에러 (404) 또는 권한 에러 - 빈 배열 반환
+        if (error) {
+          if (error.code === 'PGRST116' || error.code === '42501' || error.message?.includes('404')) {
+            console.warn('content_reports 테이블 접근 불가:', error.message);
+            setReports([]);
+            return;
+          }
+          throw error;
+        }
 
         // reporter 이름 추출
         const reportsWithName = (data || []).map((r) => ({
@@ -141,6 +150,7 @@ export default function ContentManagementTab({ docs, onDocDeleted, isAdmin }) {
   );
 
   // 신고 처리
+  // NOTE: content_reports 테이블이 DB에 없을 수 있음 - graceful 처리
   const handleResolveReport = useCallback(
     async (reportId, action) => {
       if (!isAdmin) {
@@ -157,7 +167,14 @@ export default function ContentManagementTab({ docs, onDocDeleted, isAdmin }) {
           })
           .eq('id', reportId);
 
-        if (error) throw error;
+        // 테이블 없음 에러 처리
+        if (error) {
+          if (error.code === 'PGRST116' || error.message?.includes('404')) {
+            Toast.warning('신고 기능이 아직 활성화되지 않았습니다.');
+            return;
+          }
+          throw error;
+        }
 
         Toast.success(action === 'resolved' ? '신고가 해결되었습니다.' : '신고가 기각되었습니다.');
 
