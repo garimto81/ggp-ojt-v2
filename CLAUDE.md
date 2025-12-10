@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Architecture**: Local-Only Docker 배포 (PostgreSQL + PostgREST + nginx)
+**Version**: 1.4.0 | **Architecture**: Local-Only Docker 배포 (PostgreSQL + PostgREST + nginx)
 
 ## Tech Stack
 
@@ -22,79 +22,53 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 | **Charts** | Chart.js + react-chartjs-2 |
 | **Package Manager** | pnpm 9.15+ |
 
-## Architecture (Local-Only)
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   Local-Only Architecture                    │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Browser ──HTTPS──▶ nginx:8443                              │
-│                        │                                    │
-│                        ├── / ──▶ React SPA (정적 파일)       │
-│                        ├── /rest/v1/* ──▶ PostgREST:3000    │
-│                        │                    │               │
-│                        │                    └──▶ postgres   │
-│                        │                                    │
-│                        └── /api/v1/* ──▶ vLLM (외부 서버)    │
-│                                         10.10.100.209:8001  │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+Browser ──HTTPS──▶ nginx:8443
+                      │
+                      ├── / ──▶ React SPA (정적 파일)
+                      ├── /rest/v1/* ──▶ PostgREST:3000 ──▶ postgres
+                      └── /api/v1/* ──▶ vLLM (외부 서버 10.10.100.209:8001)
 ```
 
-### Docker 서비스
+### Docker Services
 
-| 서비스 | 역할 | 포트 | 이미지 |
-|--------|------|------|--------|
-| **postgres** | Self-hosted PostgreSQL | 5432 | postgres:16-alpine |
-| **postgrest** | PostgreSQL REST API | 3000 | postgrest/postgrest:v12.0.2 |
-| **nginx** | 프론트엔드 서빙 + API 프록시 | 8080, 8443 | nginx:alpine |
-| **vLLM** | AI 서버 (외부) | 8001 | 별도 서버 |
+| 서비스 | 역할 | 포트 |
+|--------|------|------|
+| postgres | Self-hosted PostgreSQL | 5432 |
+| postgrest | PostgreSQL REST API | 3000 |
+| nginx | 프론트엔드 + API 프록시 | 8080, 8443 |
+| vLLM | AI 서버 (외부) | 8001 |
 
 ## Commands
 
 ```bash
-# === 개발 서버 ===
+# === 개발 서버 (src-vite 디렉토리) ===
 cd src-vite
-npm run dev                                    # http://localhost:5173
+npm run dev                    # http://localhost:5173
 
-# === 프론트엔드 빌드 ===
-npm run build                                  # dist/ → Docker nginx 서빙
-
-# === 단위 테스트 (Vitest) - src-vite 디렉토리에서 ===
-npm run test                                   # Watch 모드
-npm run test:run                               # 1회 실행
+# === 단위 테스트 - Vitest (src-vite 디렉토리) ===
+npm run test                   # Watch 모드
+npm run test:run               # 1회 실행
 npx vitest run src/utils/api.test.js           # 단일 파일
-npx vitest run src/features/learning/quiz/     # 디렉토리 테스트
+npx vitest run src/features/learning/quiz/     # 디렉토리
 
-# === E2E 테스트 (Playwright) - 루트 디렉토리에서 ===
-pnpm test                                      # 전체 E2E
+# === E2E 테스트 - Playwright (루트 디렉토리) ===
+pnpm test                      # 전체 E2E (Docker 서버 필요)
 npx playwright test tests/e2e-homepage.spec.js # 단일 파일
-npx playwright test --headed                   # 브라우저 표시
+npx playwright test --headed   # 브라우저 표시
 
 # === 코드 품질 (src-vite 디렉토리) ===
-npm run lint:fix                               # ESLint 자동 수정
-npm run format                                 # Prettier 포맷팅
+npm run lint:fix               # ESLint 자동 수정
+npm run format                 # Prettier 포맷팅
 
-# === Docker 배포 ===
-cd docker
-docker-compose --env-file .env.docker up -d    # 전체 시작
-docker-compose logs -f                          # 로그 확인
-```
+# === 빌드 ===
+npm run build                  # dist/ 생성 → Docker nginx 서빙
 
-## Environment Variables
-
-```bash
-# src-vite/.env
-VITE_SUPABASE_URL=https://localhost:8443     # Docker nginx
-VITE_SUPABASE_ANON_KEY=<PostgREST JWT token>
-VITE_LOCAL_AI_URL=/api                        # nginx 프록시 경로
-VITE_AUTH_MODE=email                          # 이메일 인증만
-
-# docker/.env.docker
-POSTGRES_PASSWORD=your-secure-password
-PGRST_JWT_SECRET=<32자 이상 랜덤>
-VLLM_HOST=10.10.100.209                       # AI 서버 IP
+# === Docker (docker 디렉토리) ===
+docker-compose --env-file .env.docker up -d
+docker-compose logs -f
 ```
 
 ## Path Aliases
@@ -103,10 +77,10 @@ VLLM_HOST=10.10.100.209                       # AI 서버 IP
 |-------|------|
 | `@` | `src/` |
 | `@features` | `src/features/` |
+| `@shared` | `src/shared/` |
 | `@utils` | `src/utils/` |
 | `@contexts` | `src/contexts/` |
 | `@hooks` | `src/hooks/` |
-| `@layouts` | `src/layouts/` |
 | `@components` | `src/components/` |
 
 ## Project Structure
@@ -116,25 +90,25 @@ ggp_ojt_v2/
 ├── src-vite/                    # React 앱 (메인 코드베이스)
 │   └── src/
 │       ├── features/            # Feature-Based 모듈 (Block Agent System)
-│       │   ├── admin/           # 관리자 대시보드, 사용자 승인
+│       │   ├── admin/           # 관리자 대시보드
 │       │   ├── ai/              # AI 콘텐츠 생성 (vLLM + WebLLM)
 │       │   ├── auth/            # 인증 (이메일/비밀번호)
-│       │   ├── content/         # 콘텐츠 관리
-│       │   │   ├── create/      # MentorDashboard (AI 생성)
-│       │   │   └── manage/      # 문서 CRUD
-│       │   └── learning/        # 학습 기능
-│       │       ├── study/       # MenteeList, MenteeStudy
-│       │       └── quiz/        # QuizSession, QuizResult
-│       ├── shared/              # 공유 컴포넌트/유틸리티
+│       │   ├── content/create/  # MentorDashboard (AI 생성)
+│       │   ├── content/manage/  # 문서 CRUD
+│       │   ├── learning/study/  # MenteeList, MenteeStudy
+│       │   └── learning/quiz/   # QuizSession, QuizResult
 │       ├── contexts/            # 전역 Context (Auth, AI, Toast)
 │       └── utils/               # API, helpers, logger
 ├── docker/                      # Docker 배포 설정
-├── database/init/               # PostgreSQL 초기화 SQL
+├── database/                    # PostgreSQL 스키마
+│   ├── agents/supabase/         # DB 전담 에이전트 문서
+│   ├── migrations/              # 마이그레이션 SQL
+│   └── init/                    # Docker 초기화 SQL
 ├── tests/                       # Playwright E2E 테스트
-└── playwright.config.js         # E2E 설정 (baseURL: localhost:8080)
+└── docs/                        # 프로젝트 문서
 ```
 
-## Provider 계층
+## Provider Hierarchy
 
 ```jsx
 <QueryClientProvider>      // React Query
@@ -152,40 +126,31 @@ ggp_ojt_v2/
 
 ## Data Flow
 
-```
-[React Component] ──→ [Supabase Client] ──→ [nginx /rest/v1/*] ──→ [PostgREST]
-     │                                                                   │
-     ▼                                                                   │
-[UI 업데이트] ◄─────────────────────────────────────────────────────────┘
-```
-
 **API 패턴**: `supabase.from('table').select()` - PostgREST 호환 Supabase JS 클라이언트 사용
 
-## Database Schema
+```
+[React Component] ──→ [Supabase Client] ──→ [nginx /rest/v1/*] ──→ [PostgREST]
+```
+
+## Database Schema (Core Tables)
 
 ```sql
--- users: 사용자 프로필
 users (id UUID PK, name, role, department, status, created_at)
-
--- ojt_docs: OJT 문서
-ojt_docs (id UUID PK, title, team, team_id FK, step, sections JSONB, quiz JSONB,
-          author_id, author_name, status, created_at, updated_at)
-
--- learning_records: 학습 기록
+ojt_docs (id UUID PK, title, team, team_id FK, step, sections JSONB, quiz JSONB, author_id, status)
 learning_records (id UUID PK, user_id, doc_id, score, total_questions, passed)
-
--- teams: 팀 마스터
 teams (id UUID PK, name, slug, display_order, is_active)
+departments (id UUID PK, name, code, is_active)
 ```
 
 ### RLS 정책
 
 | 테이블 | SELECT | INSERT | UPDATE | DELETE |
 |--------|--------|--------|--------|--------|
-| **users** | 본인 OR Admin | 본인만 | 본인 OR Admin | - |
-| **ojt_docs** | 모두 | Mentor/Admin | 작성자 OR Admin | 작성자 OR Admin |
-| **learning_records** | 본인 OR Admin | 본인만 | 본인만 | - |
-| **teams** | 모두 | Admin | Admin | Admin |
+| users | 본인 OR Admin | 본인만 | 본인 OR Admin | - |
+| ojt_docs | 모두 | Mentor/Admin | 작성자 OR Admin | 작성자 OR Admin |
+| learning_records | 본인 OR Admin | 본인만 | 본인만 | - |
+
+**RLS Helper 함수**: `rls_is_admin()`, `rls_is_mentor_or_admin()`, `rls_get_role()`
 
 ## Role-Based Access
 
@@ -195,40 +160,32 @@ teams (id UUID PK, name, slug, display_order, is_active)
 | **Mentor** | AI 콘텐츠 생성, 자료 CRUD | `mentor_dashboard` |
 | **Mentee** | 학습, 퀴즈 (읽기 전용) | `mentee_list` |
 
-## Authentication (Email Only)
+## Authentication
 
 ```
 회원가입 → status='pending' → Admin 승인 → status='approved' → 로그인 가능
 ```
 
-- **아이디**: 내부적으로 `@local` 접미사 추가
-- **관리자 승인**: Admin Dashboard > "승인 관리" 탭
+- 아이디: 내부적으로 `@local` 접미사 추가
+- Admin 승인: Admin Dashboard > "승인 관리" 탭
 
 ## AI Content Generation
 
-### 엔진 우선순위
+### Engine Priority
 
 1. **Local AI (vLLM)** - 사내 서버 `10.10.100.209:8001` (Qwen3-4B)
 2. **WebLLM** - 브라우저 fallback (Qwen 2.5 3B)
 
-### AI 상태 (`AIContext.jsx`)
+### AI States (`AIContext.jsx`)
 
-```javascript
-LOCAL_AI_READY    // Local AI 사용 가능
-LOCAL_AI_FAILED   // Local AI 실패 → WebLLM fallback
-WEBLLM_READY      // WebLLM 사용 가능
-NO_ENGINE         // 사용 가능한 엔진 없음
-```
-
-### 콘텐츠 생성
-
-| 입력 | 처리 |
+| 상태 | 설명 |
 |------|------|
-| 텍스트 | 섹션 구조화 + 퀴즈 10개 |
-| URL | 텍스트 추출 후 분석 |
-| PDF | pdfjs-dist 추출 → 섹션화 |
+| `LOCAL_AI_READY` | Local AI 사용 가능 |
+| `LOCAL_AI_FAILED` | Local AI 실패 → WebLLM fallback |
+| `WEBLLM_READY` | WebLLM 사용 가능 |
+| `NO_ENGINE` | 사용 가능한 엔진 없음 |
 
-## Error Handling
+### Error Handling
 
 | 영역 | 전략 |
 |------|------|
@@ -236,52 +193,38 @@ NO_ENGINE         // 사용 가능한 엔진 없음
 | AI JSON 파싱 실패 | Regex fallback |
 | 퀴즈 부족 | `createPlaceholderQuiz()` 자동 생성 |
 
-## Quick Start (Docker)
-
-```bash
-# 1. 환경 변수 설정
-cd docker
-cp .env.docker.example .env.docker
-# POSTGRES_PASSWORD, PGRST_JWT_SECRET 수정
-
-# 2. SSL 인증서 생성
-mkdir -p ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout ssl/key.pem -out ssl/cert.pem -subj "/CN=localhost"
-
-# 3. 프론트엔드 빌드
-cd ../src-vite
-npm install && npm run build
-
-# 4. Docker 실행
-cd ../docker
-docker-compose --env-file .env.docker up -d
-
-# 5. 접속: https://localhost:8443
-```
-
-## Block Agent System v1.2.0
-
-### Frontend Agents (Feature-Based)
+## Block Agent System v1.3.0
 
 App.jsx에서 React.lazy()를 통한 코드 분할:
 
 ```javascript
-// Lazy loading 패턴 (App.jsx:13-27)
 const AdminDashboard = lazy(() =>
   import('@features/admin').then((m) => ({ default: m.AdminDashboard }))
 );
 ```
 
-| Agent | 경로 | 주요 컴포넌트 |
-|-------|------|--------------|
+### Frontend Agents (7개)
+
+| Agent | 경로 | 핵심 파일 |
+|-------|------|----------|
 | auth-agent | `features/auth/` | RoleSelectionPage, AuthContext |
 | content-create-agent | `features/content/create/` | MentorDashboard, ContentInputPanel |
 | content-manage-agent | `features/content/manage/` | MyDocsList, DocsContext |
 | learning-study-agent | `features/learning/study/` | MenteeList, MenteeStudy, SectionViewer |
 | learning-quiz-agent | `features/learning/quiz/` | QuizSession, QuizResult, useLearningRecord |
-| ai-agent | `features/ai/` | AIEngineSelector, AIContext, webllm.js |
+| ai-agent | `features/ai/` | AIEngineSelector, AIContext |
 | admin-agent | `features/admin/` | AdminDashboard, useUsers, useAnalytics |
+
+### Service Agent (AI)
+
+| Agent | 경로 | 역할 |
+|-------|------|------|
+| **gemini-agent** | `features/ai/agents/gemini/` | Gemini API 전담, OJT 콘텐츠 생성 |
+
+```javascript
+// 사용 예시
+import { generateOJTContent, checkStatus } from '@features/ai/agents/gemini';
+```
 
 ### Backend Agent (Database)
 
@@ -289,62 +232,148 @@ const AdminDashboard = lazy(() =>
 |-------|------|------|
 | **supabase-agent** | `database/agents/supabase/` | DB 스키마, 마이그레이션, RLS 정책 관리 |
 
-**supabase-agent 책임**:
-- 테이블 스키마 설계 및 변경
-- SQL 마이그레이션 스크립트 작성 (`database/migrations/`)
-- RLS 정책 관리 (`rls_is_admin()`, `rls_is_mentor_or_admin()`)
-- 인덱스 최적화, FK 제약조건 관리
-
-**관련 파일**: `database/agents/supabase/README.md`, `database/agents/supabase/SCHEMA.md`
-
 **상세 문서**: `docs/BLOCK_AGENT_SYSTEM.md`
 
-## 주의사항
+## Testing
 
-1. **XSS**: 사용자 HTML 입력 시 DOMPurify 필수 (`import DOMPurify from 'dompurify'`)
+### Test File Locations
+
+- **Unit tests**: `src-vite/src/**/*.test.{js,jsx}` (컴포넌트/훅과 동일 디렉토리)
+- **E2E tests**: `tests/*.spec.js` (루트 디렉토리)
+
+### Vitest Configuration
+
+```javascript
+// vitest.config.js
+test: {
+  globals: true,
+  environment: 'jsdom',
+  setupFiles: './src/test/setup.js',
+}
+```
+
+### Mock Patterns
+
+```javascript
+// Context mock
+vi.mock('@/contexts/ToastContext', () => ({
+  Toast: { success: vi.fn(), error: vi.fn() }
+}));
+
+// API mock
+vi.mock('@/utils/api', () => ({
+  supabase: {
+    from: vi.fn(() => ({
+      insert: vi.fn(() => Promise.resolve({ data: null, error: null }))
+    }))
+  }
+}));
+```
+
+## Important Notes
+
+1. **XSS 방지**: 사용자 HTML 입력 시 DOMPurify 필수 (`import DOMPurify from 'dompurify'`)
 2. **퀴즈 정답 인덱스**: 0 처리 주의 (`hasOwnProperty` 또는 `!== undefined` 사용)
-3. **vLLM 서버**: 외부 서버 `10.10.100.209:8001` - Docker에 포함 안됨, nginx에서 프록시
+3. **vLLM 서버**: 외부 서버 `10.10.100.209:8001` - Docker에 포함 안됨
 4. **E2E 테스트**: Docker 서버 실행 필요 (baseURL: `localhost:8080`)
-5. **테스트 파일 위치**: `*.test.jsx` / `*.test.js` - 컴포넌트/훅과 동일 디렉토리
+5. **RLS 함수명**: `is_admin()` 삭제됨 → `rls_is_admin()` 사용
+
+## Environment Variables
+
+```bash
+# src-vite/.env
+VITE_SUPABASE_URL=https://localhost:8443
+VITE_SUPABASE_ANON_KEY=<PostgREST JWT token>
+VITE_LOCAL_AI_URL=/api
+VITE_AUTH_MODE=email
+
+# docker/.env.docker
+POSTGRES_PASSWORD=your-secure-password
+PGRST_JWT_SECRET=<32자 이상 랜덤>
+VLLM_HOST=10.10.100.209
+```
+
+## Quick Start (Docker)
+
+```bash
+# 1. 환경 변수 설정
+cd docker && cp .env.docker.example .env.docker
+
+# 2. SSL 인증서 생성
+mkdir -p ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout ssl/key.pem -out ssl/cert.pem -subj "/CN=localhost"
+
+# 3. 프론트엔드 빌드
+cd ../src-vite && npm install && npm run build
+
+# 4. Docker 실행
+cd ../docker && docker-compose --env-file .env.docker up -d
+
+# 5. 접속: https://localhost:8443
+```
 
 ---
 
-## 현재 진행 중인 작업 (2025-12-10)
+## 버전 관리 (필수)
 
-### Issue #178: Supabase DB 정리
+### PR/Issue 생성·업데이트 시 필수 항목
 
-**상태**: 🔄 LMS 확장 테이블 처리 결정 대기
+| 항목 | 형식 | 예시 |
+|------|------|------|
+| **버전** | Semantic Versioning | `v1.4.0` |
+| **커밋 해시** | 7자리 short hash | `e9b4a29` |
+| **이슈/PR 태그** | `#번호` 또는 `Closes #번호` | `#181`, `Closes #179` |
 
-#### 발견 사항
+### 버전 업데이트 규칙
 
-실제 Supabase API 조회 결과, **두 개의 시스템이 공존**:
+```
+MAJOR.MINOR.PATCH (Semantic Versioning)
+├── MAJOR: 호환성 깨지는 변경 (API 변경, DB 스키마 변경)
+├── MINOR: 새 기능 추가 (하위 호환) - 새 에이전트, 새 컴포넌트
+└── PATCH: 버그 수정, 문서 수정
+```
 
-| 시스템 | 핵심 테이블 | 데이터 | 상태 |
-|--------|-------------|--------|------|
-| **OJT Master** | ojt_docs, learning_records | 운영 중 | ✅ 유지 |
-| **LMS 확장** | lessons(22), quizzes(5), curriculum_days(7) | 48개 레코드 | ⚠️ 결정 필요 |
+### 워크플로우
 
-#### 다음 작업
+```
+1. Issue 생성 → 이슈 번호 발급 (#N)
+2. 브랜치 생성 → feat/issue-N-desc
+3. 작업 완료 → 커밋 (해시 생성)
+4. PR 생성 → 이슈 태그 연결 (Closes #N)
+5. 머지 전 → CLAUDE.md 버전 범프, CHANGELOG.md 업데이트
+6. 머지 후 → git tag vX.Y.Z
+```
 
-1. **LMS 확장 테이블 처리 결정**:
-   - A: 유지 (향후 커리큘럼 기반 학습 사용 계획 있음)
-   - B: 제거 (테스트/레거시 데이터, 백업 후 삭제)
+### 커밋 메시지 형식
 
-2. **Phase 1 마이그레이션 실행** (승인 완료):
-   - `poker_glossary` 제거 (0개 레코드, 무관한 프로젝트)
-   - `admin_logs` → `audit_logs` 통합
-   - `content_reports` 제거 (미사용)
+```
+<type>(<scope>): <subject> (#issue)
 
-3. **프론트엔드 참조 확인**:
-   ```bash
-   grep -r "lessons" src-vite/src/
-   grep -r "curriculum_days" src-vite/src/
-   ```
+- 변경 내용 설명
 
-#### 관련 문서
+Refs: #issue1, #issue2
+Closes #issue (PR에서 이슈 자동 종료 시)
 
-| 파일 | 내용 |
-|------|------|
-| `database/agents/supabase/MIGRATION_PLAN.md` | 수정 계획 및 승인 요청 |
-| `database/agents/supabase/SCHEMA.md` | 23개 테이블 전체 스키마 (v3.0.0) |
-| `docs/reports/2025-12-09-actual-db-analysis.md` | 실제 DB 분석 보고서 |
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+```
+
+### 코멘트 태깅 규칙
+
+| 상황 | 태그 형식 |
+|------|-----------|
+| 이슈 참조 | `Refs: #123` |
+| 이슈 종료 | `Closes #123`, `Fixes #123` |
+| PR 참조 | `PR #456` |
+| 커밋 참조 | `e9b4a29` (7자리 해시) |
+
+### 버전 히스토리
+
+| 버전 | 날짜 | 주요 변경 |
+|------|------|-----------|
+| v1.4.0 | 2025-12-10 | gemini-agent Rate Limiting, 43개 테스트 (#179, #181) |
+| v1.3.0 | 2025-12-10 | gemini-agent 신설 (Block Agent System v1.3.0) |
+| v1.2.0 | 2025-12 | supabase-agent 추가, departments 테이블 |
+| v1.1.0 | 2025-12 | Local AI (vLLM) 통합, Docker 배포 |
+| v1.0.0 | 2025-12 | 초기 릴리스 |
