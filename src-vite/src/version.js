@@ -1,6 +1,11 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.18.0 - 2025-12-11
+//   - feat(content): PDF 업로드 및 텍스트 추출 기능 구현 (#198)
+//   - pdfjs-dist를 활용한 브라우저 내 PDF 텍스트 추출
+//   - 파일 검증, 진행률 표시, 메타데이터 추출 지원
+//   - source_type='pdf' 저장으로 콘텐츠 출처 추적
 // 2.17.8 - 2025-12-10
 //   - fix(admin): 부서 동기화 문제 해결 (#178)
 //   - 설정 탭에서 부서 생성 후 사용자 탭에서 즉시 반영
@@ -44,7 +49,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.17.8';
-export const BUILD_HASH = '41f9da0';
-export const BUILD_SUMMARY = '부서 동기화 문제 해결 (#178)';
-export const BUILD_DATE = '2025-12-10';
+export const APP_VERSION = '2.18.0';
+export const BUILD_HASH = '1ac8bd0';
+export const BUILD_SUMMARY = 'PDF 업로드 및 텍스트 추출 기능 (#198)';
+export const BUILD_DATE = '2025-12-11';
