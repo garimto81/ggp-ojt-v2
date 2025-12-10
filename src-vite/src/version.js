@@ -41,6 +41,6 @@
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
 export const APP_VERSION = '2.17.7';
-export const BUILD_HASH = '2d1a0ef';
+export const BUILD_HASH = 'cbb598b';
 export const BUILD_SUMMARY = '스키마 불일치 전체 검증 (#196)';
 export const BUILD_DATE = '2025-12-10';
