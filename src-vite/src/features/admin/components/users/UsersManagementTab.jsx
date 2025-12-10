@@ -1,7 +1,7 @@
 // OJT Master - Users Management Tab Component
 // Manages user list, filtering, pagination, and integrates with side panel and bulk actions
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Toast } from '@/contexts/ToastContext';
 import { supabase } from '@/utils/api';
@@ -43,27 +43,38 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
   // Debounced search
   const debouncedUserSearch = useDebounce(userSearch, 300);
 
-  // Load departments from admin_settings
-  useEffect(() => {
-    const loadDepartments = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('admin_settings')
-          .select('value')
-          .eq('key', 'default_departments')
-          .single();
+  // Load departments from admin_settings (#178 부서 동기화 수정)
+  const loadDepartments = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('value')
+        .eq('key', 'default_departments')
+        .single();
 
-        if (!error && data?.value && Array.isArray(data.value)) {
-          setAdminDepartments(data.value);
-        }
-      } catch (e) {
-        console.error('Failed to load departments from admin_settings:', e);
-        // Keep fallback departments on error
+      if (!error && data?.value && Array.isArray(data.value)) {
+        setAdminDepartments(data.value);
+      }
+    } catch (e) {
+      console.error('Failed to load departments from admin_settings:', e);
+      // Keep fallback departments on error
+    }
+  }, []);
+
+  // 컴포넌트 마운트 시 + 주기적으로 부서 목록 갱신 (#178)
+  useEffect(() => {
+    loadDepartments();
+
+    // 탭 포커스 시 부서 목록 재로드 (설정 탭에서 변경 후 돌아올 때)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadDepartments();
       }
     };
 
-    loadDepartments();
-  }, []);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loadDepartments]);
 
   // Reset page when filters change
   useEffect(() => {

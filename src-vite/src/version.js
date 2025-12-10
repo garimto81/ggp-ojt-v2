@@ -1,6 +1,10 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.17.8 - 2025-12-10
+//   - fix(admin): 부서 동기화 문제 해결 (#178)
+//   - 설정 탭에서 부서 생성 후 사용자 탭에서 즉시 반영
+//   - visibilitychange 이벤트로 탭 전환 시 부서 재로드
 // 2.17.7 - 2025-12-10
 //   - fix(db): users.is_active 컬럼 마이그레이션 추가 (#196)
 //   - fix(docs): ai_processed, ai_error 필드도 DB 저장 시 제거
@@ -40,7 +44,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.17.7';
-export const BUILD_HASH = 'cbb598b';
-export const BUILD_SUMMARY = '스키마 불일치 전체 검증 (#196)';
+export const APP_VERSION = '2.17.8';
+export const BUILD_HASH = '41f9da0';
+export const BUILD_SUMMARY = '부서 동기화 문제 해결 (#178)';
 export const BUILD_DATE = '2025-12-10';
