@@ -106,9 +106,25 @@ export async function dbSave(table, data) {
         .single();
 
       if (error) {
+        // RLS 정책 위반 에러 (42501) - 인증 세션 문제
+        if (error.code === '42501') {
+          console.error(`[dbSave] RLS 정책 위반 - 인증 세션을 확인하세요:`, error.message);
+          // 인증 세션 확인
+          const { data: session } = await window.supabase.auth.getSession();
+          if (!session?.session) {
+            console.error('[dbSave] 인증 세션이 없습니다. 다시 로그인해주세요.');
+            throw new Error('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+          }
+        }
+
         // Queue for later sync
         await addToSyncQueue(table, 'upsert', data);
         console.warn(`Queued ${table} for sync:`, error);
+
+        // RLS 에러는 throw하여 사용자에게 알림
+        if (error.code === '42501') {
+          throw new Error('권한이 없습니다. 멘토 또는 관리자 역할이 필요합니다.');
+        }
       } else {
         return savedData;
       }
