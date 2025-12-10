@@ -1,4 +1,4 @@
-// OJT Master v2.15.0 - Main Application Component
+// OJT Master v2.17.0 - Main Application Component
 // Block Agent System v1.1.0 - Feature-based imports with lazy loading
 
 import { useEffect, useState, Suspense, lazy } from 'react';

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Version**: 1.7.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
+**Version**: 2.17.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
 
 **Production URL**: https://ggp-ojt-v2.vercel.app
 
@@ -357,6 +357,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|-----------|
+| v2.17.0 | 2025-12-10 | Supabase 세션 관리 강화, RLS 에러 핸들링, 디버그 로깅 (#188, #189, #190) |
 | v1.7.0 | 2025-12-10 | 신규 콘텐츠 status='review' 기본값 설정 (#186) |
 | v1.6.0 | 2025-12-10 | SSOT 패턴 적용, Context 중복 제거, import 경로 정규화 (#182) |
 | v1.5.0 | 2025-12-10 | 문서 Vercel 기준 정리 (#183) |
@@ -368,6 +369,14 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ---
 
 ## 현재 진행 중인 작업 (2025-12-10)
+
+### Issue #188: 콘텐츠 Supabase 저장 실패 ✅
+
+**상태**: 완료 (PR #189, #190)
+
+- RLS 에러(42501) 핸들링 추가 - 사용자에게 명확한 에러 표시
+- Supabase 세션 자동 갱신 설정 (autoRefreshToken, persistSession)
+- AuthContext/DocsContext 디버그 로깅 추가
 
 ### Issue #186: 콘텐츠 검토대기 표시 ✅
 

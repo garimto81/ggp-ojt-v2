@@ -1,4 +1,4 @@
-// OJT Master v2.16.1 - Header Component
+// OJT Master v2.17.0 - Header Component
 
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
