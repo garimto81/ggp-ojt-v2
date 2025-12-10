@@ -97,6 +97,20 @@ export function DocsProvider({ children }) {
         updated_at: new Date().toISOString(),
       };
 
+      // 디버깅: 저장 데이터 타입 검증 (Issue #188)
+      console.log('[DocsContext] 저장 데이터:', {
+        id: { value: docData.id, type: typeof docData.id },
+        title: { value: docData.title?.substring(0, 20), type: typeof docData.title },
+        team: { value: docData.team, type: typeof docData.team },
+        step: { value: docData.step, type: typeof docData.step },
+        sections: { length: docData.sections?.length, isArray: Array.isArray(docData.sections) },
+        quiz: { length: docData.quiz?.length, isArray: Array.isArray(docData.quiz) },
+        author_id: { value: docData.author_id, type: typeof docData.author_id },
+        status: { value: docData.status, type: typeof docData.status },
+        created_at: { value: docData.created_at, type: typeof docData.created_at },
+        updated_at: { value: docData.updated_at, type: typeof docData.updated_at },
+      });
+
       await dbSave('ojt_docs', docData);
 
       // Refresh lists

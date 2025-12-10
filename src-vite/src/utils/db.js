@@ -106,6 +106,14 @@ export async function dbSave(table, data) {
         .single();
 
       if (error) {
+        // 상세 에러 로깅 (Issue #188)
+        console.error(`[dbSave] ${table} 저장 실패:`, {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        });
+
         // RLS 정책 위반 에러 (42501) - 인증 세션 문제
         if (error.code === '42501') {
           console.error(`[dbSave] RLS 정책 위반 - 인증 세션을 확인하세요:`, error.message);
@@ -115,6 +123,12 @@ export async function dbSave(table, data) {
             console.error('[dbSave] 인증 세션이 없습니다. 다시 로그인해주세요.');
             throw new Error('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
           }
+        }
+
+        // 400 Bad Request - 데이터 타입 불일치 (Issue #188)
+        if (error.code === 'PGRST204' || error.message?.includes('400')) {
+          console.error('[dbSave] 데이터 형식 오류 - 저장 데이터:', JSON.stringify(data, null, 2));
+          throw new Error(`데이터 형식 오류: ${error.message}`);
         }
 
         // Queue for later sync
