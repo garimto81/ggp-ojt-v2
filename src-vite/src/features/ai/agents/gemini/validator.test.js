@@ -10,7 +10,11 @@ describe('validateQuizQuality', () => {
   it('유효한 퀴즈는 valid: true를 반환해야 함', () => {
     const quiz = [
       { question: '다음 중 올바른 것은 무엇인가요?', options: ['A', 'B', 'C', 'D'], correct: 0 },
-      { question: '어떤 것이 가장 적합한가요?', options: ['옵션1', '옵션2', '옵션3', '옵션4'], correct: 2 },
+      {
+        question: '어떤 것이 가장 적합한가요?',
+        options: ['옵션1', '옵션2', '옵션3', '옵션4'],
+        correct: 2,
+      },
     ];
 
     const result = validateQuizQuality(quiz);
@@ -20,7 +24,12 @@ describe('validateQuizQuality', () => {
 
   it('플레이스홀더 문제를 감지해야 함', () => {
     const quiz = [
-      { question: '[자동 생성] 문제 1', options: ['A', 'B', 'C', 'D'], correct: 0, isPlaceholder: true },
+      {
+        question: '[자동 생성] 문제 1',
+        options: ['A', 'B', 'C', 'D'],
+        correct: 0,
+        isPlaceholder: true,
+      },
     ];
 
     const result = validateQuizQuality(quiz);
@@ -54,7 +63,9 @@ describe('validateQuizQuality', () => {
   });
 
   it('중복 선택지를 감지해야 함', () => {
-    const quiz = [{ question: '다음 중 올바른 것은 무엇인가요?', options: ['A', 'A', 'C', 'D'], correct: 0 }];
+    const quiz = [
+      { question: '다음 중 올바른 것은 무엇인가요?', options: ['A', 'A', 'C', 'D'], correct: 0 },
+    ];
 
     const result = validateQuizQuality(quiz);
     expect(result.valid).toBe(false);
@@ -71,8 +82,16 @@ describe('validateQuizQuality', () => {
 describe('validateSections', () => {
   it('유효한 섹션은 valid: true를 반환해야 함', () => {
     const sections = [
-      { title: '학습 목표', content: '<p>이 과정을 통해 배울 내용입니다. 충분히 긴 내용입니다. 50자 이상이 되어야 합니다.</p>' },
-      { title: '핵심 내용', content: '<p>핵심적인 내용을 설명합니다. 충분히 긴 내용입니다. 50자 이상이 되어야 합니다.</p>' },
+      {
+        title: '학습 목표',
+        content:
+          '<p>이 과정을 통해 배울 내용입니다. 충분히 긴 내용입니다. 50자 이상이 되어야 합니다.</p>',
+      },
+      {
+        title: '핵심 내용',
+        content:
+          '<p>핵심적인 내용을 설명합니다. 충분히 긴 내용입니다. 50자 이상이 되어야 합니다.</p>',
+      },
     ];
 
     const result = validateSections(sections);
@@ -86,7 +105,12 @@ describe('validateSections', () => {
   });
 
   it('제목 없는 섹션을 감지해야 함', () => {
-    const sections = [{ title: '', content: '충분히 긴 내용입니다. 50자가 넘어야 합니다. 그래서 더 길게 작성합니다.' }];
+    const sections = [
+      {
+        title: '',
+        content: '충분히 긴 내용입니다. 50자가 넘어야 합니다. 그래서 더 길게 작성합니다.',
+      },
+    ];
 
     const result = validateSections(sections);
     expect(result.valid).toBe(false);
@@ -115,7 +139,13 @@ describe('validateOJTContent', () => {
     const content = {
       title: 'OJT 문서',
       team: '개발팀',
-      sections: [{ title: '학습 목표', content: '<p>이 과정을 통해 배울 내용입니다. 충분히 긴 내용입니다. 50자 이상이 되어야 합니다.</p>' }],
+      sections: [
+        {
+          title: '학습 목표',
+          content:
+            '<p>이 과정을 통해 배울 내용입니다. 충분히 긴 내용입니다. 50자 이상이 되어야 합니다.</p>',
+        },
+      ],
       quiz: [
         { question: '다음 중 올바른 것은 무엇인가요?', options: ['A', 'B', 'C', 'D'], correct: 0 },
       ],

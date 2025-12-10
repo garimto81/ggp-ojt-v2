@@ -5,8 +5,17 @@
  */
 
 import { GEMINI_CONFIG, CONFIG } from '@/constants';
-import { createOJTContentPrompt, createQuizRegeneratePrompt, createHealthCheckPrompt } from './prompts';
-import { parseJSONResponse, parseJSONArrayResponse, validateAndFillResult, normalizeQuizQuestion } from './parser';
+import {
+  createOJTContentPrompt,
+  createQuizRegeneratePrompt,
+  createHealthCheckPrompt,
+} from './prompts';
+import {
+  parseJSONResponse,
+  parseJSONArrayResponse,
+  validateAndFillResult,
+  normalizeQuizQuestion,
+} from './parser';
 
 /**
  * Gemini API 기본 요청
@@ -34,7 +43,9 @@ async function callGeminiAPI(prompt, options = {}) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(`Gemini API 오류: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    throw new Error(
+      `Gemini API 오류: ${response.status} - ${errorData.error?.message || 'Unknown error'}`
+    );
   }
 
   const data = await response.json();

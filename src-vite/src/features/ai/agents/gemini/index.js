@@ -9,7 +9,11 @@
 export { generateOJTContent, regenerateQuiz, checkStatus, getConfig } from './client';
 
 // Prompts
-export { createOJTContentPrompt, createQuizRegeneratePrompt, createHealthCheckPrompt } from './prompts';
+export {
+  createOJTContentPrompt,
+  createQuizRegeneratePrompt,
+  createHealthCheckPrompt,
+} from './prompts';
 
 // Parser
 export {
