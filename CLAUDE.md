@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Version**: 1.5.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
+**Version**: 1.6.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
 
 **Production URL**: https://ggp-ojt-v2.vercel.app
 
@@ -72,12 +72,14 @@ npm run build                  # dist/ 생성
 | Alias | 경로 |
 |-------|------|
 | `@` | `src/` |
-| `@features` | `src/features/` |
-| `@shared` | `src/shared/` |
-| `@utils` | `src/utils/` |
-| `@contexts` | `src/contexts/` |
-| `@hooks` | `src/hooks/` |
-| `@components` | `src/components/` |
+| `@/features` | `src/features/` |
+| `@/shared` | `src/shared/` |
+| `@/utils` | `src/utils/` |
+| `@/contexts` | `src/contexts/` |
+| `@/hooks` | `src/hooks/` |
+| `@/components` | `src/components/` |
+
+> ⚠️ **중요**: 모든 alias는 `@/` 형식 사용 필수 (`@contexts` ❌ → `@/contexts` ✅)
 
 ## Project Structure
 
@@ -247,6 +249,42 @@ const AdminDashboard = lazy(() =>
 
 **상세 문서**: `docs/BLOCK_AGENT_SYSTEM.md`
 
+### 코드 오염 방지 규칙 (SSOT 패턴)
+
+> **Issue #182 교훈**: Context 중복으로 인한 "useAuth must be used within AuthProvider" 에러 발생
+
+#### Context 관리 규칙
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                SSOT (Single Source of Truth)                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  src/contexts/          ← 유일한 Context 정의 위치          │
+│       ├── AuthContext.jsx                                   │
+│       ├── AIContext.jsx                                     │
+│       ├── DocsContext.jsx                                   │
+│       └── ToastContext.jsx                                  │
+│                                                             │
+│  features/*/index.js    ← re-export만 허용 (정의 금지)      │
+│       └── export { useAuth } from '@/contexts/AuthContext'; │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| 규칙 | 올바른 예 | 잘못된 예 |
+|------|-----------|-----------|
+| Context 정의 위치 | `src/contexts/` | `features/*/hooks/` |
+| Context import | `@/contexts/AuthContext` | `./hooks/AuthContext` |
+| features index.js | `export from '@/contexts/...'` | `export from './hooks/...'` |
+
+#### 왜 중요한가?
+
+React의 `createContext()`는 **호출될 때마다 새로운 인스턴스** 생성:
+- 동일한 코드라도 다른 파일에서 호출하면 **별개의 Context**
+- Provider와 Consumer가 다른 인스턴스 참조 시 **연결 실패**
+- "must be used within Provider" 에러 발생
+
 ## Testing
 
 ### Test File Locations
@@ -319,8 +357,46 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|-----------|
+| v1.6.0 | 2025-12-10 | SSOT 패턴 적용, Context 중복 제거, import 경로 정규화 (#182) |
 | v1.5.0 | 2025-12-10 | 문서 Vercel 기준 정리 (#183) |
 | v1.4.0 | 2025-12-10 | gemini-agent Rate Limiting, 43개 테스트 (#179, #181) |
 | v1.3.0 | 2025-12-10 | gemini-agent 신설 (Block Agent System v1.3.0) |
 | v1.2.0 | 2025-12 | supabase-agent 추가, departments 테이블 |
 | v1.0.0 | 2025-12 | 초기 릴리스 |
+
+---
+
+## 현재 진행 중인 작업 (2025-12-10)
+
+### Issue #182: AuthContext 오염 수정 ✅
+
+**상태**: 완료 (Vercel 배포 대기)
+
+#### 수정 내역
+
+| 작업 | 상세 |
+|------|------|
+| **Context 중복 제거** | `features/auth/hooks/AuthContext.jsx` 삭제 |
+| **SSOT 패턴 적용** | `features/auth/index.js` → `@/contexts/AuthContext` re-export |
+| **Import 경로 정규화** | `@contexts/` → `@/contexts/` (13개 파일) |
+| **삭제된 중복 파일** | AuthContext.jsx, AIContext.jsx, DocsContext.jsx (features 내) |
+
+#### 검증 결과
+
+| 항목 | 결과 |
+|------|------|
+| ESLint | ✅ 경로 오류 0개 |
+| Vite Build | ✅ 성공 (3.06s) |
+| Unit Tests | ✅ 104/108 통과 |
+
+#### 다음 단계
+
+1. PR 생성 및 머지
+2. Vercel 자동 배포
+3. Production 환경 검증
+
+### Issue #178: Supabase DB 정리
+
+**상태**: 🔄 LMS 확장 테이블 처리 결정 대기
+
+**관련 문서**: `database/agents/supabase/MIGRATION_PLAN.md`

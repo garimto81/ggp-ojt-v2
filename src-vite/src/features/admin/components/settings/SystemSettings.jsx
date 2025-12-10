@@ -1,8 +1,8 @@
 // OJT Master - System Settings Component
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@utils/api';
-import { Toast } from '@contexts/ToastContext';
+import { supabase } from '@/utils/api';
+import { Toast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ROLES } from '@/constants';
 

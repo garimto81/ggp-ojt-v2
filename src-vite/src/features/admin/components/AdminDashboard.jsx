@@ -1,12 +1,12 @@
 // OJT Master v2.10.0 - Admin Dashboard Component (Issue #54, #78, Admin Redesign)
 
 import { useState, useEffect, useMemo } from 'react';
-import { useDocs } from '@contexts/DocsContext';
+import { useDocs } from '@/contexts/DocsContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Toast } from '@contexts/ToastContext';
-import { supabase } from '@utils/api';
-import { formatDate, sanitizeText } from '@utils/helpers';
-import { useDebounce } from '@hooks/useDebounce';
+import { Toast } from '@/contexts/ToastContext';
+import { supabase } from '@/utils/api';
+import { formatDate, sanitizeText } from '@/utils/helpers';
+import { useDebounce } from '@/hooks/useDebounce';
 import { ROLES } from '@/constants';
 import {
   useMentorContribution,

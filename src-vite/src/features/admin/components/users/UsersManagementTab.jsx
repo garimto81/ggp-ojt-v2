@@ -3,11 +3,17 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Toast } from '@contexts/ToastContext';
-import { supabase } from '@utils/api';
-import { formatDate, sanitizeText } from '@utils/helpers';
-import { useDebounce } from '@hooks/useDebounce';
-import { ROLES, ROLE_THEMES, DEFAULT_THEME, DEPARTMENT_THEMES, DEFAULT_DEPARTMENT_THEME } from '@/constants';
+import { Toast } from '@/contexts/ToastContext';
+import { supabase } from '@/utils/api';
+import { formatDate, sanitizeText } from '@/utils/helpers';
+import { useDebounce } from '@/hooks/useDebounce';
+import {
+  ROLES,
+  ROLE_THEMES,
+  DEFAULT_THEME,
+  DEPARTMENT_THEMES,
+  DEFAULT_DEPARTMENT_THEME,
+} from '@/constants';
 import UserDetailPanel from './UserDetailPanel';
 import BulkActionsBar from './BulkActionsBar';
 
@@ -435,7 +441,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
                   <td className="py-3" onClick={(e) => e.stopPropagation()}>
                     {(() => {
                       const deptTheme = u.department
-                        ? (DEPARTMENT_THEMES[u.department] || DEFAULT_DEPARTMENT_THEME)
+                        ? DEPARTMENT_THEMES[u.department] || DEFAULT_DEPARTMENT_THEME
                         : DEFAULT_DEPARTMENT_THEME;
                       return (
                         <select

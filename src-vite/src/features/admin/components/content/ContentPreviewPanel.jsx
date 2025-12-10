@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ContentStatusBadge from './ContentStatusBadge';
-import { formatDate } from '@utils/helpers';
+import { formatDate } from '@/utils/helpers';
 
 export default function ContentPreviewPanel({
   doc,

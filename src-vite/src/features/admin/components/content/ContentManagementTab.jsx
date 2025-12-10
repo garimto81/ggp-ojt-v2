@@ -6,8 +6,8 @@ import 'allotment/dist/style.css';
 
 import ContentListPanel from './ContentListPanel';
 import ContentPreviewPanel from './ContentPreviewPanel';
-import { Toast } from '@contexts/ToastContext';
-import { supabase } from '@utils/api';
+import { Toast } from '@/contexts/ToastContext';
+import { supabase } from '@/utils/api';
 
 export default function ContentManagementTab({ docs, onDocDeleted, isAdmin }) {
   const [selectedDoc, setSelectedDoc] = useState(null);

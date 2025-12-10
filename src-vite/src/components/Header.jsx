@@ -2,7 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ROLES, ROLE_THEMES, DEFAULT_THEME, DEPARTMENT_THEMES, DEFAULT_DEPARTMENT_THEME } from '../constants';
+import {
+  ROLES,
+  ROLE_THEMES,
+  DEFAULT_THEME,
+  DEPARTMENT_THEMES,
+  DEFAULT_DEPARTMENT_THEME,
+} from '../constants';
 import { APP_VERSION, BUILD_HASH, BUILD_SUMMARY } from '../version';
 
 export default function Header({ aiStatus }) {
@@ -38,7 +44,9 @@ export default function Header({ aiStatus }) {
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
               <p className="text-xs text-gray-500">
-                {isTempMentorMode ? 'MENTOR MODE (임시)' : `v${APP_VERSION} (${BUILD_HASH} - ${BUILD_SUMMARY})`}
+                {isTempMentorMode
+                  ? 'MENTOR MODE (임시)'
+                  : `v${APP_VERSION} (${BUILD_HASH} - ${BUILD_SUMMARY})`}
               </p>
             </div>
           </div>
@@ -106,13 +114,17 @@ export default function Header({ aiStatus }) {
                       Mentor (임시)
                     </span>
                   ) : (
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${currentTheme.badge} border ${currentTheme.border}`}>
+                    <span
+                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${currentTheme.badge} border ${currentTheme.border}`}
+                    >
                       {displayRole}
                     </span>
                   )}
                   {/* Department Badge */}
                   {user.department && (
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${departmentTheme.badge} border ${departmentTheme.border}`}>
+                    <span
+                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${departmentTheme.badge} border ${departmentTheme.border}`}
+                    >
                       {user.department}
                     </span>
                   )}

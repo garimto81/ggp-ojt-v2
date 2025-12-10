@@ -6,11 +6,7 @@
 
 import { validateQuizQuality } from '@/utils/api';
 
-export default function GeneratedDocsPreview({
-  generatedDocs,
-  onSave,
-  onQuizPreview,
-}) {
+export default function GeneratedDocsPreview({ generatedDocs, onSave, onQuizPreview }) {
   if (generatedDocs.length === 0) return null;
 
   return (
