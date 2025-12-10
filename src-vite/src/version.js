@@ -50,6 +50,6 @@
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
 export const APP_VERSION = '2.18.0';
-export const BUILD_HASH = '1ac8bd0';
+export const BUILD_HASH = '00adb83';
 export const BUILD_SUMMARY = 'PDF 업로드 및 텍스트 추출 기능 (#198)';
 export const BUILD_DATE = '2025-12-11';
