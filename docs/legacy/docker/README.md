@@ -1,6 +1,18 @@
 # OJT Master - Local-Only Docker Deployment
 
-Issue #114: Vercel 배포 폐기, 순수 로컬 네트워크 Docker 배포로 전환
+> ⚠️ **DEPRECATED** (2025-12-10)
+>
+> 이 문서는 더 이상 사용되지 않습니다.
+> 현재 프로덕션은 **Vercel + Supabase Cloud + Gemini API**로 배포됩니다.
+>
+> - Production URL: https://ggp-ojt-v2.vercel.app
+> - 관련 이슈: #183
+>
+> 이 폴더는 레거시 참조용으로 보존됩니다.
+
+---
+
+Issue #114: Vercel 배포 폐기, 순수 로컬 네트워크 Docker 배포로 전환 (레거시)
 
 ## 개요
 

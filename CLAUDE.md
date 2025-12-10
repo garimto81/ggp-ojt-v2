@@ -6,17 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Version**: 1.4.0 | **Architecture**: Local-Only Docker 배포 (PostgreSQL + PostgREST + nginx)
+**Version**: 1.5.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
+
+**Production URL**: https://ggp-ojt-v2.vercel.app
 
 ## Tech Stack
 
 | 영역 | 기술 |
 |------|------|
 | **Frontend** | React 19 + Vite 7 + Tailwind CSS 4 |
-| **State** | Supabase Client (PostgREST 호환) |
-| **Backend** | PostgreSQL 16 + PostgREST v12 (Self-hosted) |
-| **AI** | Local AI (vLLM Qwen3-4B) + WebLLM fallback |
-| **Proxy** | nginx (SPA 서빙 + API 프록시) |
+| **Deployment** | Vercel (자동 배포) |
+| **Database** | Supabase (PostgreSQL + Auth + REST API) |
+| **AI** | Google Gemini API (gemini-2.0-flash-exp) + WebLLM fallback |
 | **Editor** | Quill 2.0 (Rich Text) |
 | **PDF** | pdfjs-dist |
 | **Charts** | Chart.js + react-chartjs-2 |
@@ -25,21 +26,22 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 ## Architecture
 
 ```
-Browser ──HTTPS──▶ nginx:8443
-                      │
-                      ├── / ──▶ React SPA (정적 파일)
-                      ├── /rest/v1/* ──▶ PostgREST:3000 ──▶ postgres
-                      └── /api/v1/* ──▶ vLLM (외부 서버 10.10.100.209:8001)
+┌─────────────────────────────────────────────────────────────┐
+│                    Vercel Production                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Browser ──HTTPS──▶ Vercel Edge                             │
+│      │                 │                                    │
+│      │                 └── React SPA (정적 파일)             │
+│      │                                                      │
+│      ├── Supabase REST API ──▶ PostgreSQL                  │
+│      │   (cbvansmxutnogntbyswi.supabase.co)                │
+│      │                                                      │
+│      └── Gemini API ──▶ AI 콘텐츠 생성                      │
+│          (generativelanguage.googleapis.com)               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
-
-### Docker Services
-
-| 서비스 | 역할 | 포트 |
-|--------|------|------|
-| postgres | Self-hosted PostgreSQL | 5432 |
-| postgrest | PostgreSQL REST API | 3000 |
-| nginx | 프론트엔드 + API 프록시 | 8080, 8443 |
-| vLLM | AI 서버 (외부) | 8001 |
 
 ## Commands
 
@@ -48,27 +50,21 @@ Browser ──HTTPS──▶ nginx:8443
 cd src-vite
 npm run dev                    # http://localhost:5173
 
-# === 단위 테스트 - Vitest (src-vite 디렉토리) ===
+# === 단위 테스트 - Vitest ===
 npm run test                   # Watch 모드
 npm run test:run               # 1회 실행
-npx vitest run src/utils/api.test.js           # 단일 파일
-npx vitest run src/features/learning/quiz/     # 디렉토리
+npx vitest run src/features/ai/agents/gemini/  # 디렉토리 테스트
 
 # === E2E 테스트 - Playwright (루트 디렉토리) ===
-pnpm test                      # 전체 E2E (Docker 서버 필요)
-npx playwright test tests/e2e-homepage.spec.js # 단일 파일
+pnpm test                      # 전체 E2E
 npx playwright test --headed   # 브라우저 표시
 
-# === 코드 품질 (src-vite 디렉토리) ===
+# === 코드 품질 ===
 npm run lint:fix               # ESLint 자동 수정
 npm run format                 # Prettier 포맷팅
 
-# === 빌드 ===
-npm run build                  # dist/ 생성 → Docker nginx 서빙
-
-# === Docker (docker 디렉토리) ===
-docker-compose --env-file .env.docker up -d
-docker-compose logs -f
+# === 빌드 (Vercel 자동 실행) ===
+npm run build                  # dist/ 생성
 ```
 
 ## Path Aliases
@@ -91,7 +87,8 @@ ggp_ojt_v2/
 │   └── src/
 │       ├── features/            # Feature-Based 모듈 (Block Agent System)
 │       │   ├── admin/           # 관리자 대시보드
-│       │   ├── ai/              # AI 콘텐츠 생성 (vLLM + WebLLM)
+│       │   ├── ai/              # AI 콘텐츠 생성
+│       │   │   └── agents/gemini/  # Gemini API 전담 에이전트
 │       │   ├── auth/            # 인증 (이메일/비밀번호)
 │       │   ├── content/create/  # MentorDashboard (AI 생성)
 │       │   ├── content/manage/  # 문서 CRUD
@@ -99,14 +96,24 @@ ggp_ojt_v2/
 │       │   └── learning/quiz/   # QuizSession, QuizResult
 │       ├── contexts/            # 전역 Context (Auth, AI, Toast)
 │       └── utils/               # API, helpers, logger
-├── docker/                      # Docker 배포 설정
-├── database/                    # PostgreSQL 스키마
-│   ├── agents/supabase/         # DB 전담 에이전트 문서
-│   ├── migrations/              # 마이그레이션 SQL
-│   └── init/                    # Docker 초기화 SQL
+├── database/                    # Supabase 스키마 문서
+│   └── agents/supabase/         # DB 전담 에이전트 문서
 ├── tests/                       # Playwright E2E 테스트
 └── docs/                        # 프로젝트 문서
 ```
+
+## Environment Variables (Vercel)
+
+Vercel Dashboard > Settings > Environment Variables에서 설정:
+
+| 변수명 | 설명 | 환경 |
+|--------|------|------|
+| `VITE_SUPABASE_URL` | Supabase 프로젝트 URL | Production, Preview |
+| `VITE_SUPABASE_ANON_KEY` | Supabase Anonymous Key | Production, Preview |
+| `VITE_GEMINI_API_KEY` | Google Gemini API Key | Production, Preview |
+| `VITE_R2_WORKER_URL` | Cloudflare R2 Worker URL | Production, Preview |
+
+**중요**: 환경변수 변경 후 Redeploy 필요 (Vite는 빌드 타임에 환경변수 주입)
 
 ## Provider Hierarchy
 
@@ -114,7 +121,7 @@ ggp_ojt_v2/
 <QueryClientProvider>      // React Query
   <ToastProvider>          // Toast 알림
     <AuthProvider>         // 인증 상태
-      <AIProvider>         // AI 상태 (Local AI + WebLLM)
+      <AIProvider>         // AI 상태 (Gemini + WebLLM)
         <DocsProvider>     // 문서 상태
           <App />
         </DocsProvider>
@@ -126,10 +133,10 @@ ggp_ojt_v2/
 
 ## Data Flow
 
-**API 패턴**: `supabase.from('table').select()` - PostgREST 호환 Supabase JS 클라이언트 사용
+**API 패턴**: Supabase JS Client → Supabase REST API → PostgreSQL
 
 ```
-[React Component] ──→ [Supabase Client] ──→ [nginx /rest/v1/*] ──→ [PostgREST]
+[React Component] ──→ [Supabase Client] ──→ [Supabase Cloud] ──→ [PostgreSQL]
 ```
 
 ## Database Schema (Core Tables)
@@ -173,23 +180,34 @@ departments (id UUID PK, name, code, is_active)
 
 ### Engine Priority
 
-1. **Local AI (vLLM)** - 사내 서버 `10.10.100.209:8001` (Qwen3-4B)
-2. **WebLLM** - 브라우저 fallback (Qwen 2.5 3B)
+1. **Gemini API** (Primary) - `gemini-2.0-flash-exp`
+2. **WebLLM** (Fallback) - 브라우저 내 로컬 AI (Qwen 2.5 3B)
 
-### AI States (`AIContext.jsx`)
+### gemini-agent (`features/ai/agents/gemini/`)
 
-| 상태 | 설명 |
+| 파일 | 역할 |
 |------|------|
-| `LOCAL_AI_READY` | Local AI 사용 가능 |
-| `LOCAL_AI_FAILED` | Local AI 실패 → WebLLM fallback |
-| `WEBLLM_READY` | WebLLM 사용 가능 |
-| `NO_ENGINE` | 사용 가능한 엔진 없음 |
+| `client.js` | Gemini API 클라이언트 + Rate Limiting |
+| `prompts.js` | OJT 생성 프롬프트 템플릿 |
+| `parser.js` | JSON 응답 파싱, 정규화 |
+| `validator.js` | 퀴즈/콘텐츠 품질 검증 |
+
+```javascript
+// 사용 예시
+import { generateOJTContent, checkStatus } from '@features/ai/agents/gemini';
+```
+
+### Rate Limiting
+
+- 429, 503, 500 에러 시 자동 재시도
+- Exponential backoff: 1s → 2s → 4s
+- 최대 3회 재시도
 
 ### Error Handling
 
 | 영역 | 전략 |
 |------|------|
-| Local AI 실패 | WebLLM fallback 자동 시도 |
+| Gemini API 실패 | WebLLM fallback 자동 시도 |
 | AI JSON 파싱 실패 | Regex fallback |
 | 퀴즈 부족 | `createPlaceholderQuiz()` 자동 생성 |
 
@@ -221,11 +239,6 @@ const AdminDashboard = lazy(() =>
 |-------|------|------|
 | **gemini-agent** | `features/ai/agents/gemini/` | Gemini API 전담, OJT 콘텐츠 생성 |
 
-```javascript
-// 사용 예시
-import { generateOJTContent, checkStatus } from '@features/ai/agents/gemini';
-```
-
 ### Backend Agent (Database)
 
 | Agent | 경로 | 역할 |
@@ -241,76 +254,19 @@ import { generateOJTContent, checkStatus } from '@features/ai/agents/gemini';
 - **Unit tests**: `src-vite/src/**/*.test.{js,jsx}` (컴포넌트/훅과 동일 디렉토리)
 - **E2E tests**: `tests/*.spec.js` (루트 디렉토리)
 
-### Vitest Configuration
+### Test Coverage
 
-```javascript
-// vitest.config.js
-test: {
-  globals: true,
-  environment: 'jsdom',
-  setupFiles: './src/test/setup.js',
-}
-```
-
-### Mock Patterns
-
-```javascript
-// Context mock
-vi.mock('@/contexts/ToastContext', () => ({
-  Toast: { success: vi.fn(), error: vi.fn() }
-}));
-
-// API mock
-vi.mock('@/utils/api', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      insert: vi.fn(() => Promise.resolve({ data: null, error: null }))
-    }))
-  }
-}));
-```
+| 영역 | 테스트 수 |
+|------|----------|
+| gemini-agent | 43개 (client, parser, validator) |
+| learning-quiz | 퀴즈 로직 테스트 |
 
 ## Important Notes
 
 1. **XSS 방지**: 사용자 HTML 입력 시 DOMPurify 필수 (`import DOMPurify from 'dompurify'`)
 2. **퀴즈 정답 인덱스**: 0 처리 주의 (`hasOwnProperty` 또는 `!== undefined` 사용)
-3. **vLLM 서버**: 외부 서버 `10.10.100.209:8001` - Docker에 포함 안됨
-4. **E2E 테스트**: Docker 서버 실행 필요 (baseURL: `localhost:8080`)
-5. **RLS 함수명**: `is_admin()` 삭제됨 → `rls_is_admin()` 사용
-
-## Environment Variables
-
-```bash
-# src-vite/.env
-VITE_SUPABASE_URL=https://localhost:8443
-VITE_SUPABASE_ANON_KEY=<PostgREST JWT token>
-VITE_LOCAL_AI_URL=/api
-VITE_AUTH_MODE=email
-
-# docker/.env.docker
-POSTGRES_PASSWORD=your-secure-password
-PGRST_JWT_SECRET=<32자 이상 랜덤>
-VLLM_HOST=10.10.100.209
-```
-
-## Quick Start (Docker)
-
-```bash
-# 1. 환경 변수 설정
-cd docker && cp .env.docker.example .env.docker
-
-# 2. SSL 인증서 생성
-mkdir -p ssl && openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout ssl/key.pem -out ssl/cert.pem -subj "/CN=localhost"
-
-# 3. 프론트엔드 빌드
-cd ../src-vite && npm install && npm run build
-
-# 4. Docker 실행
-cd ../docker && docker-compose --env-file .env.docker up -d
-
-# 5. 접속: https://localhost:8443
-```
+3. **Vercel 환경변수**: 변경 후 반드시 Redeploy 필요
+4. **RLS 함수명**: `is_admin()` 삭제됨 → `rls_is_admin()` 사용
 
 ---
 
@@ -320,7 +276,7 @@ cd ../docker && docker-compose --env-file .env.docker up -d
 
 | 항목 | 형식 | 예시 |
 |------|------|------|
-| **버전** | Semantic Versioning | `v1.4.0` |
+| **버전** | Semantic Versioning | `v1.5.0` |
 | **커밋 해시** | 7자리 short hash | `e9b4a29` |
 | **이슈/PR 태그** | `#번호` 또는 `Closes #번호` | `#181`, `Closes #179` |
 
@@ -340,8 +296,8 @@ MAJOR.MINOR.PATCH (Semantic Versioning)
 2. 브랜치 생성 → feat/issue-N-desc
 3. 작업 완료 → 커밋 (해시 생성)
 4. PR 생성 → 이슈 태그 연결 (Closes #N)
-5. 머지 전 → CLAUDE.md 버전 범프, CHANGELOG.md 업데이트
-6. 머지 후 → git tag vX.Y.Z
+5. 머지 전 → CLAUDE.md 버전 범프
+6. 머지 후 → Vercel 자동 배포
 ```
 
 ### 커밋 메시지 형식
@@ -359,21 +315,12 @@ Closes #issue (PR에서 이슈 자동 종료 시)
 Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 ```
 
-### 코멘트 태깅 규칙
-
-| 상황 | 태그 형식 |
-|------|-----------|
-| 이슈 참조 | `Refs: #123` |
-| 이슈 종료 | `Closes #123`, `Fixes #123` |
-| PR 참조 | `PR #456` |
-| 커밋 참조 | `e9b4a29` (7자리 해시) |
-
 ### 버전 히스토리
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|-----------|
+| v1.5.0 | 2025-12-10 | 문서 Vercel 기준 정리 (#183) |
 | v1.4.0 | 2025-12-10 | gemini-agent Rate Limiting, 43개 테스트 (#179, #181) |
 | v1.3.0 | 2025-12-10 | gemini-agent 신설 (Block Agent System v1.3.0) |
 | v1.2.0 | 2025-12 | supabase-agent 추가, departments 테이블 |
-| v1.1.0 | 2025-12 | Local AI (vLLM) 통합, Docker 배포 |
 | v1.0.0 | 2025-12 | 초기 릴리스 |
