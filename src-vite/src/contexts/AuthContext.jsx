@@ -99,6 +99,16 @@ export function AuthProvider({ children }) {
 
     // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // 디버그 로깅: 세션 상태 확인 (Issue #188)
+      if (session) {
+        console.info('[Auth] 세션 활성화:', {
+          userId: session.user.id,
+          email: session.user.email,
+          expiresAt: new Date(session.expires_at * 1000).toLocaleString(),
+        });
+      } else {
+        console.warn('[Auth] 세션 없음 - 로그인 필요');
+      }
       loadUserProfile(session);
     });
 

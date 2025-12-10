@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { dbGetAll, dbSave, dbDelete } from '../utils/db';
 import { sanitizeDocData } from '../utils/helpers';
 import { useAuth } from './AuthContext';
+import { supabase } from '../utils/api';
 
 const DocsContext = createContext(null);
 
@@ -74,6 +75,13 @@ export function DocsProvider({ children }) {
   const saveDocument = useCallback(
     async (doc) => {
       if (!user) throw new Error('로그인이 필요합니다.');
+
+      // 세션 검증: Supabase 인증 세션 확인 (Issue #188)
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        console.error('[DocsContext] 세션 없음 - 저장 불가');
+        throw new Error('인증 세션이 만료되었습니다. 페이지를 새로고침하고 다시 로그인해주세요.');
+      }
 
       // 신규 문서는 'review' 상태로 저장 (Issue #186)
       // 기존 문서 수정 시에는 기존 status 유지
