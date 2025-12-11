@@ -124,14 +124,22 @@ export default function ContentInputPanel({
     try {
       let contentText = rawInput;
 
-      // Determine source info based on input type (#198, #202)
-      // 임시 문서 ID 생성 (Storage 업로드용)
+      // Source 정보 초기화 (#211 리팩토링)
       const tempDocId = crypto.randomUUID();
+      const currentSourceInfo = {
+        type: inputType,
+        url: null,
+        file: null,
+        storage_path: null,
+      };
 
-      // PDF인 경우 텍스트 추출 + Storage 업로드 (#202, #206)
-      let storageResult = null;
+      // ============================================
+      // 입력 타입별 텍스트 추출 (PDF/URL 동일 패턴)
+      // ============================================
+
+      // 1. PDF 처리 (#198, #202, #206)
       if (inputType === 'pdf' && selectedPdf) {
-        // 1. 텍스트 추출 (자동) (#206)
+        // 1-1. 텍스트 추출
         setProcessingStatus('PDF 텍스트 추출 중...');
         const extracted = await extractPdfText(selectedPdf, (progress) => {
           setPdfProgress(progress);
@@ -144,36 +152,41 @@ export default function ContentInputPanel({
           Toast.info(`텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`);
         }
 
-        // 2. Storage 업로드 (#202)
+        // 1-2. Storage 업로드 (#202)
         setProcessingStatus('PDF를 Supabase Storage에 업로드 중...');
-        storageResult = await handlePdfStorageUpload(tempDocId);
+        const storageResult = await handlePdfStorageUpload(tempDocId);
+
+        // 1-3. Source 정보 설정
+        currentSourceInfo.url = storageResult?.publicUrl || null;
+        currentSourceInfo.file = selectedPdf.name;
+        currentSourceInfo.storage_path = storageResult?.path || null;
       }
 
-      const currentSourceInfo = {
-        type: inputType === 'url' ? 'url' : inputType === 'pdf' ? 'pdf' : 'manual',
-        url: inputType === 'url' ? urlInput.trim() : storageResult?.publicUrl || null, // (#202) Storage URL
-        file: inputType === 'pdf' && selectedPdf ? selectedPdf.name : null,
-        storage_path: storageResult?.path || null, // (#202) Storage 경로
-      };
-
-      // Handle URL input - extract text first
+      // 2. URL 처리 (#208, #211 - PDF와 동일 패턴)
       if (inputType === 'url') {
-        // URL 프로토콜 자동 추가 (#208)
+        // 2-1. URL 정규화 (프로토콜 자동 추가)
         let normalizedUrl = urlInput.trim();
         if (!normalizedUrl.match(/^https?:\/\//i)) {
           normalizedUrl = 'https://' + normalizedUrl;
         }
-        currentSourceInfo.url = normalizedUrl;
 
+        // 2-2. 텍스트 추출
         setProcessingStatus('URL에서 텍스트 추출 중...');
         const extracted = await extractUrlText(normalizedUrl, setProcessingStatus);
         contentText = extracted.text;
         setRawInput(contentText);
+
         if (extracted.wasTruncated) {
-          Toast.warning(
-            `텍스트가 ${extracted.originalLength}자에서 ${extracted.extractedLength}자로 잘렸습니다.`
-          );
+          Toast.info(`텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`);
         }
+
+        // 2-3. Source 정보 설정 (원본 URL 저장)
+        currentSourceInfo.url = normalizedUrl;
+      }
+
+      // 3. 텍스트 직접 입력
+      if (inputType === 'text') {
+        currentSourceInfo.type = 'manual';
       }
 
       // Warn if AI is offline but proceed anyway
