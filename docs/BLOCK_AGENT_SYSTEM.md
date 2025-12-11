@@ -1,4 +1,4 @@
-# Block Agent System v1.3.0
+# Block Agent System v1.4.0
 
 OJT Master 프로젝트의 모듈화된 컴포넌트 아키텍처 가이드입니다.
 
@@ -8,6 +8,8 @@ Block Agent System은 기능별로 분리된 **9개의 전문화된 에이전트
 - **Frontend Agents (7개)**: UI 컴포넌트 담당
 - **Service Agent (1개)**: Gemini AI API 전담 (gemini-agent)
 - **Backend Agent (1개)**: Database 담당 (supabase-agent)
+
+> **v1.4.0 변경사항** (Issue #200): WebLLM 제거, Gemini 단일 엔진 체계
 
 각 에이전트는 독립적인 책임 영역을 가지며, 명확한 인터페이스를 통해 협업합니다.
 
@@ -97,17 +99,15 @@ import { QuizSession, QuizResult } from '@features/learning/quiz';
 import { useLearningRecord } from '@features/learning/quiz';
 ```
 
-### 6. ai-agent (AI 엔진)
+### 6. ai-agent (AI 엔진) - Issue #200 단순화
 **경로**: `src/features/ai/`
 
 | 구성요소 | 파일 | 역할 |
 |----------|------|------|
-| Components | `AIEngineSelector.jsx` | AI 엔진 선택 UI |
 | Hooks | `AIContext.jsx` | AI 상태 관리 |
-| Services | `webllm.js` | WebLLM 폴백 |
 | Sub-Agent | `agents/gemini/` | Gemini API 전담 (gemini-agent) |
 
-**AI 엔진 우선순위**: Gemini API → WebLLM (fallback)
+**AI 엔진**: Gemini API 단일 엔진 (WebLLM 제거됨)
 
 ### 6-1. gemini-agent (Gemini AI) - NEW
 **경로**: `src/features/ai/agents/gemini/`
@@ -320,7 +320,6 @@ const MentorDashboard = lazy(() =>
 | vendor-react | react, react-dom | ~192KB |
 | vendor-supabase | @supabase/supabase-js | ~181KB |
 | vendor-dexie | dexie | ~96KB |
-| vendor-webllm | @mlc-ai/web-llm | ~5.5MB |
 | feature-admin | AdminDashboard | ~62KB |
 | feature-ai | AI services | ~10KB |
 
@@ -410,6 +409,7 @@ export { useAuth, AuthProvider } from '@features/auth';
 | 버전 | 날짜 | 변경 사항 |
 |------|------|----------|
 | v2.0.0 | 2025-12 | admin-agent 블럭 분리 예정 (4개 서브 에이전트), PRD #197 |
+| v1.4.0 | 2025-12-11 | WebLLM 제거, Gemini 단일 엔진 전환 (#200) |
 | v1.3.0 | 2025-12 | gemini-agent 추가 (AI API 전담), 9개 에이전트 체계 (#179) |
 | v1.2.0 | 2025-12 | supabase-agent 추가 (DB 전담), 8개 에이전트 체계 |
 | v1.1.0 | 2024-12 | Lazy loading, chunk 분할, 테스트 추가 |

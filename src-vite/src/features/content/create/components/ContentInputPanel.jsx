@@ -3,16 +3,18 @@
  * @agent content-create-agent
  * @blocks content.input, content.generate
  * @issue #198 - PDF 업로드 및 URL 텍스트 추출 기능
+ * @issue #200 - WebLLM 제거, Gemini 단일 엔진
  */
 
 import { useState, useRef } from 'react';
-import { useAuth } from '@features/auth';
-import { useAI } from '@features/ai';
 import { Toast } from '@/contexts/ToastContext';
 import { generateOJTContent, extractUrlText } from '@/utils/api';
 import { extractPdfText, validatePdfFile, getPdfInfo } from '@/utils/pdf';
-import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
-import AIEngineSelector from '@features/ai/components/AIEngineSelector';
+import {
+  estimateReadingTime,
+  calculateRequiredSteps,
+  splitContentForSteps,
+} from '@/utils/helpers';
 
 export default function ContentInputPanel({
   aiStatus,
@@ -20,8 +22,6 @@ export default function ContentInputPanel({
   rawInput,
   setRawInput,
 }) {
-  const { user } = useAuth();
-  const { engine, webllmStatus, fallbackEnabled } = useAI();
 
   // Input states
   const [inputType, setInputType] = useState('text');
@@ -172,29 +172,11 @@ export default function ContentInputPanel({
       const segments = splitContentForSteps(contentText, numSteps);
       const docs = [];
 
-      // AI 엔진 옵션 설정
-      const aiOptions = {
-        engine,
-        fallbackEnabled,
-      };
-
-      // WebLLM 선택 시 모델 로드 확인
-      if (engine === 'webllm' && !webllmStatus.loaded) {
-        Toast.warning('WebLLM 모델을 먼저 로드해주세요.');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Generate content for each step
+      // Generate content for each step (Gemini API)
       if (numSteps > 1) {
         const promises = segments.map((segment, i) =>
-          generateOJTContent(
-            segment,
-            inputTitle || '새 OJT 문서',
-            i + 1,
-            numSteps,
-            (status) => setProcessingStatus(`Step ${i + 1}: ${status}`),
-            aiOptions
+          generateOJTContent(segment, inputTitle || '새 OJT 문서', i + 1, numSteps, (status) =>
+            setProcessingStatus(`Step ${i + 1}: ${status}`)
           )
         );
         const results = await Promise.all(promises);
@@ -213,8 +195,7 @@ export default function ContentInputPanel({
           inputTitle || '새 OJT 문서',
           1,
           1,
-          setProcessingStatus,
-          aiOptions
+          setProcessingStatus
         );
         docs.push({
           ...result,
@@ -253,9 +234,6 @@ export default function ContentInputPanel({
 
   return (
     <div className="space-y-4">
-      {/* AI Engine Selector */}
-      <AIEngineSelector />
-
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-4">콘텐츠 입력</h2>
 
@@ -444,34 +422,21 @@ export default function ContentInputPanel({
           <span className="text-sm text-gray-600">자동 스텝 분할 ({requiredSteps}개)</span>
         </label>
 
-        {/* Generate Button */}
+        {/* Generate Button (Gemini Only - Issue #200) */}
         <button
           onClick={handleGenerate}
-          disabled={isProcessing || (engine === 'webllm' && !webllmStatus.loaded)}
-          className={`w-full mt-4 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition ${
-            engine === 'webllm'
-              ? 'bg-green-500 hover:bg-green-600'
-              : 'bg-blue-500 hover:bg-blue-600'
-          }`}
+          disabled={isProcessing}
+          className="w-full mt-4 py-3 text-white font-medium rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
         >
           {isProcessing
             ? processingStatus
-            : engine === 'webllm'
-              ? webllmStatus.loaded
-                ? '💻 WebLLM으로 교육 자료 생성'
-                : '모델을 먼저 로드해주세요'
-              : aiStatus.online
-                ? '☁️ Gemini로 교육 자료 생성'
-                : '원문으로 등록 (AI 오프라인)'}
+            : aiStatus.online
+              ? '✨ Gemini로 교육 자료 생성'
+              : '원문으로 등록 (AI 오프라인)'}
         </button>
-        {engine === 'gemini' && !aiStatus.online && (
+        {!aiStatus.online && (
           <p className="text-xs text-amber-600 mt-2 text-center">
             ⚠️ Gemini 서비스 오프라인 - 원문 그대로 등록됩니다
-          </p>
-        )}
-        {engine === 'webllm' && !webllmStatus.loaded && (
-          <p className="text-xs text-green-600 mt-2 text-center">
-            💡 상단에서 모델을 로드한 후 사용할 수 있습니다
           </p>
         )}
       </div>

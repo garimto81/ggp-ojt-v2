@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Version**: 2.17.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
+**Version**: 2.19.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
 
 **Production URL**: https://ggp-ojt-v2.vercel.app
 
@@ -17,7 +17,7 @@ OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 �
 | **Frontend** | React 19 + Vite 7 + Tailwind CSS 4 |
 | **Deployment** | Vercel (자동 배포) |
 | **Database** | Supabase (PostgreSQL + Auth + REST API) |
-| **AI** | Google Gemini API (gemini-2.0-flash-exp) + WebLLM fallback |
+| **AI** | Google Gemini API (gemini-2.0-flash-exp) |
 | **Editor** | Quill 2.0 (Rich Text) |
 | **PDF** | pdfjs-dist |
 | **Charts** | Chart.js + react-chartjs-2 |
@@ -123,7 +123,7 @@ Vercel Dashboard > Settings > Environment Variables에서 설정:
 <QueryClientProvider>      // React Query
   <ToastProvider>          // Toast 알림
     <AuthProvider>         // 인증 상태
-      <AIProvider>         // AI 상태 (Gemini + WebLLM)
+      <AIProvider>         // AI 상태 (Gemini)
         <DocsProvider>     // 문서 상태
           <App />
         </DocsProvider>
@@ -180,10 +180,9 @@ departments (id UUID PK, name, code, is_active)
 
 ## AI Content Generation
 
-### Engine Priority
+### Engine (Issue #200)
 
-1. **Gemini API** (Primary) - `gemini-2.0-flash-exp`
-2. **WebLLM** (Fallback) - 브라우저 내 로컬 AI (Qwen 2.5 3B)
+**Gemini API** - `gemini-2.0-flash-exp` 단일 엔진 (WebLLM 제거됨)
 
 ### gemini-agent (`features/ai/agents/gemini/`)
 
@@ -209,7 +208,7 @@ import { generateOJTContent, checkStatus } from '@features/ai/agents/gemini';
 
 | 영역 | 전략 |
 |------|------|
-| Gemini API 실패 | WebLLM fallback 자동 시도 |
+| Gemini API 실패 | 원문 모드로 전환 (graceful degradation) |
 | AI JSON 파싱 실패 | Regex fallback |
 | 퀴즈 부족 | `createPlaceholderQuiz()` 자동 생성 |
 
@@ -232,7 +231,7 @@ const AdminDashboard = lazy(() =>
 | content-manage-agent | `features/content/manage/` | MyDocsList, DocsContext |
 | learning-study-agent | `features/learning/study/` | MenteeList, MenteeStudy, SectionViewer |
 | learning-quiz-agent | `features/learning/quiz/` | QuizSession, QuizResult, useLearningRecord |
-| ai-agent | `features/ai/` | AIEngineSelector, AIContext |
+| ai-agent | `features/ai/` | AIContext |
 | admin-agent | `features/admin/` | AdminDashboard, useUsers, useAnalytics |
 
 ### Service Agent (AI)
@@ -357,6 +356,8 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|-----------|
+| v2.19.0 | 2025-12-11 | WebLLM 완전 제거, Gemini 단일 엔진 전환 (#200) |
+| v2.18.0 | 2025-12-10 | PDF 업로드 기능, 텍스트 추출 (#198) |
 | v2.17.0 | 2025-12-10 | Supabase 세션 관리 강화, RLS 에러 핸들링, 디버그 로깅 (#188, #189, #190) |
 | v1.7.0 | 2025-12-10 | 신규 콘텐츠 status='review' 기본값 설정 (#186) |
 | v1.6.0 | 2025-12-10 | SSOT 패턴 적용, Context 중복 제거, import 경로 정규화 (#182) |

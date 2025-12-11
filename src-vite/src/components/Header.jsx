@@ -1,4 +1,5 @@
-// OJT Master v2.17.0 - Header Component
+// OJT Master v2.19.0 - Header Component
+// Issue #200: AI 상태 표시 개선 (Gemini 단일 엔진)
 
 import { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -53,15 +54,17 @@ export default function Header({ aiStatus }) {
 
           {/* Right side */}
           <div className="flex items-center gap-4">
-            {/* AI Status */}
-            <div className="flex items-center gap-2">
+            {/* AI Status (Gemini) */}
+            <div className="flex items-center gap-2" title={aiStatus.model || 'Gemini API'}>
               <span
                 className={`w-2 h-2 rounded-full ${
                   aiStatus.online ? 'bg-green-500' : 'bg-red-500'
                 }`}
               />
               <span className="text-sm text-gray-600">
-                {aiStatus.online ? 'Gemini 온라인' : 'AI 오프라인'}
+                {aiStatus.online
+                  ? `Gemini${aiStatus.latency ? ` (${aiStatus.latency}ms)` : ''}`
+                  : 'Gemini 오프라인'}
               </span>
             </div>
 

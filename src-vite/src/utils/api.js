@@ -1,9 +1,9 @@
-// OJT Master v2.9.0 - API Utilities (Supabase, Gemini, WebLLM)
-// Refactored: gemini-agent 통합 (#179, #181)
+// OJT Master v2.19.0 - API Utilities (Supabase, Gemini)
+// Issue #200: WebLLM 제거, Gemini 단일 엔진
 
 import { createClient } from '@supabase/supabase-js';
 import DOMPurify from 'dompurify';
-import { SUPABASE_CONFIG, CONFIG, AI_ENGINE_CONFIG } from '../constants';
+import { SUPABASE_CONFIG, CONFIG } from '../constants';
 
 // Import gemini-agent functions
 import {
@@ -36,15 +36,12 @@ export async function checkAIStatus() {
 }
 
 /**
- * Generate OJT content using selected AI engine (Gemini or WebLLM)
+ * Generate OJT content using Gemini API
  * @param {string} contentText - Raw content text
  * @param {string} title - Document title
  * @param {number} stepNumber - Current step number
  * @param {number} totalSteps - Total number of steps
  * @param {Function} onProgress - Progress callback
- * @param {Object} options - Additional options
- * @param {string} options.engine - AI engine to use ('gemini' | 'webllm')
- * @param {boolean} options.fallbackEnabled - Enable fallback to Gemini on WebLLM failure
  * @returns {Promise<Object>} - Generated OJT content
  */
 export async function generateOJTContent(
@@ -52,40 +49,9 @@ export async function generateOJTContent(
   title,
   stepNumber = 1,
   totalSteps = 1,
-  onProgress,
-  options = {}
+  onProgress
 ) {
-  const { engine = 'gemini', fallbackEnabled = AI_ENGINE_CONFIG.FALLBACK_ENABLED } = options;
-
-  // WebLLM 엔진 사용 시
-  if (engine === 'webllm') {
-    try {
-      const { generateWithWebLLM, getWebLLMStatus } = await import('./webllm.js');
-      const status = getWebLLMStatus();
-
-      if (!status.loaded) {
-        throw new Error('WebLLM이 로드되지 않았습니다. 먼저 모델을 로드해주세요.');
-      }
-
-      if (onProgress) onProgress('WebLLM으로 콘텐츠 생성 중...');
-      const result = await generateWithWebLLM(contentText, title, onProgress);
-      result.ai_engine = 'webllm';
-      return result;
-    } catch (error) {
-      console.warn('WebLLM 생성 실패:', error.message);
-
-      // Fallback to Gemini
-      if (fallbackEnabled) {
-        if (onProgress) onProgress('WebLLM 실패 - Gemini로 전환 중...');
-        console.log('Fallback to Gemini API');
-        // Continue to Gemini generation below
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  // Gemini 엔진 사용 (기본 또는 Fallback) - gemini-agent 사용
+  // Gemini API 사용 - gemini-agent
   try {
     const result = await geminiGenerateOJTContent({
       contentText,

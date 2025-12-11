@@ -62,51 +62,6 @@ export const CORS_CONFIG = {
   CACHE_TTL: 300,
 };
 
-// WebLLM configuration (Issue #30, #45)
-export const WEBLLM_CONFIG = {
-  // 기본 모델 (한국어 우수, 2.4GB)
-  DEFAULT_MODEL: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
-  // 대안 모델 (저사양용, 1.8GB)
-  FALLBACK_MODEL: 'gemma-2-2b-it-q4f16_1-MLC',
-  // AI 생성 파라미터
-  TEMPERATURE: 0.3,
-  MAX_TOKENS: 4096,
-  // 사용 가능한 모델 목록
-  AVAILABLE_MODELS: [
-    {
-      id: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',
-      name: 'Qwen 2.5 3B',
-      size: '2.4GB',
-      recommended: true,
-      description: '한국어 우수, 권장',
-    },
-    {
-      id: 'gemma-2-2b-it-q4f16_1-MLC',
-      name: 'Gemma 2 2B',
-      size: '1.8GB',
-      recommended: false,
-      description: '저사양 기기용',
-    },
-    {
-      id: 'Llama-3.2-3B-Instruct-q4f16_1-MLC',
-      name: 'Llama 3.2 3B',
-      size: '2.1GB',
-      recommended: false,
-      description: '영어 중심',
-    },
-  ],
-};
-
-// AI Engine configuration
-export const AI_ENGINE_CONFIG = {
-  // 기본 엔진: 'gemini' | 'webllm'
-  DEFAULT_ENGINE: 'gemini',
-  // WebLLM 실패 시 Gemini로 폴백
-  FALLBACK_ENABLED: true,
-  // 로컬 스토리지 키
-  STORAGE_KEY: 'ojt_ai_engine',
-};
-
 // PDF Viewer configuration (FR-802)
 export const PDF_CONFIG = {
   // react-pdf worker

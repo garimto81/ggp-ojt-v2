@@ -1,7 +1,7 @@
 {
   "name": "src-vite",
   "private": true,
-  "version": "2.18.0",
+  "version": "2.19.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,7 +17,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.80",
     "@supabase/supabase-js": "^2.86.0",
     "allotment": "^1.20.4",
     "chart.js": "^4.5.1",

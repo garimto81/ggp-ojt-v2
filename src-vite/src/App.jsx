@@ -1,9 +1,10 @@
-// OJT Master v2.17.0 - Main Application Component
+// OJT Master v2.19.0 - Main Application Component
 // Block Agent System v1.1.0 - Feature-based imports with lazy loading
+// Issue #200: AI 상태 관리를 AIContext로 통합
 
-import { useEffect, useState, Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { checkAIStatus } from '@/utils/api';
+import { useAI } from '@/contexts/AIContext';
 import { VIEW_STATES } from '@/constants';
 
 // Shared layouts (always loaded)
@@ -37,16 +38,7 @@ function LoadingSpinner() {
 
 function App() {
   const { viewState, isLoading } = useAuth();
-  const [aiStatus, setAiStatus] = useState({ online: false, model: '' });
-
-  // Check AI status on mount
-  useEffect(() => {
-    checkAIStatus().then(setAiStatus);
-    const interval = setInterval(() => {
-      checkAIStatus().then(setAiStatus);
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  const { aiStatus } = useAI();
 
   // Loading state
   if (isLoading || viewState === VIEW_STATES.LOADING) {
