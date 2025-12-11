@@ -1,6 +1,12 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.21.0 - 2025-12-11
+//   - feat(ux): PDF 자동 텍스트 추출 (#206)
+//   - 생성 시점에 자동 추출, 수동 버튼 제거
+// 2.20.0 - 2025-12-11
+//   - feat(storage): PDF Supabase Storage 저장 (#202)
+//   - fix(pdf): PDF.js Worker 버전 불일치 수정 (#204)
 // 2.19.1 - 2025-12-11
 //   - fix(ai): Gemini 모델 gemini-2.5-flash-lite로 변경 (#200)
 //   - -exp 모델의 낮은 할당량 문제 해결 (Stable 모델 전환)
@@ -58,7 +64,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.19.1';
-export const BUILD_HASH = '3c0d342';
-export const BUILD_SUMMARY = 'Gemini 2.5 Flash-Lite 전환 (#200)';
+export const APP_VERSION = '2.21.0';
+export const BUILD_HASH = '0659242';
+export const BUILD_SUMMARY = 'PDF 자동 텍스트 추출 (#206)';
 export const BUILD_DATE = '2025-12-11';
