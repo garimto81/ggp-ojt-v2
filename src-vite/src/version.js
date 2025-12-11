@@ -1,6 +1,11 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.24.0 - 2025-12-11
+//   - fix(content): URL 학습 시 원본 페이지 직접 표시 (#211)
+//   - URL은 텍스트 추출 없이 퀴즈만 생성
+//   - 학습 뷰어에서 iframe으로 원본 URL 직접 표시
+//   - generateUrlQuizOnly, createUrlQuizOnlyPrompt 추가
 // 2.23.0 - 2025-12-11
 //   - refactor(content): URL 처리를 PDF와 동일한 패턴으로 통합 (#211)
 //   - 입력 타입별 처리 블록 분리 (PDF/URL/텍스트)
@@ -71,7 +76,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.23.0';
-export const BUILD_HASH = 'c854131';
-export const BUILD_SUMMARY = 'URL/PDF 처리 패턴 통합 (#211)';
+export const APP_VERSION = '2.24.0';
+export const BUILD_HASH = '3002964';
+export const BUILD_SUMMARY = 'URL 원본 페이지 직접 표시 (#211)';
 export const BUILD_DATE = '2025-12-11';

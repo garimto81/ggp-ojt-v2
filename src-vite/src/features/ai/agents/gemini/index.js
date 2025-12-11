@@ -8,6 +8,7 @@
 // Client (Core API)
 export {
   generateOJTContent,
+  generateUrlQuizOnly,
   regenerateQuiz,
   checkStatus,
   getConfig,
@@ -19,6 +20,7 @@ export {
 export {
   createOJTContentPrompt,
   createQuizRegeneratePrompt,
+  createUrlQuizOnlyPrompt,
   createHealthCheckPrompt,
 } from './prompts';
 
