@@ -75,12 +75,26 @@ export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm"
           >
-            <span>🔗</span>
-            <span>원문 보기</span>
-            <span className="text-xs text-blue-400">
-              ({doc.source_type === 'url' ? 'URL' : 'PDF'})
-            </span>
+            <span>{doc.source_type === 'pdf' ? '📄' : '🔗'}</span>
+            <span>{doc.source_type === 'pdf' ? 'PDF 원문 보기' : '원문 보기'}</span>
+            {doc.source_file && (
+              <span
+                className="text-xs text-blue-400 truncate max-w-[150px]"
+                title={doc.source_file}
+              >
+                ({doc.source_file})
+              </span>
+            )}
           </a>
+        )}
+
+        {/* 로컬 PDF 파일명만 있고 URL이 없는 경우 (레거시 데이터) */}
+        {!doc.source_url && doc.source_file && doc.source_type === 'pdf' && (
+          <div className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-gray-50 text-gray-500 rounded-lg text-sm">
+            <span>📄</span>
+            <span>PDF: {doc.source_file}</span>
+            <span className="text-xs text-gray-400">(원본 파일 없음)</span>
+          </div>
         )}
 
         {/* Section Progress */}

@@ -4,17 +4,15 @@
  * @blocks content.input, content.generate
  * @issue #198 - PDF 업로드 및 URL 텍스트 추출 기능
  * @issue #200 - WebLLM 제거, Gemini 단일 엔진
+ * @issue #202 - PDF Supabase Storage 저장
  */
 
 import { useState, useRef } from 'react';
 import { Toast } from '@/contexts/ToastContext';
 import { generateOJTContent, extractUrlText } from '@/utils/api';
 import { extractPdfText, validatePdfFile, getPdfInfo } from '@/utils/pdf';
-import {
-  estimateReadingTime,
-  calculateRequiredSteps,
-  splitContentForSteps,
-} from '@/utils/helpers';
+import { uploadPdfToStorage } from '@/utils/storage';
+import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
 
 export default function ContentInputPanel({
   aiStatus,
@@ -22,17 +20,17 @@ export default function ContentInputPanel({
   rawInput,
   setRawInput,
 }) {
-
   // Input states
   const [inputType, setInputType] = useState('text');
   const [urlInput, setUrlInput] = useState('');
   const [inputTitle, setInputTitle] = useState('');
   const [autoSplit, setAutoSplit] = useState(true);
 
-  // PDF states (#198)
+  // PDF states (#198, #202)
   const [selectedPdf, setSelectedPdf] = useState(null);
   const [pdfInfo, setPdfInfo] = useState(null);
   const [pdfProgress, setPdfProgress] = useState(0);
+  const [, setPdfStorageInfo] = useState(null); // Storage 업로드 결과 (#202)
   const pdfInputRef = useRef(null);
 
   // Processing states
@@ -116,8 +114,27 @@ export default function ContentInputPanel({
     setSelectedPdf(null);
     setPdfInfo(null);
     setPdfProgress(0);
+    setPdfStorageInfo(null); // (#202)
     if (pdfInputRef.current) {
       pdfInputRef.current.value = '';
+    }
+  };
+
+  // Upload PDF to Supabase Storage (#202)
+  const handlePdfStorageUpload = async (docId) => {
+    if (!selectedPdf) return null;
+
+    try {
+      const result = await uploadPdfToStorage(selectedPdf, docId, {
+        onProgress: setProcessingStatus,
+      });
+      setPdfStorageInfo(result);
+      return result;
+    } catch (error) {
+      console.error('[ContentInputPanel] Storage 업로드 실패:', error);
+      // Storage 업로드 실패해도 문서 생성은 진행 (graceful degradation)
+      Toast.warning(`PDF 저장 실패: ${error.message}. 텍스트만 저장됩니다.`);
+      return null;
     }
   };
 
@@ -143,11 +160,22 @@ export default function ContentInputPanel({
     try {
       let contentText = rawInput;
 
-      // Determine source info based on input type (#198)
+      // Determine source info based on input type (#198, #202)
+      // 임시 문서 ID 생성 (Storage 업로드용)
+      const tempDocId = crypto.randomUUID();
+
+      // PDF인 경우 Supabase Storage에 업로드 (#202)
+      let storageResult = null;
+      if (inputType === 'pdf' && selectedPdf) {
+        setProcessingStatus('PDF를 Supabase Storage에 업로드 중...');
+        storageResult = await handlePdfStorageUpload(tempDocId);
+      }
+
       const currentSourceInfo = {
         type: inputType === 'url' ? 'url' : inputType === 'pdf' ? 'pdf' : 'manual',
-        url: inputType === 'url' ? urlInput.trim() : null,
+        url: inputType === 'url' ? urlInput.trim() : storageResult?.publicUrl || null, // (#202) Storage URL
         file: inputType === 'pdf' && selectedPdf ? selectedPdf.name : null,
+        storage_path: storageResult?.path || null, // (#202) Storage 경로
       };
 
       // Handle URL input - extract text first
@@ -187,6 +215,7 @@ export default function ContentInputPanel({
             source_type: currentSourceInfo.type,
             source_url: currentSourceInfo.url,
             source_file: currentSourceInfo.file,
+            source_storage_path: currentSourceInfo.storage_path, // (#202)
           }))
         );
       } else {
@@ -203,6 +232,7 @@ export default function ContentInputPanel({
           source_type: currentSourceInfo.type,
           source_url: currentSourceInfo.url,
           source_file: currentSourceInfo.file,
+          source_storage_path: currentSourceInfo.storage_path, // (#202)
         });
       }
 
@@ -224,13 +254,14 @@ export default function ContentInputPanel({
     }
   };
 
-  // Clear inputs after save (#198)
-  const clearInputs = () => {
+  // Clear inputs after save (#198) - exported via static property
+  const _clearInputs = () => {
     setRawInput('');
     setUrlInput('');
     setInputTitle('');
     clearPdfSelection();
   };
+  void _clearInputs; // Suppress unused warning (exported via static property)
 
   return (
     <div className="space-y-4">
