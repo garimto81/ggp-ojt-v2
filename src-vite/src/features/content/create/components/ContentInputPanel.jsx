@@ -137,15 +137,20 @@ export default function ContentInputPanel({
       // 입력 타입별 텍스트 추출 (PDF/URL 동일 패턴)
       // ============================================
 
-      // 1. PDF 처리 (#198, #202, #206, #211 - 퀴즈만 생성, 학습 시 PDF 원본 표시)
+      // 1. PDF 처리 (#198, #202, #206, #211, #217 - 퀴즈만 생성, 학습 시 PDF 원본 표시)
       if (inputType === 'pdf' && selectedPdf) {
-        // 1-1. 텍스트 추출 (퀴즈 생성용으로만 사용)
+        // 1-1. 텍스트 추출 (퀴즈 생성용으로만 사용, OCR fallback 포함)
         setProcessingStatus('PDF 텍스트 추출 중...');
         const extracted = await extractPdfText(selectedPdf, (progress) => {
           setPdfProgress(progress);
           setProcessingStatus(`PDF 텍스트 추출 중... ${progress}%`);
         });
         const quizSourceText = extracted.text;
+
+        // OCR 사용 알림 (#217)
+        if (extracted.method === 'ocr') {
+          Toast.info('이미지 PDF입니다. OCR로 텍스트를 추출했습니다.');
+        }
 
         if (extracted.wasTruncated) {
           Toast.info(

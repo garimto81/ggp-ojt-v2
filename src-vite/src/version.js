@@ -1,6 +1,10 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.26.0 - 2025-12-11
+//   - feat(ocr): 이미지 PDF OCR 지원 (#217)
+//   - Tesseract.js v6 도입 (한글+영어 지원)
+//   - 텍스트 레이어 없는 PDF 자동 감지 및 OCR fallback
 // 2.25.0 - 2025-12-11
 //   - fix(content): PDF 학습 시 원본 PDF 직접 표시 (#211)
 //   - PDF도 URL과 동일하게 퀴즈만 생성 (섹션 없음)
@@ -83,7 +87,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.25.0';
-export const BUILD_HASH = '06689bf';
-export const BUILD_SUMMARY = 'PDF 원본 표시 + 퀴즈만 생성 (#211)';
+export const APP_VERSION = '2.26.0';
+export const BUILD_HASH = '8484e48';
+export const BUILD_SUMMARY = '이미지 PDF OCR 지원 (#217)';
 export const BUILD_DATE = '2025-12-11';
