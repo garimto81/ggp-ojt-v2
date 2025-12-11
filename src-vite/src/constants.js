@@ -36,9 +36,10 @@ export const SUPABASE_CONFIG = {
 };
 
 // Gemini API configuration
+// Issue #200: gemini-2.5-flash-lite로 변경 (Stable, 높은 할당량, 최저가)
 export const GEMINI_CONFIG = {
   API_KEY: import.meta.env.VITE_GEMINI_API_KEY || '',
-  MODEL: 'gemini-2.0-flash-exp',
+  MODEL: 'gemini-2.5-flash-lite',
   API_URL: 'https://generativelanguage.googleapis.com/v1beta/models',
 };
 

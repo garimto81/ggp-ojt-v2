@@ -1,6 +1,10 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.19.1 - 2025-12-11
+//   - fix(ai): Gemini 모델 gemini-2.5-flash-lite로 변경 (#200)
+//   - -exp 모델의 낮은 할당량 문제 해결 (Stable 모델 전환)
+//   - 최저가 + 높은 할당량 + 빠른 응답 속도
 // 2.19.0 - 2025-12-11
 //   - refactor(ai): WebLLM 완전 제거, Gemini 단일 엔진 전환 (#200)
 //   - @mlc-ai/web-llm 의존성 제거 (5.5MB 번들 감소)
@@ -54,7 +58,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.19.0';
-export const BUILD_HASH = '08688c6';
-export const BUILD_SUMMARY = 'WebLLM 제거, Gemini 단일 엔진 (#200)';
+export const APP_VERSION = '2.19.1';
+export const BUILD_HASH = 'pending';
+export const BUILD_SUMMARY = 'Gemini 2.5 Flash-Lite 전환 (#200)';
 export const BUILD_DATE = '2025-12-11';
