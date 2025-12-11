@@ -1,11 +1,14 @@
 // OJT Master - PDF Text Extraction Utility
 // Issue #198: PDF 업로드 및 텍스트 추출 기능
+// Issue #217: 이미지 전용 PDF OCR 지원 (Tesseract.js)
 //
 // pdfjs-dist를 직접 사용하여 PDF에서 텍스트 추출
+// 텍스트가 없는 이미지 PDF의 경우 OCR fallback 수행
 // react-pdf의 PdfViewer.jsx는 뷰어용, 이 파일은 텍스트 추출용
 
 import * as pdfjsLib from 'pdfjs-dist';
 import { CONFIG } from '../constants';
+import { extractTextWithOcr, isValidOcrText } from './ocr';
 
 // PDF.js Worker 설정 (CDN 사용)
 // Note: package.json의 pdfjs-dist 버전과 맞춰야 함 (현재 5.4.449)
@@ -117,16 +120,55 @@ export async function extractPdfText(file, onProgress) {
 
     // 전체 텍스트 정리
     fullText = fullText.trim();
+
+    // 텍스트가 없거나 너무 짧은 경우 OCR fallback 시도 (#217)
+    if (!fullText || fullText.length < 100) {
+      if (onProgress) {
+        onProgress(0); // 진행률 리셋
+      }
+
+      console.warn('[PDF] 텍스트 레이어 없음, OCR fallback 시도...');
+
+      try {
+        // OCR로 텍스트 추출 시도
+        const ocrResult = await extractTextWithOcr(pdf, (status) => {
+          // OCR 상태를 진행률 대신 로그로 출력 (onProgress는 숫자만 받음)
+          console.log('[OCR]', status);
+        });
+
+        if (ocrResult.text && isValidOcrText(ocrResult.text)) {
+          const ocrText = ocrResult.text.substring(0, PDF_EXTRACT_CONFIG.MAX_TEXT_LENGTH);
+          const ocrWasTruncated = ocrResult.text.length > PDF_EXTRACT_CONFIG.MAX_TEXT_LENGTH;
+
+          if (onProgress) {
+            onProgress(100);
+          }
+
+          return {
+            text: ocrText,
+            pages: ocrResult.pages,
+            totalPages,
+            wasTruncated: ocrWasTruncated,
+            originalLength: ocrResult.text.length,
+            extractedLength: ocrText.length,
+            method: 'ocr', // OCR 사용 표시
+          };
+        }
+      } catch (ocrError) {
+        console.error('[OCR] OCR 처리 실패:', ocrError);
+      }
+
+      // OCR도 실패한 경우
+      throw new Error(
+        'PDF에서 텍스트를 추출할 수 없습니다. 이미지 품질이 낮거나 지원하지 않는 형식일 수 있습니다.'
+      );
+    }
+
     const originalLength = fullText.length;
 
     // 최대 길이 제한
     const truncatedText = fullText.substring(0, PDF_EXTRACT_CONFIG.MAX_TEXT_LENGTH);
     const wasTruncated = originalLength > PDF_EXTRACT_CONFIG.MAX_TEXT_LENGTH;
-
-    // 텍스트가 없는 경우 (이미지 전용 PDF 등)
-    if (!truncatedText) {
-      throw new Error('PDF에서 텍스트를 추출할 수 없습니다. 이미지 전용 PDF일 수 있습니다.');
-    }
 
     return {
       text: truncatedText,
@@ -136,6 +178,7 @@ export async function extractPdfText(file, onProgress) {
       originalLength,
       extractedLength: truncatedText.length,
       pageTexts, // 디버깅용 (옵션)
+      method: 'text-layer', // 텍스트 레이어 사용 표시
     };
   } catch (error) {
     // PDF.js 에러 처리
