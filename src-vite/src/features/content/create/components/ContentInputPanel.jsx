@@ -158,8 +158,15 @@ export default function ContentInputPanel({
 
       // Handle URL input - extract text first
       if (inputType === 'url') {
+        // URL 프로토콜 자동 추가 (#208)
+        let normalizedUrl = urlInput.trim();
+        if (!normalizedUrl.match(/^https?:\/\//i)) {
+          normalizedUrl = 'https://' + normalizedUrl;
+        }
+        currentSourceInfo.url = normalizedUrl;
+
         setProcessingStatus('URL에서 텍스트 추출 중...');
-        const extracted = await extractUrlText(urlInput, setProcessingStatus);
+        const extracted = await extractUrlText(normalizedUrl, setProcessingStatus);
         contentText = extracted.text;
         setRawInput(contentText);
         if (extracted.wasTruncated) {

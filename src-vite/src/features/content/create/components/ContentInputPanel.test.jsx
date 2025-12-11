@@ -75,9 +75,7 @@ vi.mock('@/utils/helpers', () => ({
   ),
 }));
 
-vi.mock('@features/ai/components/AIEngineSelector', () => ({
-  default: () => <div data-testid="ai-engine-selector">AI Engine Selector</div>,
-}));
+// AIEngineSelector mock 제거됨 - Issue #200에서 WebLLM 제거로 해당 컴포넌트 삭제
 
 describe('ContentInputPanel - Issue #198 Tests', () => {
   const mockOnDocumentsGenerated = vi.fn();
@@ -278,15 +276,9 @@ describe('ContentInputPanel - Issue #198 Tests', () => {
     });
   });
 
-  describe('7. AI 엔진 선택기 통합', () => {
-    it('AIEngineSelector 컴포넌트가 렌더링되어야 함', () => {
-      render(<ContentInputPanel {...defaultProps} />);
+  // describe('7. AI 엔진 선택기 통합') - Issue #200에서 WebLLM 제거로 삭제됨
 
-      expect(screen.getByTestId('ai-engine-selector')).toBeInTheDocument();
-    });
-  });
-
-  describe('8. source_type 필드 설정', () => {
+  describe('7. source_type 필드 설정', () => {
     it('텍스트 입력 시 source_type이 manual로 설정되어야 함', async () => {
       const { generateOJTContent } = await import('@/utils/api');
       const user = userEvent.setup();
