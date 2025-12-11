@@ -59,6 +59,6 @@
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
 export const APP_VERSION = '2.19.1';
-export const BUILD_HASH = '6aebfe4';
+export const BUILD_HASH = '3c0d342';
 export const BUILD_SUMMARY = 'Gemini 2.5 Flash-Lite 전환 (#200)';
 export const BUILD_DATE = '2025-12-11';
