@@ -370,29 +370,31 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ---
 
-## 현재 진행 중인 작업 (2025-12-10)
+## 현재 진행 중인 작업 (2025-12-11)
 
-### Issue #188: 콘텐츠 Supabase 저장 실패 ✅
+### Issue #202: PDF Supabase Storage 저장 (신규)
 
-**상태**: 완료 (PR #189, #190)
+**상태**: 📋 PRD 작성 완료, 구현 대기
 
-- RLS 에러(42501) 핸들링 추가 - 사용자에게 명확한 에러 표시
-- Supabase 세션 자동 갱신 설정 (autoRefreshToken, persistSession)
-- AuthContext/DocsContext 디버그 로깅 추가
+로컬 PDF 파일을 Supabase Storage에 영구 저장하는 기능:
+- **PRD**: `tasks/prds/0013-pdf-supabase-storage.md`
+- **문제**: 현재 로컬 PDF는 파일명만 저장 → 학습자 열람 불가
+- **해결**: Supabase Storage `pdfs` 버킷에 원본 저장 (압축 없이)
 
-### Issue #186: 콘텐츠 검토대기 표시 ✅
+### Issue #200: Context API 기반 퀴즈 생성 ✅
 
-**상태**: 완료
+**상태**: 완료 (PR #201)
 
-- 신규 콘텐츠 저장 시 `status='review'` 기본값 설정
-- Admin '검토대기' 필터에 정상 표시
+- context-quiz-agent 추가 (Block Agent System v1.5.0)
+- URL Context Tool + Gemini Files API 활용
+- 입력 타입별 분기: text → gemini-agent, url/pdf → context-quiz-agent
 
-### Issue #182: AuthContext 오염 수정 ✅
+### Issue #199: AI 상태 표시 버그 ✅
 
-**상태**: 완료
+**상태**: Closed (Issue #200에서 해결)
 
-- SSOT 패턴 적용, Context 중복 제거
-- Import 경로 정규화 (`@/contexts/` 형식)
+- 이슈 내용 Outdated (vLLM 아키텍처 설명)
+- 코드는 이미 Gemini 단일 엔진으로 정상 동작
 
 ### Issue #178: Supabase DB 정리
 
