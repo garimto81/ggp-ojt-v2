@@ -73,42 +73,6 @@ export default function ContentInputPanel({
     }
   };
 
-  // Handle PDF text extraction (#198)
-  const handlePdfExtract = async () => {
-    if (!selectedPdf) {
-      Toast.warning('PDF 파일을 먼저 선택해주세요.');
-      return;
-    }
-
-    setIsProcessing(true);
-    setProcessingStatus('PDF 텍스트 추출 중...');
-    setPdfProgress(0);
-
-    try {
-      const result = await extractPdfText(selectedPdf, (progress) => {
-        setPdfProgress(progress);
-        setProcessingStatus(`PDF 텍스트 추출 중... ${progress}%`);
-      });
-
-      setRawInput(result.text);
-
-      if (result.wasTruncated) {
-        Toast.warning(
-          `텍스트가 ${result.originalLength.toLocaleString()}자에서 ${result.extractedLength.toLocaleString()}자로 잘렸습니다.`
-        );
-      } else {
-        Toast.success(
-          `${result.pages}페이지에서 ${result.extractedLength.toLocaleString()}자 추출 완료`
-        );
-      }
-    } catch (error) {
-      Toast.error(`PDF 추출 실패: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
-      setProcessingStatus('');
-    }
-  };
-
   // Clear PDF selection
   const clearPdfSelection = () => {
     setSelectedPdf(null);
@@ -149,8 +113,8 @@ export default function ContentInputPanel({
       Toast.warning('URL을 입력해주세요.');
       return;
     }
-    if (inputType === 'pdf' && !rawInput.trim()) {
-      Toast.warning('PDF에서 텍스트를 먼저 추출해주세요.');
+    if (inputType === 'pdf' && !selectedPdf) {
+      Toast.warning('PDF 파일을 선택해주세요.');
       return;
     }
 
@@ -164,9 +128,23 @@ export default function ContentInputPanel({
       // 임시 문서 ID 생성 (Storage 업로드용)
       const tempDocId = crypto.randomUUID();
 
-      // PDF인 경우 Supabase Storage에 업로드 (#202)
+      // PDF인 경우 텍스트 추출 + Storage 업로드 (#202, #206)
       let storageResult = null;
       if (inputType === 'pdf' && selectedPdf) {
+        // 1. 텍스트 추출 (자동) (#206)
+        setProcessingStatus('PDF 텍스트 추출 중...');
+        const extracted = await extractPdfText(selectedPdf, (progress) => {
+          setPdfProgress(progress);
+          setProcessingStatus(`PDF 텍스트 추출 중... ${progress}%`);
+        });
+        contentText = extracted.text;
+        setRawInput(contentText);
+
+        if (extracted.wasTruncated) {
+          Toast.info(`텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`);
+        }
+
+        // 2. Storage 업로드 (#202)
         setProcessingStatus('PDF를 Supabase Storage에 업로드 중...');
         storageResult = await handlePdfStorageUpload(tempDocId);
       }
@@ -403,16 +381,11 @@ export default function ContentInputPanel({
                   </div>
                 )}
 
-                {/* Extract button */}
-                {!rawInput && (
-                  <button
-                    onClick={handlePdfExtract}
-                    disabled={isProcessing}
-                    className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600
-                               disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-                  >
-                    {isProcessing ? processingStatus : '📄 텍스트 추출'}
-                  </button>
+                {/* PDF 선택 완료 안내 (#206) */}
+                {selectedPdf && !rawInput && !isProcessing && (
+                  <p className="text-sm text-green-600 text-center">
+                    ✓ PDF 선택 완료 - 아래 &quot;교육 자료 생성&quot; 버튼을 클릭하세요
+                  </p>
                 )}
 
                 {/* Extracted text preview */}
