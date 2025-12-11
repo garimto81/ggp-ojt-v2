@@ -3,7 +3,12 @@
  * @agent content-create-agent
  * @blocks content.input, content.generate
  * @issue #198 - PDF 업로드 및 URL 텍스트 추출 기능
- * @issue #200 - WebLLM 제거, Gemini 단일 엔진
+ * @issue #200 - WebLLM 제거, Gemini 단일 엔진, Context API 퀴즈 생성
+ *
+ * 입력 타입별 처리:
+ * - text: Gemini 정제 → sections[] + quiz[]
+ * - url: 원본 URL 저장 → context-quiz-agent → quiz[] only (sections=null)
+ * - pdf: 원본 파일 저장 → context-quiz-agent → quiz[] only (sections=null)
  */
 
 import { useState, useRef } from 'react';
@@ -15,6 +20,14 @@ import {
   calculateRequiredSteps,
   splitContentForSteps,
 } from '@/utils/helpers';
+
+// Context Quiz Agent - URL/PDF 퀴즈 전용 생성 (#200)
+import {
+  generateQuizFromUrl,
+  generateQuizFromLocalFile,
+  extractTitleFromUrl,
+  isPdfUrl,
+} from '@features/ai/agents/context-quiz';
 
 export default function ContentInputPanel({
   aiStatus,
@@ -121,7 +134,7 @@ export default function ContentInputPanel({
     }
   };
 
-  // Handle content generation
+  // Handle content generation - 입력 타입별 분기 (#200)
   const handleGenerate = async () => {
     // Validate input based on type
     if (inputType === 'text' && !rawInput.trim()) {
@@ -132,95 +145,176 @@ export default function ContentInputPanel({
       Toast.warning('URL을 입력해주세요.');
       return;
     }
-    if (inputType === 'pdf' && !rawInput.trim()) {
-      Toast.warning('PDF에서 텍스트를 먼저 추출해주세요.');
+    if (inputType === 'pdf' && !selectedPdf) {
+      Toast.warning('PDF 파일을 선택해주세요.');
       return;
     }
 
     setIsProcessing(true);
-    setProcessingStatus('콘텐츠 분석 중...');
 
     try {
-      let contentText = rawInput;
-
-      // Determine source info based on input type (#198)
-      const currentSourceInfo = {
-        type: inputType === 'url' ? 'url' : inputType === 'pdf' ? 'pdf' : 'manual',
-        url: inputType === 'url' ? urlInput.trim() : null,
-        file: inputType === 'pdf' && selectedPdf ? selectedPdf.name : null,
-      };
-
-      // Handle URL input - extract text first
-      if (inputType === 'url') {
-        setProcessingStatus('URL에서 텍스트 추출 중...');
-        const extracted = await extractUrlText(urlInput, setProcessingStatus);
-        contentText = extracted.text;
-        setRawInput(contentText);
-        if (extracted.wasTruncated) {
-          Toast.warning(
-            `텍스트가 ${extracted.originalLength}자에서 ${extracted.extractedLength}자로 잘렸습니다.`
-          );
-        }
-      }
-
-      // Warn if AI is offline but proceed anyway
-      if (!aiStatus.online) {
-        Toast.warning('AI 서비스 오프라인 - 원문으로 등록됩니다.');
-      }
-
-      const numSteps = autoSplit ? requiredSteps : 1;
-      const segments = splitContentForSteps(contentText, numSteps);
-      const docs = [];
-
-      // Generate content for each step (Gemini API)
-      if (numSteps > 1) {
-        const promises = segments.map((segment, i) =>
-          generateOJTContent(segment, inputTitle || '새 OJT 문서', i + 1, numSteps, (status) =>
-            setProcessingStatus(`Step ${i + 1}: ${status}`)
-          )
-        );
-        const results = await Promise.all(promises);
-        docs.push(
-          ...results.map((r, i) => ({
-            ...r,
-            step: i + 1,
-            source_type: currentSourceInfo.type,
-            source_url: currentSourceInfo.url,
-            source_file: currentSourceInfo.file,
-          }))
-        );
-      } else {
-        const result = await generateOJTContent(
-          contentText,
-          inputTitle || '새 OJT 문서',
-          1,
-          1,
-          setProcessingStatus
-        );
-        docs.push({
-          ...result,
-          step: 1,
-          source_type: currentSourceInfo.type,
-          source_url: currentSourceInfo.url,
-          source_file: currentSourceInfo.file,
-        });
-      }
-
-      // Callback with generated docs
-      onDocumentsGenerated(docs);
-
-      // Check if any doc was created with fallback
-      const fallbackDocs = docs.filter((d) => d.ai_processed === false);
-      if (fallbackDocs.length > 0) {
-        Toast.warning(`${fallbackDocs.length}개 문서가 AI 분석 없이 원문으로 생성되었습니다.`);
-      } else {
-        Toast.success(`${docs.length}개 문서가 생성되었습니다.`);
+      // 입력 타입별 분기 처리
+      switch (inputType) {
+        case 'url':
+          await handleUrlGenerate();
+          break;
+        case 'pdf':
+          await handlePdfGenerate();
+          break;
+        case 'text':
+        default:
+          await handleTextGenerate();
+          break;
       }
     } catch (error) {
       Toast.error(`오류: ${error.message}`);
     } finally {
       setIsProcessing(false);
       setProcessingStatus('');
+    }
+  };
+
+  /**
+   * URL 입력 처리 - Context Quiz Agent 사용 (#200)
+   * URL 원본 저장 + 퀴즈만 생성 (sections = null)
+   */
+  const handleUrlGenerate = async () => {
+    const url = urlInput.trim();
+    setProcessingStatus('URL 콘텐츠 분석 중...');
+
+    // URL 제목 추출 (사용자 입력 없으면)
+    const title = inputTitle || extractTitleFromUrl(url);
+
+    // Gemini URL Context Tool로 퀴즈 생성
+    const quiz = await generateQuizFromUrl(url, {
+      quizCount: 10,
+      onProgress: setProcessingStatus,
+    });
+
+    // 문서 생성 (sections = null, 원본 URL 저장)
+    const doc = {
+      title,
+      sections: null, // 원본 표시용
+      quiz,
+      source_type: 'url',
+      source_url: url,
+      source_file: null,
+      step: 1,
+      ai_processed: true,
+    };
+
+    onDocumentsGenerated([doc]);
+    Toast.success(`URL 문서 생성 완료! 퀴즈 ${quiz.length}개`);
+  };
+
+  /**
+   * PDF 입력 처리 - Context Quiz Agent 사용 (#200)
+   * PDF 원본 저장 + 퀴즈만 생성 (sections = null)
+   */
+  const handlePdfGenerate = async () => {
+    setProcessingStatus('PDF 분석 중...');
+
+    // PDF 제목 추출
+    const title = inputTitle || pdfInfo?.title || selectedPdf.name.replace('.pdf', '');
+
+    // Online PDF URL인지 확인
+    const isOnlinePdf = isPdfUrl(urlInput);
+
+    let quiz;
+    let sourceUrl = null;
+
+    if (isOnlinePdf) {
+      // Online PDF: URL Context Tool 사용
+      sourceUrl = urlInput.trim();
+      quiz = await generateQuizFromUrl(sourceUrl, {
+        quizCount: 10,
+        onProgress: setProcessingStatus,
+      });
+    } else {
+      // Local PDF: Files API 사용
+      const result = await generateQuizFromLocalFile(selectedPdf, {
+        quizCount: 10,
+        onProgress: setProcessingStatus,
+      });
+      quiz = result.quiz;
+      // fileInfo는 48시간 유효 - 필요시 source_file_uri 저장 가능
+    }
+
+    // 문서 생성 (sections = null, 원본 PDF 저장)
+    const doc = {
+      title,
+      sections: null, // 원본 표시용
+      quiz,
+      source_type: 'pdf',
+      source_url: sourceUrl,
+      source_file: selectedPdf.name,
+      step: 1,
+      ai_processed: true,
+    };
+
+    onDocumentsGenerated([doc]);
+    Toast.success(`PDF 문서 생성 완료! 퀴즈 ${quiz.length}개`);
+  };
+
+  /**
+   * 텍스트 입력 처리 - 기존 Gemini 정제 방식
+   * sections[] + quiz[] 생성
+   */
+  const handleTextGenerate = async () => {
+    setProcessingStatus('콘텐츠 분석 중...');
+
+    // Warn if AI is offline but proceed anyway
+    if (!aiStatus.online) {
+      Toast.warning('AI 서비스 오프라인 - 원문으로 등록됩니다.');
+    }
+
+    const numSteps = autoSplit ? requiredSteps : 1;
+    const segments = splitContentForSteps(rawInput, numSteps);
+    const docs = [];
+
+    // Generate content for each step (Gemini API)
+    if (numSteps > 1) {
+      const promises = segments.map((segment, i) =>
+        generateOJTContent(segment, inputTitle || '새 OJT 문서', i + 1, numSteps, (status) =>
+          setProcessingStatus(`Step ${i + 1}: ${status}`)
+        )
+      );
+      const results = await Promise.all(promises);
+      docs.push(
+        ...results.map((r, i) => ({
+          ...r,
+          step: i + 1,
+          source_type: 'manual',
+          source_url: null,
+          source_file: null,
+        }))
+      );
+    } else {
+      const result = await generateOJTContent(
+        rawInput,
+        inputTitle || '새 OJT 문서',
+        1,
+        1,
+        setProcessingStatus
+      );
+      docs.push({
+        ...result,
+        step: 1,
+        source_type: 'manual',
+        source_url: null,
+        source_file: null,
+      });
+    }
+
+    // Callback with generated docs
+    onDocumentsGenerated(docs);
+
+    // Check if any doc was created with fallback
+    const fallbackDocs = docs.filter((d) => d.ai_processed === false);
+    if (fallbackDocs.length > 0) {
+      Toast.warning(`${fallbackDocs.length}개 문서가 AI 분석 없이 원문으로 생성되었습니다.`);
+    } else {
+      Toast.success(`${docs.length}개 문서가 생성되었습니다.`);
     }
   };
 
@@ -285,7 +379,7 @@ export default function ContentInputPanel({
           />
         )}
 
-        {/* PDF Upload (#198) */}
+        {/* PDF Upload - Context API 기반 (#200) */}
         {inputType === 'pdf' && (
           <div className="space-y-4">
             {/* Hidden file input */}
@@ -320,13 +414,13 @@ export default function ContentInputPanel({
                     />
                   </svg>
                   <span className="text-gray-500">PDF 파일을 선택하거나 드래그하세요</span>
-                  <span className="text-xs text-gray-400">최대 50MB, 100페이지</span>
+                  <span className="text-xs text-gray-400">최대 50MB · Gemini Files API 사용</span>
                 </div>
               </label>
             ) : (
               <div className="border rounded-lg p-4 bg-gray-50">
                 {/* Selected file info */}
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
                       <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
@@ -347,6 +441,7 @@ export default function ContentInputPanel({
                     onClick={clearPdfSelection}
                     className="p-1 text-gray-400 hover:text-gray-600"
                     title="파일 제거"
+                    disabled={isProcessing}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -359,82 +454,59 @@ export default function ContentInputPanel({
                   </button>
                 </div>
 
-                {/* Progress bar */}
-                {isProcessing && pdfProgress > 0 && (
-                  <div className="mb-3">
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 transition-all duration-300"
-                        style={{ width: `${pdfProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1 text-center">{pdfProgress}%</p>
-                  </div>
-                )}
-
-                {/* Extract button */}
-                {!rawInput && (
-                  <button
-                    onClick={handlePdfExtract}
-                    disabled={isProcessing}
-                    className="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600
-                               disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-                  >
-                    {isProcessing ? processingStatus : '📄 텍스트 추출'}
-                  </button>
-                )}
-
-                {/* Extracted text preview */}
-                {rawInput && (
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">추출된 텍스트</span>
-                      <span className="text-xs text-gray-500">
-                        {rawInput.length.toLocaleString()}자
-                      </span>
-                    </div>
-                    <div className="max-h-32 overflow-y-auto p-3 bg-white border rounded text-sm text-gray-600">
-                      {rawInput.substring(0, 500)}
-                      {rawInput.length > 500 && '...'}
-                    </div>
-                  </div>
-                )}
+                {/* Context API 안내 (#200) */}
+                <p className="mt-3 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded">
+                  💡 PDF 원본이 학습 화면에 표시되고, Gemini가 자동으로 퀴즈를 생성합니다.
+                </p>
               </div>
             )}
           </div>
         )}
 
-        {/* Stats */}
-        {rawInput && (
+        {/* Stats - 텍스트 입력 시에만 표시 (#200) */}
+        {inputType === 'text' && rawInput && (
           <div className="mt-4 flex gap-4 text-sm text-gray-500">
             <span>예상 학습 시간: {estimatedTime}분</span>
             <span>권장 스텝 수: {requiredSteps}</span>
           </div>
         )}
 
-        {/* Auto Split Toggle */}
-        <label className="flex items-center gap-2 mt-4">
-          <input
-            type="checkbox"
-            checked={autoSplit}
-            onChange={(e) => setAutoSplit(e.target.checked)}
-          />
-          <span className="text-sm text-gray-600">자동 스텝 분할 ({requiredSteps}개)</span>
-        </label>
+        {/* Auto Split Toggle - 텍스트 입력 시에만 표시 (#200) */}
+        {inputType === 'text' && (
+          <label className="flex items-center gap-2 mt-4">
+            <input
+              type="checkbox"
+              checked={autoSplit}
+              onChange={(e) => setAutoSplit(e.target.checked)}
+            />
+            <span className="text-sm text-gray-600">자동 스텝 분할 ({requiredSteps}개)</span>
+          </label>
+        )}
 
-        {/* Generate Button (Gemini Only - Issue #200) */}
+        {/* URL/PDF 안내 메시지 (#200) */}
+        {inputType === 'url' && urlInput && (
+          <p className="mt-4 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded">
+            💡 URL 원본이 학습 화면에 표시되고, Gemini URL Context Tool로 퀴즈를 생성합니다.
+          </p>
+        )}
+
+        {/* Generate Button - 입력 타입별 텍스트 (#200) */}
         <button
           onClick={handleGenerate}
-          disabled={isProcessing}
+          disabled={isProcessing || (inputType === 'url' && !urlInput) || (inputType === 'pdf' && !selectedPdf) || (inputType === 'text' && !rawInput)}
           className="w-full mt-4 py-3 text-white font-medium rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
         >
           {isProcessing
             ? processingStatus
-            : aiStatus.online
-              ? '✨ Gemini로 교육 자료 생성'
-              : '원문으로 등록 (AI 오프라인)'}
+            : inputType === 'url'
+              ? '🔗 URL에서 퀴즈 생성'
+              : inputType === 'pdf'
+                ? '📄 PDF에서 퀴즈 생성'
+                : aiStatus.online
+                  ? '✨ Gemini로 교육 자료 생성'
+                  : '원문으로 등록 (AI 오프라인)'}
         </button>
-        {!aiStatus.online && (
+        {inputType === 'text' && !aiStatus.online && (
           <p className="text-xs text-amber-600 mt-2 text-center">
             ⚠️ Gemini 서비스 오프라인 - 원문 그대로 등록됩니다
           </p>

@@ -1,14 +1,15 @@
-# Block Agent System v1.4.0
+# Block Agent System v1.5.0
 
 OJT Master 프로젝트의 모듈화된 컴포넌트 아키텍처 가이드입니다.
 
 ## 개요
 
-Block Agent System은 기능별로 분리된 **9개의 전문화된 에이전트**로 구성됩니다:
+Block Agent System은 기능별로 분리된 **10개의 전문화된 에이전트**로 구성됩니다:
 - **Frontend Agents (7개)**: UI 컴포넌트 담당
-- **Service Agent (1개)**: Gemini AI API 전담 (gemini-agent)
+- **Service Agents (2개)**: AI API 전담 (gemini-agent, context-quiz-agent)
 - **Backend Agent (1개)**: Database 담당 (supabase-agent)
 
+> **v1.5.0 변경사항** (Issue #201): Context API 기반 퀴즈 전용 에이전트 추가
 > **v1.4.0 변경사항** (Issue #200): WebLLM 제거, Gemini 단일 엔진 체계
 
 각 에이전트는 독립적인 책임 영역을 가지며, 명확한 인터페이스를 통해 협업합니다.
@@ -109,7 +110,7 @@ import { useLearningRecord } from '@features/learning/quiz';
 
 **AI 엔진**: Gemini API 단일 엔진 (WebLLM 제거됨)
 
-### 6-1. gemini-agent (Gemini AI) - NEW
+### 6-1. gemini-agent (Gemini AI - 텍스트 정제)
 **경로**: `src/features/ai/agents/gemini/`
 **Issue**: #179
 
@@ -134,11 +135,59 @@ const result = await generateOJTContent({
 ```
 
 **책임 영역**:
+- **텍스트 입력 전용**: 콘텐츠 정제 + 퀴즈 생성
 - Gemini API 요청/응답 처리
 - OJT 콘텐츠 생성 프롬프트 관리
 - AI 응답 JSON 파싱 및 정규화
 - 퀴즈 품질 검증 및 보완
 - 에러 핸들링 및 fallback 지원
+
+### 6-2. context-quiz-agent (Context API 퀴즈) - NEW
+**경로**: `src/features/ai/agents/context-quiz/`
+**Issue**: #200
+**PRD**: `tasks/prds/0012-context-api-quiz-generation.md`
+
+| 구성요소 | 파일 | 역할 |
+|----------|------|------|
+| Entry | `index.js` | 모듈 진입점, 타입별 라우팅 |
+| URL Context | `url-context.js` | URL Context Tool 호출 |
+| File Upload | `file-upload.js` | Gemini Files API 업로드 |
+| Quiz Gen | `quiz-generator.js` | 퀴즈 전용 생성 로직 |
+| Prompts | `prompts.js` | 퀴즈 전용 프롬프트 |
+| Parser | `parser.js` | 응답 파싱 |
+| Tests | `__tests__/*.test.js` | 단위 테스트 |
+
+```javascript
+// 사용 예시
+import {
+  generateQuizFromUrl,
+  generateQuizFromFile,
+  uploadToGeminiFiles
+} from '@features/ai/agents/context-quiz';
+
+// URL 기반 퀴즈 생성 (URL Context Tool)
+const urlQuiz = await generateQuizFromUrl('https://example.com/article');
+
+// 로컬 PDF 기반 퀴즈 생성 (Files API)
+const fileUri = await uploadToGeminiFiles(pdfFile);
+const pdfQuiz = await generateQuizFromFile(fileUri);
+```
+
+**책임 영역**:
+- **URL/PDF 입력 전용**: 퀴즈만 생성 (콘텐츠 정제 없음)
+- Gemini URL Context Tool 호출 (CORS 프록시 불필요)
+- Gemini Files API 파일 업로드 (48시간 유효)
+- 퀴즈 전용 프롬프트 관리
+- 원본 콘텐츠 보존 (sections = null)
+
+**입력 타입별 에이전트 분리**:
+
+| 입력 타입 | 담당 에이전트 | 콘텐츠 처리 | 퀴즈 생성 |
+|----------|---------------|-------------|----------|
+| 텍스트 | gemini-agent | sections[] 정제 | ✅ |
+| URL | context-quiz-agent | 원본 유지 | ✅ |
+| PDF (온라인) | context-quiz-agent | 원본 유지 | ✅ |
+| PDF (로컬) | context-quiz-agent | 원본 유지 | ✅ |
 
 ### 7. admin-agent (관리자) → 블럭 분리 예정
 **경로**: `src/features/admin/`
@@ -409,6 +458,7 @@ export { useAuth, AuthProvider } from '@features/auth';
 | 버전 | 날짜 | 변경 사항 |
 |------|------|----------|
 | v2.0.0 | 2025-12 | admin-agent 블럭 분리 예정 (4개 서브 에이전트), PRD #197 |
+| v1.5.0 | 2025-12-11 | context-quiz-agent 추가 (URL/PDF 퀴즈 전용), 10개 에이전트 체계 (#200) |
 | v1.4.0 | 2025-12-11 | WebLLM 제거, Gemini 단일 엔진 전환 (#200) |
 | v1.3.0 | 2025-12 | gemini-agent 추가 (AI API 전담), 9개 에이전트 체계 (#179) |
 | v1.2.0 | 2025-12 | supabase-agent 추가 (DB 전담), 8개 에이전트 체계 |
