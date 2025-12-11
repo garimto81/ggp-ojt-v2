@@ -25,6 +25,7 @@ export default function ContentInputPanel({
   const [urlInput, setUrlInput] = useState('');
   const [inputTitle, setInputTitle] = useState('');
   const [autoSplit, setAutoSplit] = useState(true);
+  const [skipAiAnalysis, setSkipAiAnalysis] = useState(false); // #219 - AI 분석 없이 원본 저장
 
   // PDF states (#198, #202)
   const [selectedPdf, setSelectedPdf] = useState(null);
@@ -119,7 +120,7 @@ export default function ContentInputPanel({
     }
 
     setIsProcessing(true);
-    setProcessingStatus('콘텐츠 분석 중...');
+    setProcessingStatus(skipAiAnalysis ? '원본 저장 중...' : '콘텐츠 분석 중...');
 
     try {
       const contentText = rawInput;
@@ -132,6 +133,92 @@ export default function ContentInputPanel({
         file: null,
         storage_path: null,
       };
+
+      // ============================================
+      // #219: AI 분석 없이 원본 저장 모드
+      // ============================================
+      if (skipAiAnalysis) {
+        setProcessingStatus('원본 저장 중...');
+
+        // PDF 원본 저장
+        if (inputType === 'pdf' && selectedPdf) {
+          setProcessingStatus('PDF를 Supabase Storage에 업로드 중...');
+          const storageResult = await handlePdfStorageUpload(tempDocId);
+
+          const pdfDoc = {
+            title: inputTitle || selectedPdf.name.replace(/\.pdf$/i, ''),
+            team: '',
+            sections: [],
+            quiz: [],
+            ai_processed: false,
+            step: 1,
+            source_type: 'pdf',
+            source_url: storageResult?.publicUrl || null,
+            source_file: selectedPdf.name,
+            source_storage_path: storageResult?.path || null,
+          };
+
+          onDocumentsGenerated([pdfDoc]);
+          Toast.success('PDF가 원본 그대로 저장되었습니다. (퀴즈 없음)');
+          setIsProcessing(false);
+          setProcessingStatus('');
+          return;
+        }
+
+        // URL 원본 저장
+        if (inputType === 'url') {
+          let normalizedUrl = urlInput.trim();
+          if (!normalizedUrl.match(/^https?:\/\//i)) {
+            normalizedUrl = 'https://' + normalizedUrl;
+          }
+
+          const urlDoc = {
+            title: inputTitle || new URL(normalizedUrl).hostname,
+            team: '',
+            sections: [],
+            quiz: [],
+            ai_processed: false,
+            step: 1,
+            source_type: 'url',
+            source_url: normalizedUrl,
+            source_file: null,
+            source_storage_path: null,
+          };
+
+          onDocumentsGenerated([urlDoc]);
+          Toast.success('URL이 원본 그대로 저장되었습니다. (퀴즈 없음)');
+          setIsProcessing(false);
+          setProcessingStatus('');
+          return;
+        }
+
+        // 텍스트 원본 저장
+        if (inputType === 'text') {
+          const textDoc = {
+            title: inputTitle || '새 OJT 문서',
+            team: '',
+            sections: [
+              {
+                title: inputTitle || '원본 텍스트',
+                content: contentText,
+              },
+            ],
+            quiz: [],
+            ai_processed: false,
+            step: 1,
+            source_type: 'manual',
+            source_url: null,
+            source_file: null,
+            source_storage_path: null,
+          };
+
+          onDocumentsGenerated([textDoc]);
+          Toast.success('텍스트가 원본 그대로 저장되었습니다. (퀴즈 없음)');
+          setIsProcessing(false);
+          setProcessingStatus('');
+          return;
+        }
+      }
 
       // ============================================
       // 입력 타입별 텍스트 추출 (PDF/URL 동일 패턴)
@@ -491,23 +578,50 @@ export default function ContentInputPanel({
             type="checkbox"
             checked={autoSplit}
             onChange={(e) => setAutoSplit(e.target.checked)}
+            disabled={skipAiAnalysis}
           />
-          <span className="text-sm text-gray-600">자동 스텝 분할 ({requiredSteps}개)</span>
+          <span className={`text-sm ${skipAiAnalysis ? 'text-gray-400' : 'text-gray-600'}`}>
+            자동 스텝 분할 ({requiredSteps}개)
+          </span>
         </label>
 
-        {/* Generate Button (Gemini Only - Issue #200) */}
+        {/* Skip AI Analysis Toggle (#219) */}
+        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={skipAiAnalysis}
+              onChange={(e) => setSkipAiAnalysis(e.target.checked)}
+              className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+            />
+            <span className="text-sm font-medium text-amber-800">AI 분석 없이 원본 저장</span>
+          </label>
+          {skipAiAnalysis && (
+            <p className="text-xs text-amber-700 mt-2 ml-6">
+              ⚠️ 원본 그대로 저장됩니다. 퀴즈가 생성되지 않습니다.
+            </p>
+          )}
+        </div>
+
+        {/* Generate Button (Gemini Only - Issue #200, #219) */}
         <button
           onClick={handleGenerate}
           disabled={isProcessing}
-          className="w-full mt-4 py-3 text-white font-medium rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+          className={`w-full mt-4 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition ${
+            skipAiAnalysis
+              ? 'bg-amber-500 hover:bg-amber-600'
+              : 'bg-blue-500 hover:bg-blue-600'
+          }`}
         >
           {isProcessing
             ? processingStatus
-            : aiStatus.online
-              ? '✨ Gemini로 교육 자료 생성'
-              : '원문으로 등록 (AI 오프라인)'}
+            : skipAiAnalysis
+              ? '📄 원본 그대로 저장'
+              : aiStatus.online
+                ? '✨ Gemini로 교육 자료 생성'
+                : '원문으로 등록 (AI 오프라인)'}
         </button>
-        {!aiStatus.online && (
+        {!aiStatus.online && !skipAiAnalysis && (
           <p className="text-xs text-amber-600 mt-2 text-center">
             ⚠️ Gemini 서비스 오프라인 - 원문 그대로 등록됩니다
           </p>
