@@ -1,6 +1,10 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.25.0 - 2025-12-11
+//   - fix(content): PDF 학습 시 원본 PDF 직접 표시 (#211)
+//   - PDF도 URL과 동일하게 퀴즈만 생성 (섹션 없음)
+//   - SectionViewer에 PDF embed 뷰어 추가
 // 2.24.1 - 2025-12-11
 //   - fix(storage): 한글 파일명 PDF 업로드 오류 수정 (#213)
 //   - Storage key를 ASCII only로 생성 (Supabase 호환)
@@ -79,7 +83,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.24.1';
-export const BUILD_HASH = 'ddf0a8f';
-export const BUILD_SUMMARY = '한글 파일명 PDF 업로드 수정 (#213)';
+export const APP_VERSION = '2.25.0';
+export const BUILD_HASH = '06689bf';
+export const BUILD_SUMMARY = 'PDF 원본 표시 + 퀴즈만 생성 (#211)';
 export const BUILD_DATE = '2025-12-11';

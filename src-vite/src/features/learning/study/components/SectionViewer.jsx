@@ -166,11 +166,58 @@ export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
             )}
           </div>
         </div>
+      ) : doc.source_type === 'pdf' && doc.source_url ? (
+        /* PDF 학습: 원본 PDF 직접 표시 (#211) */
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800">📄 원본 PDF</h2>
+            <a
+              href={doc.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition text-sm font-medium"
+            >
+              📄 새 창에서 열기
+            </a>
+          </div>
+
+          {/* PDF embed 뷰어 */}
+          <div className="border rounded-lg overflow-hidden bg-gray-50">
+            <embed src={doc.source_url} type="application/pdf" className="w-full h-[600px]" />
+          </div>
+
+          {doc.source_file && (
+            <p className="text-xs text-gray-400 mt-2 text-center">파일: {doc.source_file}</p>
+          )}
+
+          <p className="text-sm text-gray-500 mt-3 text-center">
+            💡 위 PDF를 학습한 후 퀴즈를 풀어보세요
+          </p>
+
+          {/* PDF 학습 완료 버튼 */}
+          <div className="flex justify-center mt-6">
+            {hasQuiz ? (
+              <button
+                onClick={handleStartQuiz}
+                className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition"
+              >
+                학습 완료 → 퀴즈 시작하기
+              </button>
+            ) : (
+              <button
+                onClick={onBackToList}
+                className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition"
+              >
+                목록으로 돌아가기
+              </button>
+            )}
+          </div>
+        </div>
       ) : doc.source_type === 'url' && doc.source_url ? (
         /* URL 학습: 원본 URL 직접 표시 (#211) */
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-800">원본 콘텐츠</h2>
+            <h2 className="text-xl font-bold text-gray-800">🔗 원본 웹페이지</h2>
             <a
               href={doc.source_url}
               target="_blank"

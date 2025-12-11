@@ -122,7 +122,7 @@ export default function ContentInputPanel({
     setProcessingStatus('콘텐츠 분석 중...');
 
     try {
-      let contentText = rawInput;
+      const contentText = rawInput;
 
       // Source 정보 초기화 (#211 리팩토링)
       const tempDocId = crypto.randomUUID();
@@ -137,29 +137,50 @@ export default function ContentInputPanel({
       // 입력 타입별 텍스트 추출 (PDF/URL 동일 패턴)
       // ============================================
 
-      // 1. PDF 처리 (#198, #202, #206)
+      // 1. PDF 처리 (#198, #202, #206, #211 - 퀴즈만 생성, 학습 시 PDF 원본 표시)
       if (inputType === 'pdf' && selectedPdf) {
-        // 1-1. 텍스트 추출
+        // 1-1. 텍스트 추출 (퀴즈 생성용으로만 사용)
         setProcessingStatus('PDF 텍스트 추출 중...');
         const extracted = await extractPdfText(selectedPdf, (progress) => {
           setPdfProgress(progress);
           setProcessingStatus(`PDF 텍스트 추출 중... ${progress}%`);
         });
-        contentText = extracted.text;
-        setRawInput(contentText);
+        const quizSourceText = extracted.text;
 
         if (extracted.wasTruncated) {
-          Toast.info(`텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`);
+          Toast.info(
+            `퀴즈 생성용 텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`
+          );
         }
 
         // 1-2. Storage 업로드 (#202)
         setProcessingStatus('PDF를 Supabase Storage에 업로드 중...');
         const storageResult = await handlePdfStorageUpload(tempDocId);
 
-        // 1-3. Source 정보 설정
-        currentSourceInfo.url = storageResult?.publicUrl || null;
-        currentSourceInfo.file = selectedPdf.name;
-        currentSourceInfo.storage_path = storageResult?.path || null;
+        // 1-3. 퀴즈만 생성 (섹션 없음 - 원본 PDF 직접 표시 예정)
+        setProcessingStatus('PDF 퀴즈 생성 중 (Gemini)...');
+        const result = await generateUrlQuizOnly(
+          quizSourceText,
+          inputTitle || selectedPdf.name.replace(/\.pdf$/i, ''),
+          setProcessingStatus
+        );
+
+        // 1-4. PDF 문서는 단일 문서로 생성 (스텝 분할 없음)
+        const pdfDoc = {
+          ...result,
+          step: 1,
+          source_type: 'pdf',
+          source_url: storageResult?.publicUrl || null, // Storage URL (학습 시 PDF 표시)
+          source_file: selectedPdf.name,
+          source_storage_path: storageResult?.path || null,
+        };
+
+        // PDF 문서 즉시 반환 (아래 텍스트 처리 스킵)
+        onDocumentsGenerated([pdfDoc]);
+        Toast.success('PDF 콘텐츠가 생성되었습니다. (원본 PDF + 퀴즈)');
+        setIsProcessing(false);
+        setProcessingStatus('');
+        return;
       }
 
       // 2. URL 처리 (#208, #211 - 퀴즈만 생성, 학습 시 원본 URL 직접 호출)
