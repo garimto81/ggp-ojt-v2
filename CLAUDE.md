@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OJT Master - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-**Version**: 2.19.0 | **Deployment**: Vercel + Supabase Cloud + Gemini API
+**Version**: 2.19.1 | **Deployment**: Vercel + Supabase Cloud + Gemini API
 
 **Production URL**: https://ggp-ojt-v2.vercel.app
 
@@ -356,6 +356,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 | 버전 | 날짜 | 주요 변경 |
 |------|------|-----------|
+| v2.19.1 | 2025-12-11 | Gemini 모델 gemini-2.5-flash-lite로 변경 (Stable, 높은 할당량) (#200) |
 | v2.19.0 | 2025-12-11 | WebLLM 완전 제거, Gemini 단일 엔진 전환 (#200) |
 | v2.18.0 | 2025-12-10 | PDF 업로드 기능, 텍스트 추출 (#198) |
 | v2.17.0 | 2025-12-10 | Supabase 세션 관리 강화, RLS 에러 핸들링, 디버그 로깅 (#188, #189, #190) |
