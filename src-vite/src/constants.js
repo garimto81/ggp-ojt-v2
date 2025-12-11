@@ -64,9 +64,10 @@ export const CORS_CONFIG = {
 };
 
 // PDF Viewer configuration (FR-802)
+// Note: WORKER_SRC 버전은 package.json의 pdfjs-dist 버전과 일치해야 함
 export const PDF_CONFIG = {
-  // react-pdf worker
-  WORKER_SRC: 'https://unpkg.com/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs',
+  // react-pdf worker (pdfjs-dist@5.4.449)
+  WORKER_SRC: 'https://unpkg.com/pdfjs-dist@5.4.449/build/pdf.worker.min.mjs',
   // 최대 페이지 수 (메모리 제한)
   MAX_PAGES: 100,
   // 기본 확대 배율

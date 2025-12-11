@@ -8,8 +8,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { CONFIG } from '../constants';
 
 // PDF.js Worker 설정 (CDN 사용)
-// Note: package.json의 pdfjs-dist 버전과 맞춰야 함
-const PDFJS_VERSION = '4.4.168';
+// Note: package.json의 pdfjs-dist 버전과 맞춰야 함 (현재 5.4.449)
+const PDFJS_VERSION = '5.4.449';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`;
 
 // PDF 설정
