@@ -55,6 +55,6 @@
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
 export const APP_VERSION = '2.19.0';
-export const BUILD_HASH = 'pending';
+export const BUILD_HASH = '9dc0b23';
 export const BUILD_SUMMARY = 'WebLLM 제거, Gemini 단일 엔진 (#200)';
 export const BUILD_DATE = '2025-12-11';
