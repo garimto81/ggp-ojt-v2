@@ -1,6 +1,10 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.22.0 - 2025-12-11
+//   - fix(content): URL 프로토콜 자동 추가 (#208)
+//   - fix(content): 생성 후 자동 저장 (#209)
+//   - fix(ai): Gemini 응답 team/title 필드 기본값 설정
 // 2.21.0 - 2025-12-11
 //   - feat(ux): PDF 자동 텍스트 추출 (#206)
 //   - 생성 시점에 자동 추출, 수동 버튼 제거
@@ -64,7 +68,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.21.0';
-export const BUILD_HASH = '0659242';
-export const BUILD_SUMMARY = 'PDF 자동 텍스트 추출 (#206)';
+export const APP_VERSION = '2.22.0';
+export const BUILD_HASH = 'ba531ae';
+export const BUILD_SUMMARY = 'URL 개선 및 자동 저장 (#208, #209)';
 export const BUILD_DATE = '2025-12-11';
