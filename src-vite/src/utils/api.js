@@ -8,6 +8,7 @@ import { SUPABASE_CONFIG, CONFIG } from '../constants';
 // Import gemini-agent functions
 import {
   generateOJTContent as geminiGenerateOJTContent,
+  generateUrlQuizOnly as geminiGenerateUrlQuizOnly,
   regenerateQuiz as geminiRegenerateQuiz,
   checkStatus as geminiCheckStatus,
   validateQuizQuality as geminiValidateQuizQuality,
@@ -126,6 +127,43 @@ function createFallbackContent(contentText, title, errorMessage) {
     ai_processed: false,
     ai_error: errorMessage,
   };
+}
+
+/**
+ * Generate URL quiz only (no sections) - Issue #211
+ * URL 학습은 원본 페이지를 직접 보여주므로 섹션 없이 퀴즈만 생성
+ * @param {string} contentText - URL에서 추출한 텍스트 (퀴즈 생성용)
+ * @param {string} title - 문서 제목
+ * @param {Function} onProgress - Progress callback
+ * @returns {Promise<Object>} - Generated quiz content (no sections)
+ */
+export async function generateUrlQuizOnly(contentText, title, onProgress) {
+  try {
+    const result = await geminiGenerateUrlQuizOnly({
+      contentText,
+      title,
+      onProgress,
+      options: {
+        quizCount: CONFIG.QUIZ_TOTAL_POOL,
+      },
+    });
+
+    return result;
+  } catch (error) {
+    console.warn('URL 퀴즈 생성 실패:', error.message);
+
+    // Graceful Degradation: 빈 퀴즈 반환
+    if (onProgress) onProgress('퀴즈 생성 실패...');
+
+    return {
+      title: title || '제목 없음',
+      team: '미분류',
+      sections: [], // URL은 섹션 없음
+      quiz: [],
+      ai_processed: false,
+      ai_error: error.message,
+    };
+  }
 }
 
 /**

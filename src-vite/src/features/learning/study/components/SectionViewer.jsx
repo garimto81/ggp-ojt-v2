@@ -166,6 +166,54 @@ export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
             )}
           </div>
         </div>
+      ) : doc.source_type === 'url' && doc.source_url ? (
+        /* URL 학습: 원본 URL 직접 표시 (#211) */
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800">원본 콘텐츠</h2>
+            <a
+              href={doc.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition text-sm font-medium"
+            >
+              🔗 새 창에서 열기
+            </a>
+          </div>
+
+          {/* URL iframe 뷰어 */}
+          <div className="border rounded-lg overflow-hidden bg-gray-50">
+            <iframe
+              src={doc.source_url}
+              title={doc.title}
+              className="w-full h-[600px] border-0"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            />
+          </div>
+
+          <p className="text-sm text-gray-500 mt-3 text-center">
+            💡 위 콘텐츠를 학습한 후 퀴즈를 풀어보세요
+          </p>
+
+          {/* URL 학습 완료 버튼 */}
+          <div className="flex justify-center mt-6">
+            {hasQuiz ? (
+              <button
+                onClick={handleStartQuiz}
+                className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition"
+              >
+                학습 완료 → 퀴즈 시작하기
+              </button>
+            ) : (
+              <button
+                onClick={onBackToList}
+                className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition"
+              >
+                목록으로 돌아가기
+              </button>
+            )}
+          </div>
+        </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm p-6 text-center text-gray-500">
           이 문서에는 학습 섹션이 없습니다.

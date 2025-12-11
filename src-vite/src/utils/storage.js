@@ -76,19 +76,25 @@ export function validateFile(file) {
 }
 
 /**
- * 안전한 파일 경로 생성
+ * 안전한 파일 경로 생성 (#213 - 한글 파일명 지원)
+ *
+ * Supabase Storage는 ASCII 문자만 key로 허용합니다.
+ * 한글 등 non-ASCII 문자가 포함된 파일명은 UUID로 대체합니다.
+ *
  * @param {string} docId - 문서 ID
  * @param {string} fileName - 원본 파일명
- * @returns {string} 저장 경로
+ * @returns {string} 저장 경로 (ASCII only)
  */
 export function generateStoragePath(docId, fileName) {
-  // 파일명에서 특수문자 제거 (공백은 언더스코어로)
-  const safeFileName = fileName.replace(/[^a-zA-Z0-9가-힣._-]/g, '_').replace(/\s+/g, '_');
+  // 확장자 추출
+  const extension = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : 'pdf';
 
-  // 타임스탬프 추가로 중복 방지
+  // 타임스탬프 + 랜덤 문자열로 고유 ID 생성 (ASCII only)
   const timestamp = Date.now();
+  const randomId = Math.random().toString(36).substring(2, 8);
 
-  return `documents/${docId}/${timestamp}_${safeFileName}`;
+  // ASCII only 경로 생성 (한글/특수문자 없음)
+  return `documents/${docId}/${timestamp}_${randomId}.${extension}`;
 }
 
 /**

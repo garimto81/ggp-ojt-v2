@@ -9,7 +9,7 @@
 
 import { useState, useRef } from 'react';
 import { Toast } from '@/contexts/ToastContext';
-import { generateOJTContent, extractUrlText } from '@/utils/api';
+import { generateOJTContent, extractUrlText, generateUrlQuizOnly } from '@/utils/api';
 import { extractPdfText, validatePdfFile, getPdfInfo } from '@/utils/pdf';
 import { uploadPdfToStorage } from '@/utils/storage';
 import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
@@ -162,7 +162,7 @@ export default function ContentInputPanel({
         currentSourceInfo.storage_path = storageResult?.path || null;
       }
 
-      // 2. URL 처리 (#208, #211 - PDF와 동일 패턴)
+      // 2. URL 처리 (#208, #211 - 퀴즈만 생성, 학습 시 원본 URL 직접 호출)
       if (inputType === 'url') {
         // 2-1. URL 정규화 (프로토콜 자동 추가)
         let normalizedUrl = urlInput.trim();
@@ -170,18 +170,41 @@ export default function ContentInputPanel({
           normalizedUrl = 'https://' + normalizedUrl;
         }
 
-        // 2-2. 텍스트 추출
+        // 2-2. 텍스트 추출 (퀴즈 생성용으로만 사용)
         setProcessingStatus('URL에서 텍스트 추출 중...');
         const extracted = await extractUrlText(normalizedUrl, setProcessingStatus);
-        contentText = extracted.text;
-        setRawInput(contentText);
+        const quizSourceText = extracted.text;
 
         if (extracted.wasTruncated) {
-          Toast.info(`텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`);
+          Toast.info(
+            `퀴즈 생성용 텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`
+          );
         }
 
-        // 2-3. Source 정보 설정 (원본 URL 저장)
-        currentSourceInfo.url = normalizedUrl;
+        // 2-3. 퀴즈만 생성 (섹션 없음 - 원본 URL 직접 표시 예정)
+        setProcessingStatus('URL 퀴즈 생성 중 (Gemini)...');
+        const result = await generateUrlQuizOnly(
+          quizSourceText,
+          inputTitle || new URL(normalizedUrl).hostname,
+          setProcessingStatus
+        );
+
+        // 2-4. URL 문서는 단일 문서로 생성 (스텝 분할 없음)
+        const urlDoc = {
+          ...result,
+          step: 1,
+          source_type: 'url',
+          source_url: normalizedUrl, // 원본 URL 저장 (학습 시 직접 호출)
+          source_file: null,
+          source_storage_path: null,
+        };
+
+        // URL 문서 즉시 반환 (아래 PDF/텍스트 처리 스킵)
+        onDocumentsGenerated([urlDoc]);
+        Toast.success('URL 콘텐츠가 생성되었습니다. (원본 URL + 퀴즈)');
+        setIsProcessing(false);
+        setProcessingStatus('');
+        return;
       }
 
       // 3. 텍스트 직접 입력

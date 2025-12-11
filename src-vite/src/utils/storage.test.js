@@ -130,25 +130,37 @@ describe('storage', () => {
 
     it('should include timestamp for uniqueness', () => {
       const path = generateStoragePath('doc', 'test.pdf');
-      // 타임스탬프가 포함되어 있어야 함
-      expect(path).toMatch(/documents\/doc\/\d+_test\.pdf/);
+      // 타임스탬프가 포함되어 있어야 함 (새 형식: timestamp_randomId.ext)
+      expect(path).toMatch(/documents\/doc\/\d+_[a-z0-9]+\.pdf/);
     });
 
-    it('should sanitize special characters in filename', () => {
+    // #213: 한글 파일명은 ASCII 경로로 변환 (Supabase Storage 호환)
+    it('should generate ASCII-only path for Korean filename', () => {
+      const path = generateStoragePath('doc', '한글파일.pdf');
+      // 한글이 포함되지 않아야 함 (Supabase Storage 호환)
+      expect(path).not.toMatch(/[가-힣]/);
+      // 확장자는 유지되어야 함
+      expect(path).toMatch(/\.pdf$/);
+    });
+
+    it('should generate ASCII-only path for special characters', () => {
       const path = generateStoragePath('doc', 'my file (1).pdf');
       expect(path).not.toContain(' ');
       expect(path).not.toContain('(');
       expect(path).not.toContain(')');
+      expect(path).toMatch(/\.pdf$/);
     });
 
-    it('should preserve Korean characters', () => {
-      const path = generateStoragePath('doc', '한글파일.pdf');
-      expect(path).toContain('한글파일');
+    it('should preserve file extension', () => {
+      const path = generateStoragePath('doc', 'document.PDF');
+      expect(path).toMatch(/\.pdf$/); // 소문자로 정규화
     });
 
-    it('should replace spaces with underscores', () => {
-      const path = generateStoragePath('doc', 'my test file.pdf');
-      expect(path).toContain('my_test_file.pdf');
+    it('should generate unique paths for same filename', () => {
+      const path1 = generateStoragePath('doc', 'test.pdf');
+      const path2 = generateStoragePath('doc', 'test.pdf');
+      // 랜덤 ID로 인해 다른 경로 생성
+      expect(path1).not.toBe(path2);
     });
   });
 

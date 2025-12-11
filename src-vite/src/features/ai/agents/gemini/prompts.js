@@ -92,6 +92,46 @@ ${contentText.substring(0, 8000)}`;
 }
 
 /**
+ * URL 콘텐츠용 퀴즈만 생성 프롬프트 (#211)
+ * URL 학습은 원본 페이지를 직접 보여주므로 섹션 없이 퀴즈만 생성
+ * @param {string} title - 문서 제목
+ * @param {string} contentText - URL에서 추출한 텍스트 (퀴즈 생성용)
+ * @param {number} quizCount - 생성할 퀴즈 수
+ * @returns {string} 프롬프트 텍스트
+ */
+export function createUrlQuizOnlyPrompt(title, contentText, quizCount = 20) {
+  return `당신은 10년 경력의 기업 교육 설계 전문가입니다.
+
+다음 웹 페이지 텍스트를 분석하여 퀴즈 문제만 생성하세요.
+(섹션은 생성하지 않음 - 학습자가 원본 URL을 직접 볼 예정)
+
+문서 제목: "${title}"
+
+## 출력 형식 (반드시 JSON)
+{
+  "title": "${title}",
+  "team": "미분류",
+  "quiz": [
+    {
+      "question": "문제 내용",
+      "options": ["선택지1", "선택지2", "선택지3", "선택지4"],
+      "correct": 0
+    }
+  ]
+}
+
+## 퀴즈 구성 (${quizCount}개)
+- 기억형 40%: 핵심 용어, 정의
+- 이해형 35%: 개념 관계, 비교
+- 적용형 25%: 실무 상황 판단
+- 각 문제는 4개의 명확히 다른 선택지 필요
+- 정답은 반드시 선택지 중 하나
+
+## 웹 페이지 텍스트
+${contentText.substring(0, 12000)}`;
+}
+
+/**
  * 헬스체크용 간단한 프롬프트
  * @returns {string}
  */
