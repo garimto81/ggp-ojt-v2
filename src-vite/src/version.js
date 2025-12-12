@@ -1,6 +1,20 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.31.0 - 2025-12-12
+//   - feat: 버전 자동 업데이트 시스템 추가
+//   - 캐시 삭제 없이 새 버전 감지 및 Toast 알림
+//   - VersionContext, vite-plugin-version 도입
+// 2.30.0 - 2025-12-12
+//   - feat(design): 톤앤매너 가이드라인 시스템 적용 (PRD-0014) (#225)
+//   - 디자인 토큰 (색상, 타이포그래피) 정의
+//   - Toast, EmptyState 컴포넌트 리디자인
+// 2.29.0 - 2025-12-12
+//   - feat: 퀴즈 없는 문서 열람 완료 기능 (#223) (#224)
+//   - 퀴즈 없는 문서도 "열람 완료" 버튼으로 학습 완료 처리
+// 2.28.0 - 2025-12-12
+//   - fix: 학습 완료 판단 로직 단순화 (#221) (#222)
+//   - learning_records.passed만으로 완료 여부 판단
 // 2.27.0 - 2025-12-11
 //   - feat(content): AI 분석 없이 원본 저장 기능 (#219)
 //   - skipAiAnalysis 토글로 텍스트/URL/PDF 원본 그대로 저장
@@ -91,7 +105,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.27.0';
-export const BUILD_HASH = 'e29c313';
-export const BUILD_SUMMARY = 'AI 분석 없이 원본 저장 (#219)';
-export const BUILD_DATE = '2025-12-11';
+export const APP_VERSION = '2.31.0';
+export const BUILD_HASH = '1c21946';
+export const BUILD_SUMMARY = '버전 자동 업데이트 시스템';
+export const BUILD_DATE = '2025-12-12';
