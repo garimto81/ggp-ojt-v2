@@ -14,15 +14,7 @@ import { Card, CardContent } from './card';
  * @param {'default'|'success'|'warning'|'error'} [props.variant] - Color variant
  * @param {string} [props.className] - Additional classes
  */
-export function StatsCard({
-  icon,
-  value,
-  label,
-  trend,
-  variant = 'default',
-  className,
-  ...props
-}) {
+export function StatsCard({ icon, value, label, trend, variant = 'default', className, ...props }) {
   const valueColorClass = {
     default: 'text-gray-800',
     success: 'text-success-600',
@@ -43,18 +35,10 @@ export function StatsCard({
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-500">{label}</p>
-            <p className={cn('text-2xl font-bold mt-1', valueColorClass[variant])}>
-              {value}
-            </p>
-            {trend && (
-              <p className={cn('text-xs mt-1', trendColorClass[variant])}>
-                {trend}
-              </p>
-            )}
+            <p className={cn('text-2xl font-bold mt-1', valueColorClass[variant])}>{value}</p>
+            {trend && <p className={cn('text-xs mt-1', trendColorClass[variant])}>{trend}</p>}
           </div>
-          {icon && (
-            <div className="text-2xl opacity-80">{icon}</div>
-          )}
+          {icon && <div className="text-2xl opacity-80">{icon}</div>}
         </div>
       </CardContent>
     </Card>
@@ -71,11 +55,7 @@ export function StatsCardGrid({ children, className, columns = 4 }) {
     4: 'grid-cols-2 md:grid-cols-4',
   };
 
-  return (
-    <div className={cn('grid gap-4', gridCols[columns], className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn('grid gap-4', gridCols[columns], className)}>{children}</div>;
 }
 
 export default StatsCard;

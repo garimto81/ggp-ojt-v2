@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **OJT Master** - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-- **Version**: 2.24.1
+- **Version**: 2.32.0 (see `src-vite/src/version.js` for SSOT)
 - **Production**: https://ggp-ojt-v2.vercel.app (Vercel + Supabase Cloud + Gemini API)
 
 ## Tech Stack
@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 영역 | 기술 |
 |------|------|
 | Frontend | React 19 + Vite 7 + Tailwind CSS 4 |
+| UI Components | shadcn/ui (Button, Card, Input, Badge, Table, Select, Progress) |
 | Database | Supabase (PostgreSQL + REST API) |
 | AI | Google Gemini API (gemini-2.5-flash-lite) |
 | Editor | Quill 2.0 (Rich Text) |
@@ -73,7 +74,10 @@ ggp_ojt_v2/
 │       │   ├── AuthContext.jsx
 │       │   ├── AIContext.jsx
 │       │   ├── DocsContext.jsx
-│       │   └── ToastContext.jsx
+│       │   ├── ToastContext.jsx
+│       │   └── VersionContext.jsx  # 버전 자동 업데이트 (v2.31.0+)
+│       ├── components/ui/       # shadcn/ui 컴포넌트 (v2.32.0+)
+│       ├── shared/              # 공유 유틸리티, 레이아웃
 │       └── utils/               # API, helpers, logger
 ├── database/agents/supabase/    # DB 스키마 문서
 ├── tests/                       # Playwright E2E 테스트
@@ -86,22 +90,26 @@ ggp_ojt_v2/
 |-------|------|
 | `@` | `src/` |
 | `@features` | `src/features/` |
-| `@/contexts` | `src/contexts/` |
-| `@/utils` | `src/utils/` |
+| `@shared` | `src/shared/` |
+| `@utils` | `src/utils/` (legacy) |
+| `@contexts` | `src/contexts/` (legacy) |
+| `@components` | `src/components/` (legacy) |
 
-> ⚠️ **중요**: 모든 alias는 `@/` 형식 사용 필수 (`@contexts` ❌ → `@/contexts` ✅)
+> **참고**: `@/` 형식과 `@prefix` 형식 모두 지원 (하위 호환)
 
 ## Provider Hierarchy (main.jsx)
 
 ```jsx
 <ToastProvider>
-  <AuthProvider>
-    <AIProvider>
-      <DocsProvider>
-        <App />
-      </DocsProvider>
-    </AIProvider>
-  </AuthProvider>
+  <VersionProvider>       {/* 버전 자동 업데이트 (v2.31.0+) */}
+    <AuthProvider>
+      <AIProvider>
+        <DocsProvider>
+          <App />
+        </DocsProvider>
+      </AIProvider>
+    </AuthProvider>
+  </VersionProvider>
 </ToastProvider>
 ```
 
@@ -135,6 +143,24 @@ const AdminDashboard = lazy(() =>
 
 ```javascript
 import { generateOJTContent, checkStatus } from '@features/ai/agents/gemini';
+```
+
+### Version Auto-Update (v2.31.0+)
+
+빌드 시 `version.json` 생성 → 런타임에 5분 간격 폴링 → 버전 불일치 시 Toast 알림
+
+```javascript
+// src/version.js - 버전 정보 SSOT
+export const APP_VERSION = '2.32.0';
+export const BUILD_HASH = '730f37f';
+```
+
+### shadcn/ui Components (v2.32.0+)
+
+`src/components/ui/`에 위치. Radix UI 기반 headless 컴포넌트.
+
+```javascript
+import { Button, Card, Input, Badge } from '@/components/ui';
 ```
 
 ## Database Schema
@@ -186,6 +212,8 @@ teams (id UUID PK, name, slug, display_order, is_active)
 2. **퀴즈 정답 인덱스**: 0 처리 주의 (`!== undefined` 사용)
 3. **RLS 함수명**: `is_admin()` → `rls_is_admin()` (rls_ 접두사 필수)
 4. **Graceful Degradation**: Gemini API 실패 시 원문 모드로 전환
+5. **버전 관리**: `src/version.js`만 수정 (CLAUDE.md 버전은 참조용)
+6. **스키마 없는 필드**: DB 저장 시 `ai_processed`, `ai_error`, `ai_engine` 필드 제거 필요
 
 ## Testing
 
@@ -197,6 +225,7 @@ teams (id UUID PK, name, slug, display_order, is_active)
 
 | 문서 | 내용 |
 |------|------|
+| `src-vite/src/version.js` | 버전 정보 SSOT + 변경 이력 |
 | `docs/BLOCK_AGENT_SYSTEM.md` | Feature 모듈 상세 |
 | `docs/STATE_MANAGEMENT_GUIDE.md` | 상태 관리 가이드 |
 | `database/agents/supabase/SCHEMA.md` | DB 스키마 상세 |

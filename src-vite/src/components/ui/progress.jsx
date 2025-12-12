@@ -14,10 +14,7 @@ const Progress = forwardRef(({ className, value = 0, max = 100, ...props }, ref)
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={value}
-      className={cn(
-        'relative h-2 w-full overflow-hidden rounded-full bg-gray-200',
-        className
-      )}
+      className={cn('relative h-2 w-full overflow-hidden rounded-full bg-gray-200', className)}
       {...props}
     >
       <div
@@ -48,17 +45,11 @@ const ProgressVariant = forwardRef(
         aria-valuemin={0}
         aria-valuemax={max}
         aria-valuenow={value}
-        className={cn(
-          'relative h-2 w-full overflow-hidden rounded-full bg-gray-200',
-          className
-        )}
+        className={cn('relative h-2 w-full overflow-hidden rounded-full bg-gray-200', className)}
         {...props}
       >
         <div
-          className={cn(
-            'h-full transition-all duration-300 ease-in-out',
-            variantStyles[variant]
-          )}
+          className={cn('h-full transition-all duration-300 ease-in-out', variantStyles[variant])}
           style={{ width: `${percentage}%` }}
         />
       </div>

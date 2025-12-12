@@ -2,15 +2,9 @@
 // Issue #200: AI 상태 표시 개선 (Gemini 단일 엔진)
 // PRD-0015: shadcn/ui 적용
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import {
-  ROLES,
-  ROLE_THEMES,
-  DEFAULT_THEME,
-  DEPARTMENT_THEMES,
-  DEFAULT_DEPARTMENT_THEME,
-} from '../constants';
+import { ROLES } from '../constants';
 import { APP_VERSION, BUILD_HASH, BUILD_SUMMARY } from '../version';
 import { Button, Badge } from '@/components/ui';
 
@@ -21,19 +15,8 @@ export default function Header({ aiStatus }) {
   const isAdmin = user?.role === ROLES.ADMIN;
   const isTempMentorMode = sessionMode === 'mentor';
 
-  // 현재 역할에 따른 테마 결정 (Issue #170)
-  // Admin이 임시 Mentor 모드일 때는 Mentor 테마 적용
-  const currentTheme = useMemo(() => {
-    if (!user) return DEFAULT_THEME;
-    if (isTempMentorMode) return ROLE_THEMES[ROLES.MENTOR];
-    return ROLE_THEMES[user.role] || DEFAULT_THEME;
-  }, [user, isTempMentorMode]);
-
-  // 부서에 따른 테마 결정 (Issue #170)
-  const departmentTheme = useMemo(() => {
-    if (!user?.department) return DEFAULT_DEPARTMENT_THEME;
-    return DEPARTMENT_THEMES[user.department] || DEFAULT_DEPARTMENT_THEME;
-  }, [user]);
+  // NOTE: currentTheme, departmentTheme은 PRD-0015 shadcn/ui 전환으로 Badge variant 사용
+  // 기존 테마 로직은 constants.js에 보존 (향후 커스텀 테마 지원 시 활용)
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -121,9 +104,7 @@ export default function Header({ aiStatus }) {
                     <Badge variant={user.role || 'default'}>{displayRole}</Badge>
                   )}
                   {/* Department Badge */}
-                  {user.department && (
-                    <Badge variant="outline">{user.department}</Badge>
-                  )}
+                  {user.department && <Badge variant="outline">{user.department}</Badge>}
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   로그아웃

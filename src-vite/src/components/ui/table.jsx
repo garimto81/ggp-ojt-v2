@@ -6,11 +6,7 @@ import { cn } from '@/lib/utils';
 
 const Table = forwardRef(({ className, ...props }, ref) => (
   <div className="relative w-full overflow-auto">
-    <table
-      ref={ref}
-      className={cn('w-full caption-bottom text-sm', className)}
-      {...props}
-    />
+    <table ref={ref} className={cn('w-full caption-bottom text-sm', className)} {...props} />
   </div>
 ));
 Table.displayName = 'Table';
@@ -21,21 +17,14 @@ const TableHeader = forwardRef(({ className, ...props }, ref) => (
 TableHeader.displayName = 'TableHeader';
 
 const TableBody = forwardRef(({ className, ...props }, ref) => (
-  <tbody
-    ref={ref}
-    className={cn('[&_tr:last-child]:border-0', className)}
-    {...props}
-  />
+  <tbody ref={ref} className={cn('[&_tr:last-child]:border-0', className)} {...props} />
 ));
 TableBody.displayName = 'TableBody';
 
 const TableFooter = forwardRef(({ className, ...props }, ref) => (
   <tfoot
     ref={ref}
-    className={cn(
-      'border-t bg-gray-50 font-medium [&>tr]:last:border-b-0',
-      className
-    )}
+    className={cn('border-t bg-gray-50 font-medium [&>tr]:last:border-b-0', className)}
     {...props}
   />
 ));
@@ -78,21 +67,8 @@ const TableCell = forwardRef(({ className, ...props }, ref) => (
 TableCell.displayName = 'TableCell';
 
 const TableCaption = forwardRef(({ className, ...props }, ref) => (
-  <caption
-    ref={ref}
-    className={cn('mt-4 text-sm text-gray-500', className)}
-    {...props}
-  />
+  <caption ref={ref} className={cn('mt-4 text-sm text-gray-500', className)} {...props} />
 ));
 TableCaption.displayName = 'TableCaption';
 
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-};
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };

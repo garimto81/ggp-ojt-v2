@@ -321,27 +321,10 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       {/* Stats Cards (PRD-0015 shadcn/ui) */}
       <StatsCardGrid columns={4}>
-        <StatsCard
-          icon="👥"
-          label="총 사용자"
-          value={stats.totalUsers}
-        />
-        <StatsCard
-          icon="📄"
-          label="총 문서"
-          value={stats.totalDocs}
-        />
-        <StatsCard
-          icon="📚"
-          label="학습 기록"
-          value={stats.totalRecords.toLocaleString()}
-        />
-        <StatsCard
-          icon="✅"
-          label="통과율"
-          value={`${stats.passRate}%`}
-          variant="success"
-        />
+        <StatsCard icon="👥" label="총 사용자" value={stats.totalUsers} />
+        <StatsCard icon="📄" label="총 문서" value={stats.totalDocs} />
+        <StatsCard icon="📚" label="학습 기록" value={stats.totalRecords.toLocaleString()} />
+        <StatsCard icon="✅" label="통과율" value={`${stats.passRate}%`} variant="success" />
       </StatsCardGrid>
 
       {/* Tabs (Issue #77: Added a11y) */}
@@ -460,7 +443,9 @@ export default function AdminDashboard() {
                             <TableCell className="font-medium">
                               {u.name}
                               {u.is_active === false && (
-                                <Badge variant="error" className="ml-2">정지됨</Badge>
+                                <Badge variant="error" className="ml-2">
+                                  정지됨
+                                </Badge>
                               )}
                             </TableCell>
                             <TableCell>
