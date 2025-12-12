@@ -23,14 +23,18 @@ export function useLearningRecord() {
     const passed = score >= CONFIG.QUIZ_PASS_THRESHOLD;
 
     try {
-      await supabase.from('learning_records').insert({
-        user_id: userId,
-        doc_id: docId,
-        score: score,
-        total_questions: totalQuestions,
-        passed: passed,
-        completed_at: new Date().toISOString(), // ISO 문자열로 통일 (timestamptz)
-      });
+      // upsert: 재학습 시 기존 기록 갱신 (UNIQUE(user_id, doc_id) 제약조건)
+      await supabase.from('learning_records').upsert(
+        {
+          user_id: userId,
+          doc_id: docId,
+          score: score,
+          total_questions: totalQuestions,
+          passed: passed,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,doc_id' }
+      );
 
       if (passed) {
         Toast.success('축하합니다! 퀴즈를 통과했습니다!');
