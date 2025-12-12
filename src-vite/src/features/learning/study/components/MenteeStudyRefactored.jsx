@@ -75,6 +75,7 @@ export default function MenteeStudy() {
   return (
     <SectionViewer
       doc={selectedDoc}
+      userId={user.id}
       onStudyComplete={handleStudyComplete}
       onBackToList={handleBackToList}
     />

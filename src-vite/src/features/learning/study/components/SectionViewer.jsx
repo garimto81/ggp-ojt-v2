@@ -2,14 +2,22 @@
  * SectionViewer - 섹션 학습 뷰어
  * @agent learning-study-agent
  * @blocks learning.section
+ *
+ * 학습 완료 판단 (Issue #221):
+ * - 퀴즈 있음 → 퀴즈 시작 (QuizSession에서 처리)
+ * - 퀴즈 없음 → 열람 완료 버튼 클릭 시 learning_records 저장
  */
 
 import { useState } from 'react';
 import { sanitizeHtml } from '@/utils/helpers';
+import { useLearningRecord } from '@features/learning/quiz/hooks/useLearningRecord';
 
-export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
+export default function SectionViewer({ doc, userId, onStudyComplete, onBackToList }) {
   const [currentSection, setCurrentSection] = useState(0);
   const [studyCompleted, setStudyCompleted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { saveViewCompletion } = useLearningRecord();
 
   const sections = doc?.sections || [];
   const totalSections = sections.length;
@@ -33,6 +41,19 @@ export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
   const handleStartQuiz = () => {
     if (onStudyComplete) {
       onStudyComplete();
+    }
+  };
+
+  // 퀴즈 없는 문서 열람 완료 처리
+  const handleViewComplete = async () => {
+    if (!userId || !doc?.id) return;
+
+    setIsSaving(true);
+    try {
+      await saveViewCompletion({ userId, docId: doc.id });
+      onBackToList();
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -150,10 +171,11 @@ export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
                 </button>
               ) : (
                 <button
-                  onClick={onBackToList}
-                  className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition"
+                  onClick={handleViewComplete}
+                  disabled={isSaving}
+                  className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 disabled:opacity-50 transition"
                 >
-                  목록으로 돌아가기
+                  {isSaving ? '저장 중...' : '✓ 학습 완료'}
                 </button>
               )
             ) : (
@@ -205,10 +227,11 @@ export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
               </button>
             ) : (
               <button
-                onClick={onBackToList}
-                className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition"
+                onClick={handleViewComplete}
+                disabled={isSaving}
+                className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 disabled:opacity-50 transition"
               >
-                목록으로 돌아가기
+                {isSaving ? '저장 중...' : '✓ 학습 완료'}
               </button>
             )}
           </div>
@@ -253,10 +276,11 @@ export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
               </button>
             ) : (
               <button
-                onClick={onBackToList}
-                className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 transition"
+                onClick={handleViewComplete}
+                disabled={isSaving}
+                className="px-6 py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 disabled:opacity-50 transition"
               >
-                목록으로 돌아가기
+                {isSaving ? '저장 중...' : '✓ 학습 완료'}
               </button>
             )}
           </div>
@@ -298,14 +322,15 @@ export default function SectionViewer({ doc, onStudyComplete, onBackToList }) {
 
       {/* Study Complete without Quiz */}
       {studyCompleted && !hasQuiz && (
-        <div className="bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl p-6 text-white text-center">
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-6 text-white text-center">
           <h3 className="text-lg font-bold mb-2">학습 완료!</h3>
-          <p className="opacity-90 mb-4">이 문서는 퀴즈가 없습니다. 다른 문서를 학습해보세요.</p>
+          <p className="opacity-90 mb-4">아래 버튼을 눌러 학습을 완료하세요.</p>
           <button
-            onClick={onBackToList}
-            className="px-6 py-3 bg-white text-gray-600 font-medium rounded-lg hover:bg-gray-100 transition"
+            onClick={handleViewComplete}
+            disabled={isSaving}
+            className="px-6 py-3 bg-white text-green-600 font-medium rounded-lg hover:bg-gray-100 disabled:opacity-50 transition"
           >
-            목록으로 돌아가기
+            {isSaving ? '저장 중...' : '✓ 학습 완료 저장'}
           </button>
         </div>
       )}
