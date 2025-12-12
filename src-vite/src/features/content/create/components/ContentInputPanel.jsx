@@ -5,6 +5,7 @@
  * @issue #198 - PDF 업로드 및 URL 텍스트 추출 기능
  * @issue #200 - WebLLM 제거, Gemini 단일 엔진
  * @issue #202 - PDF Supabase Storage 저장
+ * @issue #215 - Gemini 생성 중 프로그레스바 + UI 비활성화
  */
 
 import { useState, useRef } from 'react';
@@ -14,6 +15,7 @@ import { extractPdfText, validatePdfFile, getPdfInfo } from '@/utils/pdf';
 import { uploadPdfToStorage } from '@/utils/storage';
 import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
 import { SUCCESS, ERROR, WARNING, INFO } from '@/constants/messages';
+import { Progress } from '@/components/ui';
 
 export default function ContentInputPanel({
   aiStatus,
@@ -35,9 +37,10 @@ export default function ContentInputPanel({
   const [, setPdfStorageInfo] = useState(null); // Storage 업로드 결과 (#202)
   const pdfInputRef = useRef(null);
 
-  // Processing states
+  // Processing states (#215 - 프로그레스바 및 UI 비활성화)
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
+  const [progress, setProgress] = useState(0); // 0-100 진행률
 
   // Derived values
   const estimatedTime = rawInput ? estimateReadingTime(rawInput) : 0;
@@ -121,6 +124,7 @@ export default function ContentInputPanel({
     }
 
     setIsProcessing(true);
+    setProgress(5); // 시작
     setProcessingStatus(skipAiAnalysis ? '원본 저장 중...' : '콘텐츠 분석 중...');
 
     try {
@@ -139,6 +143,7 @@ export default function ContentInputPanel({
       // #219: AI 분석 없이 원본 저장 모드
       // ============================================
       if (skipAiAnalysis) {
+        setProgress(50);
         setProcessingStatus('원본 저장 중...');
 
         // PDF 원본 저장
@@ -159,10 +164,12 @@ export default function ContentInputPanel({
             source_storage_path: storageResult?.path || null,
           };
 
+          setProgress(100);
           onDocumentsGenerated([pdfDoc]);
           Toast.success(SUCCESS.PDF_SAVED_RAW);
           setIsProcessing(false);
           setProcessingStatus('');
+          setProgress(0);
           return;
         }
 
@@ -186,10 +193,12 @@ export default function ContentInputPanel({
             source_storage_path: null,
           };
 
+          setProgress(100);
           onDocumentsGenerated([urlDoc]);
           Toast.success(SUCCESS.URL_SAVED_RAW);
           setIsProcessing(false);
           setProcessingStatus('');
+          setProgress(0);
           return;
         }
 
@@ -213,10 +222,12 @@ export default function ContentInputPanel({
             source_storage_path: null,
           };
 
+          setProgress(100);
           onDocumentsGenerated([textDoc]);
           Toast.success(SUCCESS.TEXT_SAVED_RAW);
           setIsProcessing(false);
           setProcessingStatus('');
+          setProgress(0);
           return;
         }
       }
@@ -228,6 +239,7 @@ export default function ContentInputPanel({
       // 1. PDF 처리 (#198, #202, #206, #211, #217 - 퀴즈만 생성, 학습 시 PDF 원본 표시)
       if (inputType === 'pdf' && selectedPdf) {
         // 1-1. 텍스트 추출 (퀴즈 생성용으로만 사용, OCR fallback 포함)
+        setProgress(10);
         setProcessingStatus('PDF 텍스트 추출 중...');
         const extracted = await extractPdfText(selectedPdf, (progress) => {
           setPdfProgress(progress);
@@ -247,10 +259,12 @@ export default function ContentInputPanel({
         }
 
         // 1-2. Storage 업로드 (#202)
+        setProgress(30);
         setProcessingStatus('PDF를 Supabase Storage에 업로드 중...');
         const storageResult = await handlePdfStorageUpload(tempDocId);
 
         // 1-3. 퀴즈만 생성 (섹션 없음 - 원본 PDF 직접 표시 예정)
+        setProgress(50);
         setProcessingStatus('PDF 퀴즈 생성 중 (Gemini)...');
         const result = await generateUrlQuizOnly(
           quizSourceText,
@@ -269,10 +283,12 @@ export default function ContentInputPanel({
         };
 
         // PDF 문서 즉시 반환 (아래 텍스트 처리 스킵)
+        setProgress(100);
         onDocumentsGenerated([pdfDoc]);
         Toast.success(SUCCESS.PDF_CONTENT_CREATED);
         setIsProcessing(false);
         setProcessingStatus('');
+        setProgress(0);
         return;
       }
 
@@ -285,6 +301,7 @@ export default function ContentInputPanel({
         }
 
         // 2-2. 텍스트 추출 (퀴즈 생성용으로만 사용)
+        setProgress(20);
         setProcessingStatus('URL에서 텍스트 추출 중...');
         const extracted = await extractUrlText(normalizedUrl, setProcessingStatus);
         const quizSourceText = extracted.text;
@@ -296,6 +313,7 @@ export default function ContentInputPanel({
         }
 
         // 2-3. 퀴즈만 생성 (섹션 없음 - 원본 URL 직접 표시 예정)
+        setProgress(50);
         setProcessingStatus('URL 퀴즈 생성 중 (Gemini)...');
         const result = await generateUrlQuizOnly(
           quizSourceText,
@@ -314,10 +332,12 @@ export default function ContentInputPanel({
         };
 
         // URL 문서 즉시 반환 (아래 PDF/텍스트 처리 스킵)
+        setProgress(100);
         onDocumentsGenerated([urlDoc]);
         Toast.success(SUCCESS.URL_CONTENT_CREATED);
         setIsProcessing(false);
         setProcessingStatus('');
+        setProgress(0);
         return;
       }
 
@@ -336,6 +356,7 @@ export default function ContentInputPanel({
       const docs = [];
 
       // Generate content for each step (Gemini API)
+      setProgress(30);
       if (numSteps > 1) {
         const promises = segments.map((segment, i) =>
           generateOJTContent(segment, inputTitle || '새 OJT 문서', i + 1, numSteps, (status) =>
@@ -372,7 +393,9 @@ export default function ContentInputPanel({
       }
 
       // Callback with generated docs
+      setProgress(95);
       onDocumentsGenerated(docs);
+      setProgress(100);
 
       // Check if any doc was created with fallback
       const fallbackDocs = docs.filter((d) => d.ai_processed === false);
@@ -386,6 +409,7 @@ export default function ContentInputPanel({
     } finally {
       setIsProcessing(false);
       setProcessingStatus('');
+      setProgress(0);
     }
   };
 
@@ -403,17 +427,18 @@ export default function ContentInputPanel({
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-4">콘텐츠 입력</h2>
 
-        {/* Input Type Selector */}
+        {/* Input Type Selector (#215 - 생성 중 비활성화) */}
         <div className="flex gap-2 mb-4">
           {['text', 'url', 'pdf'].map((type) => (
             <button
               key={type}
               onClick={() => setInputType(type)}
+              disabled={isProcessing}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 inputType === type
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {type === 'text' && '텍스트'}
               {type === 'url' && 'URL'}
@@ -422,22 +447,24 @@ export default function ContentInputPanel({
           ))}
         </div>
 
-        {/* Title Input */}
+        {/* Title Input (#215 - 생성 중 비활성화) */}
         <input
           type="text"
           value={inputTitle}
           onChange={(e) => setInputTitle(e.target.value)}
           placeholder="문서 제목"
-          className="w-full px-4 py-2 border rounded-lg mb-4"
+          disabled={isProcessing}
+          className={`w-full px-4 py-2 border rounded-lg mb-4 ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
         />
 
-        {/* Content Input */}
+        {/* Content Input (#215 - 생성 중 비활성화) */}
         {inputType === 'text' && (
           <textarea
             value={rawInput}
             onChange={(e) => setRawInput(e.target.value)}
             placeholder="교육 콘텐츠를 입력하세요..."
-            className="w-full h-64 px-4 py-3 border rounded-lg resize-none"
+            disabled={isProcessing}
+            className={`w-full h-64 px-4 py-3 border rounded-lg resize-none ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
           />
         )}
 
@@ -447,7 +474,8 @@ export default function ContentInputPanel({
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="https://example.com/article"
-            className="w-full px-4 py-2 border rounded-lg"
+            disabled={isProcessing}
+            className={`w-full px-4 py-2 border rounded-lg ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
           />
         )}
 
@@ -604,23 +632,38 @@ export default function ContentInputPanel({
           )}
         </div>
 
+        {/* Progress Bar (#215 - Gemini 생성 중 프로그레스바) */}
+        {isProcessing && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-medium text-blue-700">{processingStatus}</span>
+            </div>
+            <Progress value={progress} className="h-3" />
+            <p className="text-xs text-blue-600 mt-2 text-center">{progress}% 완료</p>
+          </div>
+        )}
+
         {/* Generate Button (Gemini Only - Issue #200, #219) */}
         <button
           onClick={handleGenerate}
           disabled={isProcessing}
           className={`w-full mt-4 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition ${
-            skipAiAnalysis
-              ? 'bg-amber-500 hover:bg-amber-600'
-              : 'bg-blue-500 hover:bg-blue-600'
+            skipAiAnalysis ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-500 hover:bg-blue-600'
           }`}
         >
-          {isProcessing
-            ? processingStatus
-            : skipAiAnalysis
-              ? '📄 원본 그대로 저장'
-              : aiStatus.online
-                ? '✨ Gemini로 교육 자료 생성'
-                : '원문으로 등록 (AI 오프라인)'}
+          {isProcessing ? (
+            <span className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              처리 중...
+            </span>
+          ) : skipAiAnalysis ? (
+            '📄 원본 그대로 저장'
+          ) : aiStatus.online ? (
+            '✨ Gemini로 교육 자료 생성'
+          ) : (
+            '원문으로 등록 (AI 오프라인)'
+          )}
         </button>
         {!aiStatus.online && !skipAiAnalysis && (
           <p className="text-xs text-amber-600 mt-2 text-center">

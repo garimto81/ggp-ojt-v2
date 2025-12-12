@@ -1,6 +1,10 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.33.0 - 2025-12-12
+//   - feat(ux): Gemini 생성 중 프로그레스바 및 UI 비활성화 (#215)
+//   - 단계별 진행률 표시 (추출 → 업로드 → AI 생성 → 완료)
+//   - 생성 중 입력 필드, 탭 버튼 비활성화로 중복 요청 방지
 // 2.32.0 - 2025-12-12
 //   - feat(ui): shadcn/ui 컴포넌트 시스템 구현 (PRD-0015)
 //   - Button, Card, Input, Badge, Table, Select, Progress, StatsCard 추가
@@ -109,7 +113,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.32.0';
-export const BUILD_HASH = '730f37f';
-export const BUILD_SUMMARY = 'shadcn/ui 컴포넌트 시스템';
+export const APP_VERSION = '2.33.0';
+export const BUILD_HASH = '3bef54d';
+export const BUILD_SUMMARY = 'Gemini 프로그레스바';
 export const BUILD_DATE = '2025-12-12';
