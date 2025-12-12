@@ -1,6 +1,10 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.34.0 - 2025-12-12
+//   - feat: DepartmentsContext 호환성 레이어 추가 (#178)
+//   - departments 테이블 있으면 사용, 없으면 admin_settings 폴백
+//   - 향후 DB 마이그레이션 후 컴포넌트 점진적 마이그레이션 예정
 // 2.33.0 - 2025-12-12
 //   - feat(ux): Gemini 생성 중 프로그레스바 및 UI 비활성화 (#215)
 //   - 단계별 진행률 표시 (추출 → 업로드 → AI 생성 → 완료)
@@ -113,7 +117,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.33.0';
-export const BUILD_HASH = '3bef54d';
-export const BUILD_SUMMARY = 'Gemini 프로그레스바';
+export const APP_VERSION = '2.34.0';
+export const BUILD_HASH = '5dc149a';
+export const BUILD_SUMMARY = 'DepartmentsContext';
 export const BUILD_DATE = '2025-12-12';

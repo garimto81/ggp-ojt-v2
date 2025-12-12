@@ -1,5 +1,5 @@
-// OJT Master v2.28.0 - Application Entry Point
-// 버전 자동 업데이트 시스템 추가
+// OJT Master v2.33.0 - Application Entry Point
+// #178: DepartmentsProvider 추가
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -10,6 +10,7 @@ import {
   ToastProvider,
   AIProvider,
   VersionProvider,
+  DepartmentsProvider,
 } from './contexts';
 import './index.css';
 
@@ -18,11 +19,13 @@ createRoot(document.getElementById('root')).render(
     <ToastProvider>
       <VersionProvider>
         <AuthProvider>
-          <AIProvider>
-            <DocsProvider>
-              <App />
-            </DocsProvider>
-          </AIProvider>
+          <DepartmentsProvider>
+            <AIProvider>
+              <DocsProvider>
+                <App />
+              </DocsProvider>
+            </AIProvider>
+          </DepartmentsProvider>
         </AuthProvider>
       </VersionProvider>
     </ToastProvider>
