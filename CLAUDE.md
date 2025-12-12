@@ -146,6 +146,18 @@ learning_records (id UUID PK, user_id, doc_id, score, total_questions, passed)
 teams (id UUID PK, name, slug, display_order, is_active)
 ```
 
+### 학습 완료 판단 기준
+
+**퀴즈 결과(`learning_records.passed`)로만 판단** (Issue #221)
+
+| 조건 | 상태 |
+|------|------|
+| `learning_records` 레코드 없음 | 미학습 |
+| `passed = false` | 퀴즈 미통과 |
+| `passed = true` | ✅ 학습 완료 |
+
+> ⚠️ `learning_progress` 테이블은 DB에 존재하나 **사용하지 않음**
+
 **RLS Helper 함수**: `rls_is_admin()`, `rls_is_mentor_or_admin()`, `rls_get_role()`
 
 ## Role-Based Access

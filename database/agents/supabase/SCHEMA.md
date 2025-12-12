@@ -127,9 +127,15 @@ CREATE TABLE public.ojt_docs (
 
 **인덱스**: `idx_ojt_docs_author`, `idx_ojt_docs_team`, `idx_ojt_docs_source_storage_path` (WHERE NOT NULL)
 
-### 1.5 learning_records (7 컬럼)
+### 1.5 learning_records (7 컬럼) ✅ 학습 완료 판단 기준
 
-학습 완료 기록 테이블.
+학습 완료 기록 테이블. **퀴즈 결과만으로 학습 완료 여부를 판단합니다.**
+
+| 조건 | 상태 |
+|------|------|
+| 레코드 없음 | 미학습 |
+| `passed = false` | 퀴즈 미통과 |
+| `passed = true` | ✅ 학습 완료 |
 
 ```sql
 CREATE TABLE public.learning_records (
@@ -146,7 +152,11 @@ CREATE TABLE public.learning_records (
 
 **인덱스**: `idx_learning_records_user`
 
-### 1.6 learning_progress (13 컬럼)
+### 1.6 learning_progress (13 컬럼) ⚠️ 미사용
+
+> **참고**: 이 테이블은 DB에 존재하나 **프론트엔드에서 사용하지 않습니다**.
+> 학습 완료 여부는 `learning_records` 테이블의 퀴즈 결과(`passed`)로만 판단합니다.
+> (Issue #221)
 
 학습 진행 상태 테이블.
 
