@@ -2,6 +2,10 @@
  * useLearningRecord - 학습 기록 저장 훅
  * @agent learning-quiz-agent
  * @blocks learning.record
+ *
+ * 학습 완료 판단 기준 (Issue #221):
+ * - 퀴즈 있음 → saveLearningRecord() → passed=true (score>=3)
+ * - 퀴즈 없음 → saveViewCompletion() → passed=true (score=null)
  */
 
 import { useCallback } from 'react';
@@ -50,7 +54,38 @@ export function useLearningRecord() {
     }
   }, []);
 
-  return { saveLearningRecord };
+  /**
+   * Save view completion for documents without quiz
+   * @param {Object} params
+   * @param {string} params.userId - User ID
+   * @param {string} params.docId - Document ID
+   * @returns {Promise<boolean>} Always returns true on success
+   */
+  const saveViewCompletion = useCallback(async ({ userId, docId }) => {
+    try {
+      // 퀴즈 없는 문서: score=null, passed=true로 저장
+      await supabase.from('learning_records').upsert(
+        {
+          user_id: userId,
+          doc_id: docId,
+          score: null,
+          total_questions: 0,
+          passed: true,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,doc_id' }
+      );
+
+      Toast.success('학습이 완료되었습니다!');
+      return true;
+    } catch (error) {
+      console.error('Failed to save view completion:', error);
+      Toast.error('학습 기록 저장에 실패했습니다.');
+      return false;
+    }
+  }, []);
+
+  return { saveLearningRecord, saveViewCompletion };
 }
 
 export default useLearningRecord;
