@@ -10,6 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useLearningRecord } from './useLearningRecord';
+import { SUCCESS, WARNING } from '@/constants/messages';
 
 // Mock Supabase with upsert support
 const mockUpsert = vi.fn(() => Promise.resolve({ data: null, error: null }));
@@ -92,7 +93,7 @@ describe('useLearningRecord', () => {
       });
     });
 
-    expect(Toast.success).toHaveBeenCalledWith('축하합니다! 퀴즈를 통과했습니다!');
+    expect(Toast.success).toHaveBeenCalledWith(SUCCESS.QUIZ_PASSED);
   });
 
   it('should show warning toast when failed', async () => {
@@ -108,7 +109,7 @@ describe('useLearningRecord', () => {
       });
     });
 
-    expect(Toast.warning).toHaveBeenCalledWith('아쉽습니다. 다시 도전해보세요.');
+    expect(Toast.warning).toHaveBeenCalledWith(WARNING.QUIZ_FAILED);
   });
 
   // === Issue #221: 새로운 테스트 케이스 ===
@@ -157,7 +158,7 @@ describe('useLearningRecord', () => {
         });
       });
 
-      expect(Toast.success).toHaveBeenCalledWith('학습이 완료되었습니다!');
+      expect(Toast.success).toHaveBeenCalledWith(SUCCESS.VIEW_COMPLETE);
     });
 
     it('should return true on successful view completion', async () => {

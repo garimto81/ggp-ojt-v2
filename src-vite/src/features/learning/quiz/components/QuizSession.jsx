@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Toast } from '@/contexts/ToastContext';
 import { shuffleArray } from '@/utils/helpers';
 import { CONFIG } from '@/constants';
+import { WARNING } from '@/constants/messages';
 import QuizResult from './QuizResult';
 import { useLearningRecord } from '../hooks/useLearningRecord';
 
@@ -50,7 +51,7 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
   // Submit answer
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null) {
-      Toast.warning('답을 선택해주세요.');
+      Toast.warning(WARNING.ANSWER_REQUIRED);
       return;
     }
 

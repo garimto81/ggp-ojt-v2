@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ContentInputPanel from './ContentInputPanel';
+import { WARNING } from '@/constants/messages';
 
 // Mock dependencies
 vi.mock('@features/auth', () => ({
@@ -180,7 +181,7 @@ describe('ContentInputPanel - Issue #198 Tests', () => {
       const generateButton = screen.getByRole('button', { name: /교육 자료 생성|원문으로 등록/ });
       await user.click(generateButton);
 
-      expect(Toast.warning).toHaveBeenCalledWith('URL을 입력해주세요.');
+      expect(Toast.warning).toHaveBeenCalledWith(WARNING.URL_REQUIRED);
     });
   });
 
@@ -265,7 +266,7 @@ describe('ContentInputPanel - Issue #198 Tests', () => {
       const generateButton = screen.getByRole('button', { name: /교육 자료 생성|원문으로 등록/ });
       await user.click(generateButton);
 
-      expect(Toast.warning).toHaveBeenCalledWith('텍스트를 입력해주세요.');
+      expect(Toast.warning).toHaveBeenCalledWith(WARNING.TEXT_REQUIRED);
     });
 
     it('AI 오프라인 상태에서 버튼 텍스트가 변경되어야 함', () => {

@@ -13,6 +13,7 @@ import { useDocs } from '@/contexts/DocsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Toast } from '@/contexts/ToastContext';
 import { VIEW_STATES } from '@/constants';
+import { WARNING, EMPTY } from '@/constants/messages';
 
 // Refactored components
 import SectionViewer from './SectionViewer';
@@ -34,7 +35,7 @@ export default function MenteeStudy() {
   // Start quiz after study complete
   const handleStudyComplete = () => {
     if (!selectedDoc?.quiz || selectedDoc.quiz.length === 0) {
-      Toast.warning('이 문서에는 퀴즈가 없습니다.');
+      Toast.warning(WARNING.NO_QUIZ);
       return;
     }
     setQuizMode(true);
@@ -48,7 +49,7 @@ export default function MenteeStudy() {
   if (!selectedDoc) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">선택된 문서가 없습니다.</p>
+        <p className="text-gray-500">{EMPTY.NO_SELECTED_DOC}</p>
         <button
           onClick={handleBackToList}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"

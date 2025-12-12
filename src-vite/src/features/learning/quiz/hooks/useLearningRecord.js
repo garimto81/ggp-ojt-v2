@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/utils/api';
 import { Toast } from '@/contexts/ToastContext';
 import { CONFIG } from '@/constants';
+import { SUCCESS, WARNING, ERROR } from '@/constants/messages';
 
 export function useLearningRecord() {
   /**
@@ -41,15 +42,15 @@ export function useLearningRecord() {
       );
 
       if (passed) {
-        Toast.success('축하합니다! 퀴즈를 통과했습니다!');
+        Toast.success(SUCCESS.QUIZ_PASSED);
       } else {
-        Toast.warning('아쉽습니다. 다시 도전해보세요.');
+        Toast.warning(WARNING.QUIZ_FAILED);
       }
 
       return passed;
     } catch (error) {
       console.error('Failed to save learning record:', error);
-      Toast.error('학습 기록 저장에 실패했습니다.');
+      Toast.error(ERROR.LEARNING_RECORD_FAILED);
       return passed;
     }
   }, []);
@@ -76,11 +77,11 @@ export function useLearningRecord() {
         { onConflict: 'user_id,doc_id' }
       );
 
-      Toast.success('학습이 완료되었습니다!');
+      Toast.success(SUCCESS.VIEW_COMPLETE);
       return true;
     } catch (error) {
       console.error('Failed to save view completion:', error);
-      Toast.error('학습 기록 저장에 실패했습니다.');
+      Toast.error(ERROR.LEARNING_RECORD_FAILED);
       return false;
     }
   }, []);

@@ -4,6 +4,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Toast } from '@/contexts/ToastContext';
 import { ROLES } from '@/constants';
+import { SUCCESS, ERROR } from '@/constants/messages';
 
 // 역할별 카드 스타일 설정 (Issue #170)
 const ROLE_CARD_STYLES = {
@@ -36,16 +37,16 @@ export default function RoleSelectionPage() {
     try {
       await handleGoogleLogin();
     } catch (error) {
-      Toast.error('Google 로그인 중 오류가 발생했습니다: ' + error.message);
+      Toast.error(ERROR.LOGIN_FAILED(error.message));
     }
   };
 
   const onRoleSelect = async (role) => {
     try {
       await handleRoleSelect(role);
-      Toast.success(`${role} 역할로 등록되었습니다.`);
+      Toast.success(SUCCESS.ROLE_SAVED(role));
     } catch (error) {
-      Toast.error('역할 저장 중 오류가 발생했습니다.');
+      Toast.error(ERROR.ROLE_SAVE_FAILED);
     }
   };
 

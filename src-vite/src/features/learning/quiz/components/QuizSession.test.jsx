@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import QuizSession from './QuizSession';
+import { WARNING } from '@/constants/messages';
 
 // Mock dependencies
 vi.mock('@/contexts/ToastContext', () => ({
@@ -85,7 +86,7 @@ describe('QuizSession', () => {
 
     fireEvent.click(screen.getByText('정답 확인'));
 
-    expect(Toast.warning).toHaveBeenCalledWith('답을 선택해주세요.');
+    expect(Toast.warning).toHaveBeenCalledWith(WARNING.ANSWER_REQUIRED);
   });
 
   it('should show correct answer feedback', () => {

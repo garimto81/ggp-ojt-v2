@@ -13,6 +13,7 @@ import { generateOJTContent, extractUrlText, generateUrlQuizOnly } from '@/utils
 import { extractPdfText, validatePdfFile, getPdfInfo } from '@/utils/pdf';
 import { uploadPdfToStorage } from '@/utils/storage';
 import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
+import { SUCCESS, ERROR, WARNING, INFO } from '@/constants/messages';
 
 export default function ContentInputPanel({
   aiStatus,
@@ -67,9 +68,9 @@ export default function ContentInputPanel({
         setInputTitle(info.title);
       }
 
-      Toast.success(`PDF 선택됨: ${info.pages}페이지`);
+      Toast.success(SUCCESS.PDF_SELECTED(info.pages));
     } catch (error) {
-      Toast.error(`PDF 정보 읽기 실패: ${error.message}`);
+      Toast.error(ERROR.PDF_INFO_FAILED(error.message));
       setSelectedPdf(null);
     }
   };
@@ -98,7 +99,7 @@ export default function ContentInputPanel({
     } catch (error) {
       console.error('[ContentInputPanel] Storage 업로드 실패:', error);
       // Storage 업로드 실패해도 문서 생성은 진행 (graceful degradation)
-      Toast.warning(`PDF 저장 실패: ${error.message}. 텍스트만 저장됩니다.`);
+      Toast.warning(WARNING.PDF_SAVE_FALLBACK(error.message));
       return null;
     }
   };
@@ -107,15 +108,15 @@ export default function ContentInputPanel({
   const handleGenerate = async () => {
     // Validate input based on type
     if (inputType === 'text' && !rawInput.trim()) {
-      Toast.warning('텍스트를 입력해주세요.');
+      Toast.warning(WARNING.TEXT_REQUIRED);
       return;
     }
     if (inputType === 'url' && !urlInput.trim()) {
-      Toast.warning('URL을 입력해주세요.');
+      Toast.warning(WARNING.URL_REQUIRED);
       return;
     }
     if (inputType === 'pdf' && !selectedPdf) {
-      Toast.warning('PDF 파일을 선택해주세요.');
+      Toast.warning(WARNING.PDF_REQUIRED);
       return;
     }
 
@@ -159,7 +160,7 @@ export default function ContentInputPanel({
           };
 
           onDocumentsGenerated([pdfDoc]);
-          Toast.success('PDF가 원본 그대로 저장되었습니다. (퀴즈 없음)');
+          Toast.success(SUCCESS.PDF_SAVED_RAW);
           setIsProcessing(false);
           setProcessingStatus('');
           return;
@@ -186,7 +187,7 @@ export default function ContentInputPanel({
           };
 
           onDocumentsGenerated([urlDoc]);
-          Toast.success('URL이 원본 그대로 저장되었습니다. (퀴즈 없음)');
+          Toast.success(SUCCESS.URL_SAVED_RAW);
           setIsProcessing(false);
           setProcessingStatus('');
           return;
@@ -213,7 +214,7 @@ export default function ContentInputPanel({
           };
 
           onDocumentsGenerated([textDoc]);
-          Toast.success('텍스트가 원본 그대로 저장되었습니다. (퀴즈 없음)');
+          Toast.success(SUCCESS.TEXT_SAVED_RAW);
           setIsProcessing(false);
           setProcessingStatus('');
           return;
@@ -236,12 +237,12 @@ export default function ContentInputPanel({
 
         // OCR 사용 알림 (#217)
         if (extracted.method === 'ocr') {
-          Toast.info('이미지 PDF입니다. OCR로 텍스트를 추출했습니다.');
+          Toast.info(INFO.IMAGE_PDF_OCR);
         }
 
         if (extracted.wasTruncated) {
           Toast.info(
-            `퀴즈 생성용 텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`
+            `퀴즈 생성용 텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸어요`
           );
         }
 
@@ -269,7 +270,7 @@ export default function ContentInputPanel({
 
         // PDF 문서 즉시 반환 (아래 텍스트 처리 스킵)
         onDocumentsGenerated([pdfDoc]);
-        Toast.success('PDF 콘텐츠가 생성되었습니다. (원본 PDF + 퀴즈)');
+        Toast.success(SUCCESS.PDF_CONTENT_CREATED);
         setIsProcessing(false);
         setProcessingStatus('');
         return;
@@ -290,7 +291,7 @@ export default function ContentInputPanel({
 
         if (extracted.wasTruncated) {
           Toast.info(
-            `퀴즈 생성용 텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸습니다.`
+            `퀴즈 생성용 텍스트가 ${extracted.extractedLength.toLocaleString()}자로 잘렸어요`
           );
         }
 
@@ -314,7 +315,7 @@ export default function ContentInputPanel({
 
         // URL 문서 즉시 반환 (아래 PDF/텍스트 처리 스킵)
         onDocumentsGenerated([urlDoc]);
-        Toast.success('URL 콘텐츠가 생성되었습니다. (원본 URL + 퀴즈)');
+        Toast.success(SUCCESS.URL_CONTENT_CREATED);
         setIsProcessing(false);
         setProcessingStatus('');
         return;
@@ -327,7 +328,7 @@ export default function ContentInputPanel({
 
       // Warn if AI is offline but proceed anyway
       if (!aiStatus.online) {
-        Toast.warning('AI 서비스 오프라인 - 원문으로 등록됩니다.');
+        Toast.warning(WARNING.AI_OFFLINE);
       }
 
       const numSteps = autoSplit ? requiredSteps : 1;
@@ -376,12 +377,12 @@ export default function ContentInputPanel({
       // Check if any doc was created with fallback
       const fallbackDocs = docs.filter((d) => d.ai_processed === false);
       if (fallbackDocs.length > 0) {
-        Toast.warning(`${fallbackDocs.length}개 문서가 AI 분석 없이 원문으로 생성되었습니다.`);
+        Toast.warning(SUCCESS.FALLBACK_CREATED(fallbackDocs.length));
       } else {
-        Toast.success(`${docs.length}개 문서가 생성되었습니다.`);
+        Toast.success(SUCCESS.CONTENT_CREATED(docs.length));
       }
     } catch (error) {
-      Toast.error(`오류: ${error.message}`);
+      Toast.error(ERROR.CONTENT_CREATE_FAILED(error.message));
     } finally {
       setIsProcessing(false);
       setProcessingStatus('');
