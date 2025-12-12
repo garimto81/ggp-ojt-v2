@@ -1,6 +1,10 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.32.0 - 2025-12-12
+//   - feat(ui): shadcn/ui 컴포넌트 시스템 구현 (PRD-0015)
+//   - Button, Card, Input, Badge, Table, Select, Progress, StatsCard 추가
+//   - AdminDashboard, Header에 새 컴포넌트 적용
 // 2.31.0 - 2025-12-12
 //   - feat: 버전 자동 업데이트 시스템 추가
 //   - 캐시 삭제 없이 새 버전 감지 및 Toast 알림
@@ -105,7 +109,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.31.0';
-export const BUILD_HASH = '1c21946';
-export const BUILD_SUMMARY = '버전 자동 업데이트 시스템';
+export const APP_VERSION = '2.32.0';
+export const BUILD_HASH = '730f37f';
+export const BUILD_SUMMARY = 'shadcn/ui 컴포넌트 시스템';
 export const BUILD_DATE = '2025-12-12';
