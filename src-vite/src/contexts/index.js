@@ -12,3 +12,9 @@ export { ToastProvider, useToast, Toast } from './ToastContext';
 
 // AI (ai-agent) - 로컬 파일 유지
 export { AIProvider, useAI } from './AIContext';
+
+// Version (버전 자동 업데이트)
+export { VersionProvider, useVersion } from './VersionContext';
+
+// Departments (#178 - 부서 관리 정규화)
+export { DepartmentsProvider, useDepartments } from './DepartmentsContext';

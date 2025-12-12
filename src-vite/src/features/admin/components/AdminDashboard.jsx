@@ -18,6 +18,21 @@ import {
 import { ContentManagementTab } from './content';
 import { SettingsTab } from './settings';
 import { StatsTab } from './stats';
+import {
+  StatsCard,
+  StatsCardGrid,
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+  Input,
+  Select,
+  SelectOption,
+  Badge,
+  Button,
+} from '@/components/ui';
 
 // 기본 부서 목록
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
@@ -304,25 +319,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-gray-500">총 사용자</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.totalUsers}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-gray-500">총 문서</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.totalDocs}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-gray-500">학습 기록</p>
-          <p className="text-2xl font-bold text-gray-800">{stats.totalRecords}</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-gray-500">통과율</p>
-          <p className="text-2xl font-bold text-green-600">{stats.passRate}%</p>
-        </div>
-      </div>
+      {/* Stats Cards (PRD-0015 shadcn/ui) */}
+      <StatsCardGrid columns={4}>
+        <StatsCard icon="👥" label="총 사용자" value={stats.totalUsers} />
+        <StatsCard icon="📄" label="총 문서" value={stats.totalDocs} />
+        <StatsCard icon="📚" label="학습 기록" value={stats.totalRecords.toLocaleString()} />
+        <StatsCard icon="✅" label="통과율" value={`${stats.passRate}%`} variant="success" />
+      </StatsCardGrid>
 
       {/* Tabs (Issue #77: Added a11y) */}
       <div className="bg-white rounded-xl shadow-sm">
@@ -354,48 +357,48 @@ export default function AdminDashboard() {
           {activeTab === 'users' && (
             <div role="tabpanel" id="tabpanel-users" aria-labelledby="tab-users">
               <div className="space-y-4">
-                {/* Filters */}
+                {/* Filters (PRD-0015 shadcn/ui) */}
                 <div className="flex flex-wrap gap-3">
-                  <input
+                  <Input
                     type="text"
                     value={userSearch}
                     onChange={(e) => setUserSearch(e.target.value)}
                     placeholder="이름 검색..."
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-48"
                   />
-                  <select
+                  <Select
                     value={userRoleFilter}
                     onChange={(e) => setUserRoleFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-32"
                   >
-                    <option value="">모든 역할</option>
-                    <option value="admin">Admin</option>
-                    <option value="mentor">Mentor</option>
-                    <option value="mentee">Mentee</option>
-                  </select>
-                  <select
+                    <SelectOption value="">모든 역할</SelectOption>
+                    <SelectOption value="admin">Admin</SelectOption>
+                    <SelectOption value="mentor">Mentor</SelectOption>
+                    <SelectOption value="mentee">Mentee</SelectOption>
+                  </Select>
+                  <Select
                     value={userDeptFilter}
                     onChange={(e) => setUserDeptFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-32"
                   >
-                    <option value="">모든 부서</option>
+                    <SelectOption value="">모든 부서</SelectOption>
                     {departmentOptions.map((dept) => (
-                      <option key={dept} value={dept}>
+                      <SelectOption key={dept} value={dept}>
                         {dept}
-                      </option>
+                      </SelectOption>
                     ))}
-                  </select>
-                  <select
+                  </Select>
+                  <Select
                     value={userItemsPerPage}
                     onChange={(e) => setUserItemsPerPage(Number(e.target.value))}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-24"
                   >
                     {ITEMS_PER_PAGE_OPTIONS.map((n) => (
-                      <option key={n} value={n}>
+                      <SelectOption key={n} value={n}>
                         {n}개씩
-                      </option>
+                      </SelectOption>
                     ))}
-                  </select>
+                  </Select>
                 </div>
 
                 {/* Results count */}
@@ -403,104 +406,104 @@ export default function AdminDashboard() {
                   {filteredUsers.length}명 중 {paginatedUsers.length}명 표시
                 </p>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-500 border-b">
-                        <th
-                          className="pb-3 font-medium cursor-pointer hover:text-gray-700"
+                {/* Table (PRD-0015 shadcn/ui) */}
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead
+                          className="cursor-pointer hover:text-gray-700"
                           onClick={() => handleUserSort('name')}
                         >
                           이름 {userSort.field === 'name' && (userSort.order === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th className="pb-3 font-medium">역할</th>
-                        <th className="pb-3 font-medium">부서</th>
-                        <th
-                          className="pb-3 font-medium cursor-pointer hover:text-gray-700"
+                        </TableHead>
+                        <TableHead>역할</TableHead>
+                        <TableHead>부서</TableHead>
+                        <TableHead
+                          className="cursor-pointer hover:text-gray-700"
                           onClick={() => handleUserSort('created_at')}
                         >
                           가입일{' '}
                           {userSort.field === 'created_at' &&
                             (userSort.order === 'asc' ? '↑' : '↓')}
-                        </th>
-                        <th className="pb-3 font-medium">액션</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                        </TableHead>
+                        <TableHead>액션</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {paginatedUsers.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-gray-500">
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-24 text-center text-gray-500">
                             검색 결과가 없습니다.
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ) : (
                         paginatedUsers.map((u) => (
-                          <tr key={u.id} className="border-b last:border-0">
-                            <td className="py-3">
+                          <TableRow key={u.id}>
+                            <TableCell className="font-medium">
                               {u.name}
                               {u.is_active === false && (
-                                <span className="ml-2 text-xs text-red-500">(정지됨)</span>
+                                <Badge variant="error" className="ml-2">
+                                  정지됨
+                                </Badge>
                               )}
-                            </td>
-                            <td className="py-3">
-                              <select
+                            </TableCell>
+                            <TableCell>
+                              <Select
                                 value={u.role || ''}
                                 onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                                className="px-2 py-1 border rounded text-sm"
+                                className="w-28"
                                 disabled={u.id === user?.id}
                               >
-                                <option value="admin">Admin</option>
-                                <option value="mentor">Mentor</option>
-                                <option value="mentee">Mentee</option>
-                              </select>
-                            </td>
-                            <td className="py-3">
-                              <select
+                                <SelectOption value="admin">Admin</SelectOption>
+                                <SelectOption value="mentor">Mentor</SelectOption>
+                                <SelectOption value="mentee">Mentee</SelectOption>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Select
                                 value={u.department || ''}
                                 onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
-                                className="px-2 py-1 border rounded text-sm"
+                                className="w-28"
                               >
-                                <option value="">선택 안함</option>
+                                <SelectOption value="">선택 안함</SelectOption>
                                 {departmentOptions.map((dept) => (
-                                  <option key={dept} value={dept}>
+                                  <SelectOption key={dept} value={dept}>
                                     {dept}
-                                  </option>
+                                  </SelectOption>
                                 ))}
-                              </select>
-                            </td>
-                            <td className="py-3 text-sm text-gray-500">
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-gray-500">
                               {formatDate(u.created_at)}
-                            </td>
-                            <td className="py-3">
+                            </TableCell>
+                            <TableCell>
                               {u.id === user?.id ? (
                                 <span className="text-xs text-gray-400">(본인)</span>
                               ) : (
                                 <div className="flex gap-2">
-                                  <button
+                                  <Button
+                                    size="sm"
+                                    variant={u.is_active === false ? 'success' : 'warning'}
                                     onClick={() => handleToggleActive(u.id, u.is_active !== false)}
-                                    className={`text-xs px-2 py-1 rounded ${
-                                      u.is_active === false
-                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                        : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                                    }`}
                                   >
                                     {u.is_active === false ? '활성화' : '정지'}
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
                                     onClick={() => handleDeleteUser(u.id)}
-                                    className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
                                   >
                                     삭제
-                                  </button>
+                                  </Button>
                                 </div>
                               )}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))
                       )}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
 
                 {/* Pagination */}
