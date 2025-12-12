@@ -224,29 +224,35 @@ describe('ContentInputPanel - Issue #198 Tests', () => {
     it('자동 스텝 분할 체크박스가 존재해야 함', () => {
       render(<ContentInputPanel {...defaultProps} rawInput="테스트" />);
 
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).toBeInTheDocument();
+      // 여러 체크박스 중 자동 스텝 분할 체크박스 선택 (첫 번째)
+      const checkboxes = screen.getAllByRole('checkbox');
+      const autoStepCheckbox = checkboxes[0];
+      expect(autoStepCheckbox).toBeInTheDocument();
     });
 
     it('자동 스텝 분할이 기본적으로 활성화되어야 함', () => {
       render(<ContentInputPanel {...defaultProps} rawInput="테스트" />);
 
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).toBeChecked();
+      // 여러 체크박스 중 자동 스텝 분할 체크박스 선택 (첫 번째)
+      const checkboxes = screen.getAllByRole('checkbox');
+      const autoStepCheckbox = checkboxes[0];
+      expect(autoStepCheckbox).toBeChecked();
     });
 
     it('자동 스텝 분할 체크박스 토글이 동작해야 함', async () => {
       const user = userEvent.setup();
       render(<ContentInputPanel {...defaultProps} rawInput="테스트" />);
 
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).toBeChecked();
+      // 여러 체크박스 중 자동 스텝 분할 체크박스 선택 (첫 번째)
+      const checkboxes = screen.getAllByRole('checkbox');
+      const autoStepCheckbox = checkboxes[0];
+      expect(autoStepCheckbox).toBeChecked();
 
-      await user.click(checkbox);
-      expect(checkbox).not.toBeChecked();
+      await user.click(autoStepCheckbox);
+      expect(autoStepCheckbox).not.toBeChecked();
 
-      await user.click(checkbox);
-      expect(checkbox).toBeChecked();
+      await user.click(autoStepCheckbox);
+      expect(autoStepCheckbox).toBeChecked();
     });
   });
 
