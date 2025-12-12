@@ -1,23 +1,27 @@
 // OJT Master - Empty State Component (Issue #139)
-// 데이터가 없을 때 표시하는 UI 컴포넌트
+// Design System: PRD-0014 톤앤매너 가이드라인
 
 /**
  * EmptyState - 빈 상태 UI 컴포넌트
+ * PRD-0014: "데이터 없음" → "아직 ~가 없어요" 패턴 적용
+ *
  * @param {Object} props
- * @param {string} props.title - 제목
- * @param {string} props.description - 설명
- * @param {string} [props.icon] - 아이콘 타입 (document, search, user, default)
+ * @param {string} props.title - 제목 (따뜻한 톤)
+ * @param {string} props.description - 설명 (격려하는 톤)
+ * @param {string} [props.icon] - 아이콘 타입 (document, search, user, learning, quiz, default)
  * @param {React.ReactNode} [props.action] - 액션 버튼/링크
+ * @param {string} [props.variant] - 스타일 변형 (default, subtle)
  */
 export default function EmptyState({
-  title = '데이터가 없습니다',
+  title = '아직 데이터가 없어요',
   description = '',
   icon = 'default',
   action = null,
+  variant = 'default',
 }) {
   const icons = {
     document: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -27,7 +31,7 @@ export default function EmptyState({
       </svg>
     ),
     search: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -37,7 +41,7 @@ export default function EmptyState({
       </svg>
     ),
     user: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -46,8 +50,28 @@ export default function EmptyState({
         />
       </svg>
     ),
+    learning: (
+      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+        />
+      </svg>
+    ),
+    quiz: (
+      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+        />
+      </svg>
+    ),
     default: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -58,11 +82,28 @@ export default function EmptyState({
     ),
   };
 
+  // variant에 따른 스타일
+  const containerStyles = {
+    default: 'bg-gradient-to-b from-gray-50 to-white rounded-2xl border border-gray-100',
+    subtle: '',
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="text-gray-300 mb-4">{icons[icon] || icons.default}</div>
-      <h3 className="text-lg font-medium text-gray-700 mb-1">{title}</h3>
-      {description && <p className="text-sm text-gray-500 mb-4">{description}</p>}
+    <div
+      className={`flex flex-col items-center justify-center py-16 px-6 text-center ${containerStyles[variant]}`}
+    >
+      {/* 아이콘 - Primary 색상의 연한 배경 */}
+      <div className="w-24 h-24 rounded-full bg-primary-50 flex items-center justify-center mb-6">
+        <div className="text-primary-400">{icons[icon] || icons.default}</div>
+      </div>
+
+      {/* 제목 - 따뜻하고 격려하는 톤 */}
+      <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
+
+      {/* 설명 */}
+      {description && <p className="text-base text-gray-500 mb-6 max-w-sm">{description}</p>}
+
+      {/* 액션 버튼 */}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
