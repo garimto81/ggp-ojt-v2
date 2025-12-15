@@ -40,9 +40,16 @@ export default function UrlViewer({ url, title, className = '' }) {
   // 에러 발생 시 새 탭 안내
   if (loadError) {
     return (
-      <div className={`flex flex-col items-center justify-center p-8 bg-gray-50 rounded-lg ${className}`}>
-        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div
+        className={`flex flex-col items-center justify-center rounded-lg bg-gray-50 p-8 ${className}`}
+      >
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-200">
+          <svg
+            className="h-8 w-8 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -51,17 +58,16 @@ export default function UrlViewer({ url, title, className = '' }) {
             />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-gray-700 mb-2">페이지를 미리볼 수 없습니다</h3>
-        <p className="text-sm text-gray-500 mb-4 text-center">
+        <h3 className="mb-2 text-lg font-medium text-gray-700">페이지를 미리볼 수 없습니다</h3>
+        <p className="mb-4 text-center text-sm text-gray-500">
           이 웹사이트는 iframe 내장을 허용하지 않습니다.
-          <br />
-          새 탭에서 원본 콘텐츠를 확인해주세요.
+          <br />새 탭에서 원본 콘텐츠를 확인해주세요.
         </p>
         <button
           onClick={openInNewTab}
-          className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2"
+          className="flex items-center gap-2 rounded-lg bg-blue-500 px-6 py-2 text-white transition hover:bg-blue-600"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -76,12 +82,17 @@ export default function UrlViewer({ url, title, className = '' }) {
   }
 
   return (
-    <div className={`relative bg-white rounded-lg overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden rounded-lg bg-white ${className}`}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100">
+            <svg
+              className="h-4 w-4 text-blue-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -91,16 +102,16 @@ export default function UrlViewer({ url, title, className = '' }) {
             </svg>
           </div>
           <div className="min-w-0">
-            <h3 className="font-medium text-gray-800 truncate">{title || 'URL 문서'}</h3>
-            <p className="text-xs text-gray-500 truncate">{url}</p>
+            <h3 className="truncate font-medium text-gray-800">{title || 'URL 문서'}</h3>
+            <p className="truncate text-xs text-gray-500">{url}</p>
           </div>
         </div>
         <button
           onClick={openInNewTab}
-          className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition flex items-center gap-1 flex-shrink-0"
+          className="flex flex-shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-blue-600 transition hover:bg-blue-50"
           title="새 탭에서 열기"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -116,7 +127,7 @@ export default function UrlViewer({ url, title, className = '' }) {
       {isLoading && (
         <div className="absolute inset-0 top-14 flex items-center justify-center bg-gray-50">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
             <span className="text-sm text-gray-500">콘텐츠 로딩 중...</span>
           </div>
         </div>
@@ -126,7 +137,7 @@ export default function UrlViewer({ url, title, className = '' }) {
       <iframe
         src={url}
         title={title || 'URL 문서'}
-        className="w-full h-[calc(100%-56px)] min-h-[500px] border-0"
+        className="h-[calc(100%-56px)] min-h-[500px] w-full border-0"
         onLoad={handleLoad}
         onError={handleError}
         sandbox="allow-scripts allow-same-origin allow-popups allow-forms"

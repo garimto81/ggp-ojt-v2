@@ -11,8 +11,9 @@
  */
 
 import { GEMINI_CONFIG, CONFIG } from '@/constants';
-import { createUrlQuizPrompt, DEFAULT_QUIZ_COUNT } from './prompts';
+
 import { parseQuizResponse, validateQuiz } from './parser';
+import { createUrlQuizPrompt, DEFAULT_QUIZ_COUNT } from './prompts';
 
 /**
  * URL 기반 퀴즈 생성 (URL Context Tool 사용)

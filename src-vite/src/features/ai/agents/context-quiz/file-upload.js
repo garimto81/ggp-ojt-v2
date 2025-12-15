@@ -163,7 +163,9 @@ function getMimeType(filename) {
  */
 export function isPdf(fileOrUrl) {
   if (fileOrUrl instanceof File) {
-    return fileOrUrl.type === SUPPORTED_MIME_TYPES.PDF || fileOrUrl.name.toLowerCase().endsWith('.pdf');
+    return (
+      fileOrUrl.type === SUPPORTED_MIME_TYPES.PDF || fileOrUrl.name.toLowerCase().endsWith('.pdf')
+    );
   }
   if (typeof fileOrUrl === 'string') {
     return fileOrUrl.toLowerCase().endsWith('.pdf');

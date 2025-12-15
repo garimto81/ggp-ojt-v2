@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
 import { parseQuizResponse, validateQuiz } from '../parser';
 
 describe('parseQuizResponse', () => {
@@ -111,8 +112,18 @@ describe('parseQuizResponse', () => {
               {
                 text: JSON.stringify({
                   quiz: [
-                    { question: '쉬운 문제', options: ['1', '2', '3', '4'], correctIndex: 0, difficulty: '쉬움' },
-                    { question: '어려운 문제', options: ['1', '2', '3', '4'], correctIndex: 0, difficulty: 'hard' },
+                    {
+                      question: '쉬운 문제',
+                      options: ['1', '2', '3', '4'],
+                      correctIndex: 0,
+                      difficulty: '쉬움',
+                    },
+                    {
+                      question: '어려운 문제',
+                      options: ['1', '2', '3', '4'],
+                      correctIndex: 0,
+                      difficulty: 'hard',
+                    },
                     { question: '기본 문제', options: ['1', '2', '3', '4'], correctIndex: 0 },
                   ],
                 }),
@@ -158,9 +169,17 @@ describe('parseQuizResponse', () => {
 describe('validateQuiz', () => {
   it('유효한 퀴즈 배열을 검증한다', () => {
     const quiz = [
-      { question: '충분히 긴 질문입니다. 이것은 테스트입니다.', options: ['1', '2', '3', '4'], correctIndex: 0 },
+      {
+        question: '충분히 긴 질문입니다. 이것은 테스트입니다.',
+        options: ['1', '2', '3', '4'],
+        correctIndex: 0,
+      },
       { question: '또 다른 충분히 긴 질문입니다.', options: ['A', 'B', 'C', 'D'], correctIndex: 1 },
-      { question: '세 번째 충분히 긴 질문입니다.', options: ['가', '나', '다', '라'], correctIndex: 2 },
+      {
+        question: '세 번째 충분히 긴 질문입니다.',
+        options: ['가', '나', '다', '라'],
+        correctIndex: 2,
+      },
       { question: '네 번째 충분히 긴 질문입니다.', options: ['@', '#', '$', '%'], correctIndex: 3 },
     ];
 
