@@ -165,7 +165,7 @@ export function PassRateChart({ passRate, label = '전체 통과율' }) {
   };
 
   return (
-    <div className="h-48 relative">
+    <div className="relative h-48">
       <Doughnut data={chartData} options={options} />
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="text-2xl font-bold text-gray-700">{passRate}%</span>

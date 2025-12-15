@@ -110,7 +110,7 @@ export default function BulkActionsBar({
   if (selectedCount === 0) return null;
 
   return (
-    <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4 shadow-sm">
+    <div className="sticky top-0 z-10 mb-4 rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-4">
         {/* Selection Info */}
         <div className="flex items-center gap-3">
@@ -118,14 +118,14 @@ export default function BulkActionsBar({
             type="checkbox"
             checked={allSelected}
             onChange={(e) => (e.target.checked ? onSelectAll() : onDeselectAll())}
-            className="w-4 h-4 cursor-pointer"
+            className="h-4 w-4 cursor-pointer"
             aria-label={allSelected ? '전체 선택 해제' : '전체 선택'}
           />
           <span className="text-sm font-medium text-gray-700">{selectedCount}명 선택됨</span>
           {selectedCount > 0 && (
             <button
               onClick={onDeselectAll}
-              className="text-xs text-blue-600 hover:text-blue-700 underline"
+              className="text-xs text-blue-600 underline hover:text-blue-700"
             >
               선택 해제
             </button>
@@ -133,7 +133,7 @@ export default function BulkActionsBar({
         </div>
 
         {/* Divider */}
-        <div className="h-8 w-px bg-gray-300 hidden md:block" />
+        <div className="hidden h-8 w-px bg-gray-300 md:block" />
 
         {/* Bulk Role Change */}
         <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function BulkActionsBar({
           <select
             value={bulkRole}
             onChange={(e) => setBulkRole(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             disabled={isProcessing}
           >
             <option value="">선택하세요</option>
@@ -152,7 +152,7 @@ export default function BulkActionsBar({
           <button
             onClick={handleBulkRoleChange}
             disabled={!bulkRole || isProcessing}
-            className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isProcessing ? '처리 중...' : '적용'}
           </button>
@@ -164,7 +164,7 @@ export default function BulkActionsBar({
           <select
             value={bulkDepartment}
             onChange={(e) => setBulkDepartment(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             disabled={isProcessing}
           >
             <option value="">선택하세요</option>
@@ -177,7 +177,7 @@ export default function BulkActionsBar({
           <button
             onClick={handleBulkDepartmentChange}
             disabled={!bulkDepartment || isProcessing}
-            className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isProcessing ? '처리 중...' : '적용'}
           </button>

@@ -330,12 +330,12 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
           value={userSearch}
           onChange={(e) => setUserSearch(e.target.value)}
           placeholder="이름 검색..."
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
         />
         <select
           value={userRoleFilter}
           onChange={(e) => setUserRoleFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
         >
           <option value="">모든 역할</option>
           <option value="admin">Admin</option>
@@ -345,7 +345,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
         <select
           value={userDeptFilter}
           onChange={(e) => setUserDeptFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
         >
           <option value="">모든 부서</option>
           {departmentOptions.map((dept) => (
@@ -357,7 +357,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
         <select
           value={userItemsPerPage}
           onChange={(e) => setUserItemsPerPage(Number(e.target.value))}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
         >
           {ITEMS_PER_PAGE_OPTIONS.map((n) => (
             <option key={n} value={n}>
@@ -376,8 +376,8 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="text-left text-sm text-gray-500 border-b">
-              <th className="pb-3 w-8">
+            <tr className="border-b text-left text-sm text-gray-500">
+              <th className="w-8 pb-3">
                 <input
                   type="checkbox"
                   checked={selectedUserIds.length > 0}
@@ -387,7 +387,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
                 />
               </th>
               <th
-                className="pb-3 font-medium cursor-pointer hover:text-gray-700"
+                className="cursor-pointer pb-3 font-medium hover:text-gray-700"
                 onClick={() => handleUserSort('name')}
               >
                 이름 {userSort.field === 'name' && (userSort.order === 'asc' ? '↑' : '↓')}
@@ -395,7 +395,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
               <th className="pb-3 font-medium">역할</th>
               <th className="pb-3 font-medium">부서</th>
               <th
-                className="pb-3 font-medium cursor-pointer hover:text-gray-700"
+                className="cursor-pointer pb-3 font-medium hover:text-gray-700"
                 onClick={() => handleUserSort('created_at')}
               >
                 가입일 {userSort.field === 'created_at' && (userSort.order === 'asc' ? '↑' : '↓')}
@@ -414,7 +414,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
               paginatedUsers.map((u) => (
                 <tr
                   key={u.id}
-                  className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition"
+                  className="cursor-pointer border-b transition last:border-0 hover:bg-gray-50"
                   onClick={() => handleRowClick(u)}
                 >
                   <td className="py-3" onClick={(e) => e.stopPropagation()}>
@@ -439,7 +439,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
                         <select
                           value={u.role || ''}
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          className={`px-2 py-1 rounded-full text-xs font-medium border cursor-pointer ${roleTheme.badge} ${roleTheme.border}`}
+                          className={`cursor-pointer rounded-full border px-2 py-1 text-xs font-medium ${roleTheme.badge} ${roleTheme.border}`}
                           disabled={u.id === currentUser?.id}
                         >
                           <option value="admin">Admin</option>
@@ -458,7 +458,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
                         <select
                           value={u.department || ''}
                           onChange={(e) => handleDepartmentChange(u.id, e.target.value)}
-                          className={`px-2 py-1 rounded-full text-xs font-medium border cursor-pointer ${deptTheme.badge} ${deptTheme.border}`}
+                          className={`cursor-pointer rounded-full border px-2 py-1 text-xs font-medium ${deptTheme.badge} ${deptTheme.border}`}
                         >
                           <option value="">선택 안함</option>
                           {departmentOptions.map((dept) => (
@@ -478,7 +478,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleToggleActive(u.id, u.is_active !== false)}
-                          className={`text-xs px-2 py-1 rounded ${
+                          className={`rounded px-2 py-1 text-xs ${
                             u.is_active === false
                               ? 'bg-green-100 text-green-700 hover:bg-green-200'
                               : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
@@ -488,7 +488,7 @@ export default function UsersManagementTab({ allUsers, setAllUsers, allDocs, isA
                         </button>
                         <button
                           onClick={() => handleDeleteUser(u.id)}
-                          className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
+                          className="rounded bg-red-100 px-2 py-1 text-xs text-red-700 hover:bg-red-200"
                         >
                           삭제
                         </button>
@@ -560,11 +560,11 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
   };
 
   return (
-    <nav className="flex items-center justify-center gap-1 mt-4" aria-label="페이지네이션">
+    <nav className="mt-4 flex items-center justify-center gap-1" aria-label="페이지네이션">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="이전 페이지"
       >
         이전
@@ -579,10 +579,10 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
           <button
             key={page}
             onClick={() => onPageChange(page)}
-            className={`px-3 py-2 text-sm font-medium rounded-lg ${
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
               currentPage === page
-                ? 'text-blue-600 bg-blue-50 border border-blue-300'
-                : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100'
+                ? 'border border-blue-300 bg-blue-50 text-blue-600'
+                : 'border border-gray-300 bg-white text-gray-500 hover:bg-gray-100'
             }`}
             aria-label={`${page}페이지로 이동`}
             aria-current={currentPage === page ? 'page' : undefined}
@@ -595,7 +595,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="다음 페이지"
       >
         다음

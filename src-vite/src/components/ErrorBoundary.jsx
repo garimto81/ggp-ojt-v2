@@ -32,12 +32,12 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
             {/* 에러 아이콘 */}
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <svg
-                className="w-8 h-8 text-red-600"
+                className="h-8 w-8 text-red-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -52,31 +52,31 @@ export class ErrorBoundary extends Component {
             </div>
 
             {/* 에러 메시지 */}
-            <h1 className="text-xl font-bold text-gray-800 mb-2">문제가 발생했습니다</h1>
-            <p className="text-gray-600 mb-6">
+            <h1 className="mb-2 text-xl font-bold text-gray-800">문제가 발생했습니다</h1>
+            <p className="mb-6 text-gray-600">
               예기치 않은 오류가 발생했습니다. 불편을 드려 죄송합니다.
             </p>
 
             {/* 에러 상세 (개발 환경에서만) */}
             {import.meta.env.DEV && this.state.error && (
-              <div className="mb-6 p-3 bg-gray-100 rounded-lg text-left">
-                <p className="text-xs font-mono text-red-600 break-all">
+              <div className="mb-6 rounded-lg bg-gray-100 p-3 text-left">
+                <p className="font-mono text-xs break-all text-red-600">
                   {this.state.error.toString()}
                 </p>
               </div>
             )}
 
             {/* 버튼 */}
-            <div className="flex gap-3 justify-center">
+            <div className="flex justify-center gap-3">
               <button
                 onClick={this.handleReload}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
               >
                 새로고침
               </button>
               <button
                 onClick={this.handleReset}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                className="rounded-lg bg-gray-200 px-4 py-2 text-gray-700 transition hover:bg-gray-300"
               >
                 홈으로 이동
               </button>

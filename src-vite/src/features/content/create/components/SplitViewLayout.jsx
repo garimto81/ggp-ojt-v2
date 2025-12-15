@@ -109,24 +109,15 @@ export default function SplitViewLayout({
       <div
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
-        className={`
-          w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize
-          flex-shrink-0 relative group transition-colors
-          ${isDragging ? 'bg-blue-500' : ''}
-        `}
+        className={`group relative w-1 flex-shrink-0 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-400 ${isDragging ? 'bg-blue-500' : ''} `}
       >
         {/* Drag Handle Visual */}
         <div
-          className={`
-          absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-          w-4 h-8 rounded bg-gray-300 group-hover:bg-blue-400
-          flex items-center justify-center
-          ${isDragging ? 'bg-blue-500' : ''}
-        `}
+          className={`absolute top-1/2 left-1/2 flex h-8 w-4 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded bg-gray-300 group-hover:bg-blue-400 ${isDragging ? 'bg-blue-500' : ''} `}
         >
           <div className="flex gap-0.5">
-            <div className="w-0.5 h-4 bg-gray-500 rounded" />
-            <div className="w-0.5 h-4 bg-gray-500 rounded" />
+            <div className="h-4 w-0.5 rounded bg-gray-500" />
+            <div className="h-4 w-0.5 rounded bg-gray-500" />
           </div>
         </div>
       </div>

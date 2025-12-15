@@ -29,19 +29,19 @@ export default function MyDocsList({ onEdit }) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <h2 className="text-lg font-bold text-gray-800 mb-4">내 문서</h2>
+    <div className="rounded-xl bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-lg font-bold text-gray-800">내 문서</h2>
       <div className="space-y-3">
         {myDocs.length === 0 ? (
-          <p className="text-gray-500 text-sm">아직 작성한 문서가 없습니다.</p>
+          <p className="text-sm text-gray-500">아직 작성한 문서가 없습니다.</p>
         ) : (
           myDocs.map((doc) => (
-            <div key={doc.id} className="p-3 border rounded-lg hover:bg-gray-50">
+            <div key={doc.id} className="rounded-lg border p-3 hover:bg-gray-50">
               <div className="flex items-start justify-between">
-                <h4 className="font-medium text-sm">{doc.title}</h4>
+                <h4 className="text-sm font-medium">{doc.title}</h4>
                 {doc.source_type && doc.source_type !== 'manual' && (
                   <span
-                    className={`text-xs px-1.5 py-0.5 rounded ${
+                    className={`rounded px-1.5 py-0.5 text-xs ${
                       doc.source_type === 'url'
                         ? 'bg-blue-100 text-blue-600'
                         : 'bg-purple-100 text-purple-600'
@@ -51,7 +51,7 @@ export default function MyDocsList({ onEdit }) {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="mt-1 text-xs text-gray-500">
                 {doc.team} · {formatDate(doc.created_at)}
               </p>
               {doc.source_url && (
@@ -59,13 +59,13 @@ export default function MyDocsList({ onEdit }) {
                   href={doc.source_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-500 hover:text-blue-700 mt-1 block truncate"
+                  className="mt-1 block truncate text-xs text-blue-500 hover:text-blue-700"
                   title={doc.source_url}
                 >
                   {doc.source_url}
                 </a>
               )}
-              <div className="flex gap-2 mt-2">
+              <div className="mt-2 flex gap-2">
                 <button
                   onClick={() => onEdit(doc)}
                   className="text-xs text-blue-500 hover:text-blue-700"

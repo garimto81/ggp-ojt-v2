@@ -26,12 +26,12 @@ const DEFAULT_DEPARTMENTS = [
 
 // 색상 테마 매핑 (레거시 호환)
 const COLOR_THEME_MAP = {
-  '개발팀': 'indigo',
-  '디자인팀': 'pink',
-  '기획팀': 'purple',
-  '마케팅팀': 'orange',
-  '운영팀': 'teal',
-  '인사팀': 'cyan',
+  개발팀: 'indigo',
+  디자인팀: 'pink',
+  기획팀: 'purple',
+  마케팅팀: 'orange',
+  운영팀: 'teal',
+  인사팀: 'cyan',
 };
 
 /**

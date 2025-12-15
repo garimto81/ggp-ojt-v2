@@ -21,7 +21,7 @@ export default function EmptyState({
 }) {
   const icons = {
     document: (
-      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -31,7 +31,7 @@ export default function EmptyState({
       </svg>
     ),
     search: (
-      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -41,7 +41,7 @@ export default function EmptyState({
       </svg>
     ),
     user: (
-      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -51,7 +51,7 @@ export default function EmptyState({
       </svg>
     ),
     learning: (
-      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -61,7 +61,7 @@ export default function EmptyState({
       </svg>
     ),
     quiz: (
-      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -71,7 +71,7 @@ export default function EmptyState({
       </svg>
     ),
     default: (
-      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -90,18 +90,18 @@ export default function EmptyState({
 
   return (
     <div
-      className={`flex flex-col items-center justify-center py-16 px-6 text-center ${containerStyles[variant]}`}
+      className={`flex flex-col items-center justify-center px-6 py-16 text-center ${containerStyles[variant]}`}
     >
       {/* 아이콘 - Primary 색상의 연한 배경 */}
-      <div className="w-24 h-24 rounded-full bg-primary-50 flex items-center justify-center mb-6">
+      <div className="bg-primary-50 mb-6 flex h-24 w-24 items-center justify-center rounded-full">
         <div className="text-primary-400">{icons[icon] || icons.default}</div>
       </div>
 
       {/* 제목 - 따뜻하고 격려하는 톤 */}
-      <h3 className="text-xl font-semibold text-gray-800 mb-2">{title}</h3>
+      <h3 className="mb-2 text-xl font-semibold text-gray-800">{title}</h3>
 
       {/* 설명 */}
-      {description && <p className="text-base text-gray-500 mb-6 max-w-sm">{description}</p>}
+      {description && <p className="mb-6 max-w-sm text-base text-gray-500">{description}</p>}
 
       {/* 액션 버튼 */}
       {action && <div className="mt-2">{action}</div>}
