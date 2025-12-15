@@ -11,9 +11,10 @@
  */
 
 import { GEMINI_CONFIG, CONFIG } from '@/constants';
-import { createFileQuizPrompt, DEFAULT_QUIZ_COUNT } from './prompts';
-import { parseQuizResponse, validateQuiz } from './parser';
+
 import { uploadToGeminiFiles, SUPPORTED_MIME_TYPES } from './file-upload';
+import { parseQuizResponse, validateQuiz } from './parser';
+import { createFileQuizPrompt, DEFAULT_QUIZ_COUNT } from './prompts';
 
 /**
  * 파일 기반 퀴즈 생성 (Files API 사용)

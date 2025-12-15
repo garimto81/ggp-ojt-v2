@@ -52,12 +52,19 @@ export default function Header({ aiStatus }) {
                 <button
                   onClick={() => setShowModeMenu(!showModeMenu)}
                   className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm transition hover:bg-gray-200"
+                  aria-expanded={showModeMenu}
+                  aria-haspopup="menu"
                 >
                   모드
                 </button>
                 {showModeMenu && (
-                  <div className="absolute right-0 z-50 mt-2 w-40 rounded-lg border bg-white shadow-lg">
+                  <div
+                    className="absolute right-0 z-50 mt-2 w-40 rounded-lg border bg-white shadow-lg"
+                    role="menu"
+                    aria-label="모드 선택"
+                  >
                     <button
+                      role="menuitem"
                       onClick={() => {
                         handleModeSwitch('admin');
                         setShowModeMenu(false);
@@ -69,6 +76,7 @@ export default function Header({ aiStatus }) {
                       Admin 대시보드
                     </button>
                     <button
+                      role="menuitem"
                       onClick={() => {
                         handleModeSwitch('mentor');
                         setShowModeMenu(false);

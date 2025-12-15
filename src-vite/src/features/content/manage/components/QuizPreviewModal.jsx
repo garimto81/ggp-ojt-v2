@@ -73,12 +73,19 @@ export default function QuizPreviewModal({ previewingDoc, onClose, onQuizUpdated
   };
 
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+    <div
+      className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="quiz-modal-title"
+    >
       <div className="mx-4 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b p-6">
           <div>
-            <h3 className="text-lg font-bold text-gray-800">퀴즈 검증: {previewingDoc.title}</h3>
+            <h3 id="quiz-modal-title" className="text-lg font-bold text-gray-800">
+              퀴즈 검증: {previewingDoc.title}
+            </h3>
             {quizValidation && (
               <p className="mt-1 text-sm text-gray-500">
                 총 {quizValidation.stats.total}개 중 {quizValidation.stats.validCount}개 유효
@@ -90,7 +97,11 @@ export default function QuizPreviewModal({ previewingDoc, onClose, onQuizUpdated
               </p>
             )}
           </div>
-          <button onClick={onClose} className="text-2xl text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="text-2xl text-gray-400 hover:text-gray-600"
+            aria-label="모달 닫기"
+          >
             &times;
           </button>
         </div>

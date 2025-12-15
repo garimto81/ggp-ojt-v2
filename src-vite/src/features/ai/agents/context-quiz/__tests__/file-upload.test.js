@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
 import { isPdf, isPdfUrl, SUPPORTED_MIME_TYPES } from '../file-upload';
 
 describe('SUPPORTED_MIME_TYPES', () => {

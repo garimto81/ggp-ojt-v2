@@ -25,11 +25,7 @@ export {
 } from './file-upload';
 
 // 퀴즈 생성
-export {
-  generateQuizFromFile,
-  generateQuizFromLocalFile,
-  generateQuiz,
-} from './quiz-generator';
+export { generateQuizFromFile, generateQuizFromLocalFile, generateQuiz } from './quiz-generator';
 
 // 프롬프트
 export {

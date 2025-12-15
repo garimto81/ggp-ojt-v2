@@ -69,7 +69,10 @@ export function createUrlQuizPrompt(url, quizCount = CONFIG.QUIZ_TOTAL_POOL) {
  * @returns {string} 완성된 프롬프트
  */
 export function createFileQuizPrompt(quizCount = CONFIG.QUIZ_TOTAL_POOL) {
-  return QUIZ_ONLY_PROMPT.replace('{quizCount}', quizCount) + '\n\n위 문서의 내용을 기반으로 퀴즈를 생성해주세요.';
+  return (
+    QUIZ_ONLY_PROMPT.replace('{quizCount}', quizCount) +
+    '\n\n위 문서의 내용을 기반으로 퀴즈를 생성해주세요.'
+  );
 }
 
 /**

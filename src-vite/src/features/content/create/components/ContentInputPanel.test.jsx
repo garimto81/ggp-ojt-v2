@@ -48,6 +48,22 @@ vi.mock('@/utils/api', () => ({
   }),
 }));
 
+// Mock Context Quiz Agent (#200)
+vi.mock('@features/ai/agents/context-quiz', () => ({
+  generateQuizFromUrl: vi
+    .fn()
+    .mockResolvedValue([
+      { question: 'Test Question', options: ['A', 'B', 'C', 'D'], correctIndex: 0 },
+    ]),
+  generateQuizFromLocalFile: vi
+    .fn()
+    .mockResolvedValue([
+      { question: 'PDF Question', options: ['A', 'B', 'C', 'D'], correctIndex: 0 },
+    ]),
+  extractTitleFromUrl: vi.fn().mockReturnValue('URL Test Title'),
+  isPdfUrl: vi.fn().mockReturnValue(false),
+}));
+
 // Mock PDF utilities (#198 - pdfjs-dist requires Canvas API not available in JSDOM)
 vi.mock('@/utils/pdf', () => ({
   extractPdfText: vi.fn().mockResolvedValue({
@@ -171,19 +187,17 @@ describe('ContentInputPanel - Issue #198 Tests', () => {
       expect(urlInput).toHaveValue('https://test.com/article');
     });
 
-    it('빈 URL로 생성 시도 시 경고가 표시되어야 함', async () => {
-      const { Toast } = await import('@/contexts/ToastContext');
+    it('빈 URL일 때 생성 버튼이 비활성화되어야 함', async () => {
+      // Issue #200: 버튼이 disabled 상태이므로 클릭 불가
       const user = userEvent.setup();
       render(<ContentInputPanel {...defaultProps} />);
 
       // URL 모드로 전환
       await user.click(screen.getByRole('button', { name: 'URL' }));
 
-      // 생성 버튼 클릭 (URL 비어있음)
-      const generateButton = screen.getByRole('button', { name: /교육 자료 생성|원문으로 등록/ });
-      await user.click(generateButton);
-
-      expect(Toast.warning).toHaveBeenCalledWith(WARNING.URL_REQUIRED);
+      // 생성 버튼이 비활성화되어 있어야 함 (URL 비어있음)
+      const generateButton = screen.getByRole('button', { name: /URL에서 퀴즈 생성/ });
+      expect(generateButton).toBeDisabled();
     });
   });
 
@@ -266,15 +280,12 @@ describe('ContentInputPanel - Issue #198 Tests', () => {
       expect(generateButton).not.toBeDisabled();
     });
 
-    it('빈 텍스트로 생성 시도 시 경고가 표시되어야 함', async () => {
-      const { Toast } = await import('@/contexts/ToastContext');
-      const user = userEvent.setup();
+    it('빈 텍스트일 때 생성 버튼이 비활성화되어야 함', async () => {
+      // Issue #200: 버튼이 disabled 상태이므로 클릭 불가
       render(<ContentInputPanel {...defaultProps} rawInput="" />);
 
       const generateButton = screen.getByRole('button', { name: /교육 자료 생성|원문으로 등록/ });
-      await user.click(generateButton);
-
-      expect(Toast.warning).toHaveBeenCalledWith(WARNING.TEXT_REQUIRED);
+      expect(generateButton).toBeDisabled();
     });
 
     it('AI 오프라인 상태에서 버튼 텍스트가 변경되어야 함', () => {
@@ -309,7 +320,8 @@ describe('ContentInputPanel - Issue #198 Tests', () => {
     });
 
     it('URL 입력 시 source_type이 url로 설정되어야 함', async () => {
-      const { extractUrlText } = await import('@/utils/api');
+      // Issue #200: generateQuizFromUrl이 호출되어야 함
+      const { generateQuizFromUrl } = await import('@features/ai/agents/context-quiz');
       const user = userEvent.setup();
       render(<ContentInputPanel {...defaultProps} />);
 
@@ -319,14 +331,23 @@ describe('ContentInputPanel - Issue #198 Tests', () => {
       const urlInput = screen.getByPlaceholderText('https://example.com/article');
       await user.type(urlInput, 'https://test.com/article');
 
-      const generateButton = screen.getByRole('button', { name: /교육 자료 생성|원문으로 등록/ });
+      // URL 모드에서는 "URL에서 퀴즈 생성" 버튼 텍스트 사용 (Issue #200)
+      const generateButton = screen.getByRole('button', { name: /URL에서 퀴즈 생성/ });
       await user.click(generateButton);
 
       await waitFor(() => {
-        expect(extractUrlText).toHaveBeenCalledWith(
+        expect(generateQuizFromUrl).toHaveBeenCalledWith(
           'https://test.com/article',
-          expect.any(Function)
+          expect.objectContaining({ quizCount: 10 })
         );
+      });
+
+      // source_type이 url로 설정되어야 함
+      await waitFor(() => {
+        expect(mockOnDocumentsGenerated).toHaveBeenCalled();
+        const callArgs = mockOnDocumentsGenerated.mock.calls[0][0];
+        expect(callArgs[0]).toHaveProperty('source_type', 'url');
+        expect(callArgs[0]).toHaveProperty('source_url', 'https://test.com/article');
       });
     });
   });
