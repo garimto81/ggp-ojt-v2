@@ -5,6 +5,7 @@
 // Gemini API 단일 엔진으로 단순화
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
 import { checkAIStatus } from '@/utils/api';
 
 const AIContext = createContext(null);

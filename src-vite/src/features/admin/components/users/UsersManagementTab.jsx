@@ -2,11 +2,7 @@
 // Manages user list, filtering, pagination, and integrates with side panel and bulk actions
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Toast } from '@/contexts/ToastContext';
-import { supabase } from '@/utils/api';
-import { formatDate, sanitizeText } from '@/utils/helpers';
-import { useDebounce } from '@/hooks/useDebounce';
+
 import {
   ROLES,
   ROLE_THEMES,
@@ -14,8 +10,14 @@ import {
   DEPARTMENT_THEMES,
   DEFAULT_DEPARTMENT_THEME,
 } from '@/constants';
-import UserDetailPanel from './UserDetailPanel';
+import { useAuth } from '@/contexts/AuthContext';
+import { Toast } from '@/contexts/ToastContext';
+import { useDebounce } from '@/hooks/useDebounce';
+import { supabase } from '@/utils/api';
+import { formatDate, sanitizeText } from '@/utils/helpers';
+
 import BulkActionsBar from './BulkActionsBar';
+import UserDetailPanel from './UserDetailPanel';
 
 const FALLBACK_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 const ITEMS_PER_PAGE_OPTIONS = [10, 20, 50];

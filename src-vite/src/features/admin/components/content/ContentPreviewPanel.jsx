@@ -1,8 +1,10 @@
 // ContentPreviewPanel.jsx - 콘텐츠 미리보기 패널 (Split View 오른쪽)
 
 import { useState } from 'react';
-import ContentStatusBadge from './ContentStatusBadge';
+
 import { formatDate } from '@/utils/helpers';
+
+import ContentStatusBadge from './ContentStatusBadge';
 
 export default function ContentPreviewPanel({
   doc,

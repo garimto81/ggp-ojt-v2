@@ -1,8 +1,8 @@
 // OJT Master - Admin Settings Tab (Admin Page Redesign)
 
-import { SystemSettings } from './SystemSettings';
-import { NotificationSettings } from './NotificationSettings';
 import { AdminLogsViewer } from './AdminLogsViewer';
+import { NotificationSettings } from './NotificationSettings';
+import { SystemSettings } from './SystemSettings';
 
 /**
  * Settings Tab Component

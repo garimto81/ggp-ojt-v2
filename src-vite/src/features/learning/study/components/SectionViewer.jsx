@@ -9,7 +9,9 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import { sanitizeHtml } from '@/utils/helpers';
+
 import { useLearningRecord } from '@features/learning/quiz/hooks/useLearningRecord';
 
 // iframe 임베딩이 불가능한 도메인 (변환 방법 없음)

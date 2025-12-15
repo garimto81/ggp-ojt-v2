@@ -1,10 +1,12 @@
 // OJT Master v2.3.0 - Documents Context
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+
+import { supabase } from '../utils/api';
 import { dbGetAll, dbSave, dbDelete } from '../utils/db';
 import { sanitizeDocData } from '../utils/helpers';
+
 import { useAuth } from './AuthContext';
-import { supabase } from '../utils/api';
 
 const DocsContext = createContext(null);
 

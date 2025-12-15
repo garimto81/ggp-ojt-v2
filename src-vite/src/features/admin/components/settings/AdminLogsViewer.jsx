@@ -2,9 +2,10 @@
 // audit_logs 실제 스키마 기반 (v2.17.3)
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/utils/api';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { ROLES } from '@/constants';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/utils/api';
 
 const LOG_TYPE_ICONS = {
   INFO: { icon: 'ℹ️', color: 'text-blue-600', bg: 'bg-blue-50' },

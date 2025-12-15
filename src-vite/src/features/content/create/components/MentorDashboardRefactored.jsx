@@ -10,15 +10,17 @@
  */
 
 import { useState } from 'react';
-import { useDocs } from '@/contexts/DocsContext';
+
 import { useAuth } from '@/contexts/AuthContext';
+import { useDocs } from '@/contexts/DocsContext';
 import { Toast } from '@/contexts/ToastContext';
 
 // Refactored components
-import ContentInputPanel from './ContentInputPanel';
-import GeneratedDocsPreview from './GeneratedDocsPreview';
 import MyDocsList from '@features/content/manage/components/MyDocsList';
 import QuizPreviewModal from '@features/content/manage/components/QuizPreviewModal';
+
+import ContentInputPanel from './ContentInputPanel';
+import GeneratedDocsPreview from './GeneratedDocsPreview';
 
 export default function MentorDashboard({ aiStatus }) {
   const { saveDocument, loadMyDocs } = useDocs();

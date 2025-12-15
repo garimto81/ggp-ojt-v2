@@ -3,11 +3,13 @@
  * Issue #198: PDF/URL 콘텐츠 입력 기능 검증
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ContentInputPanel from './ContentInputPanel';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { WARNING } from '@/constants/messages';
+
+import ContentInputPanel from './ContentInputPanel';
 
 // Mock dependencies
 vi.mock('@features/auth', () => ({

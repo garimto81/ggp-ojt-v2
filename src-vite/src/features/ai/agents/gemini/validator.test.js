@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
 import { validateQuizQuality, validateSections, validateOJTContent } from './validator';
 
 describe('validateQuizQuality', () => {

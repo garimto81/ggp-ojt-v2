@@ -2,10 +2,11 @@
 // Displays detailed user information, learning progress, and actions
 
 import { useState, useEffect } from 'react';
+
+import { ROLES } from '@/constants';
+import { Toast } from '@/contexts/ToastContext';
 import { supabase } from '@/utils/api';
 import { formatDate, sanitizeText } from '@/utils/helpers';
-import { Toast } from '@/contexts/ToastContext';
-import { ROLES } from '@/constants';
 
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 

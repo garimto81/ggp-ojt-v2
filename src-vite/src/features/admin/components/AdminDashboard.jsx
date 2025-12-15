@@ -1,23 +1,7 @@
 // OJT Master v2.10.0 - Admin Dashboard Component (Issue #54, #78, Admin Redesign)
 
 import { useState, useEffect, useMemo } from 'react';
-import { useDocs } from '@/contexts/DocsContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Toast } from '@/contexts/ToastContext';
-import { supabase } from '@/utils/api';
-import { formatDate, sanitizeText } from '@/utils/helpers';
-import { useDebounce } from '@/hooks/useDebounce';
-import { ROLES } from '@/constants';
-import {
-  useMentorContribution,
-  useLearningProgress,
-  useQuizWeakness,
-  useLearningActivity,
-  useTeamStats,
-} from '../hooks/useAnalytics';
-import { ContentManagementTab } from './content';
-import { SettingsTab } from './settings';
-import { StatsTab } from './stats';
+
 import {
   StatsCard,
   StatsCardGrid,
@@ -33,6 +17,25 @@ import {
   Badge,
   Button,
 } from '@/components/ui';
+import { ROLES } from '@/constants';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDocs } from '@/contexts/DocsContext';
+import { Toast } from '@/contexts/ToastContext';
+import { useDebounce } from '@/hooks/useDebounce';
+import { supabase } from '@/utils/api';
+import { formatDate, sanitizeText } from '@/utils/helpers';
+
+import {
+  useMentorContribution,
+  useLearningProgress,
+  useQuizWeakness,
+  useLearningActivity,
+  useTeamStats,
+} from '../hooks/useAnalytics';
+
+import { ContentManagementTab } from './content';
+import { SettingsTab } from './settings';
+import { StatsTab } from './stats';
 
 // 기본 부서 목록
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];

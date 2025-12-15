@@ -9,13 +9,14 @@
  */
 
 import { useState, useRef } from 'react';
+
+import { Progress } from '@/components/ui';
+import { SUCCESS, ERROR, WARNING, INFO } from '@/constants/messages';
 import { Toast } from '@/contexts/ToastContext';
 import { generateOJTContent, extractUrlText, generateUrlQuizOnly } from '@/utils/api';
+import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
 import { extractPdfText, validatePdfFile, getPdfInfo } from '@/utils/pdf';
 import { uploadPdfToStorage } from '@/utils/storage';
-import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
-import { SUCCESS, ERROR, WARNING, INFO } from '@/constants/messages';
-import { Progress } from '@/components/ui';
 
 export default function ContentInputPanel({
   aiStatus,

@@ -3,10 +3,12 @@
 // PRD-0015: shadcn/ui 적용
 
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { ROLES } from '../constants';
-import { APP_VERSION, BUILD_HASH, BUILD_SUMMARY } from '../version';
+
 import { Button, Badge } from '@/components/ui';
+
+import { ROLES } from '../constants';
+import { useAuth } from '../contexts/AuthContext';
+import { APP_VERSION, BUILD_HASH, BUILD_SUMMARY } from '../version';
 
 export default function Header({ aiStatus }) {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();

@@ -2,7 +2,9 @@
 // react-pdf 기반 PDF 뷰어 (페이지 네비게이션, 확대/축소)
 
 import { useState, useCallback } from 'react';
+
 import { Document, Page, pdfjs } from 'react-pdf';
+
 import { PDF_CONFIG } from '../constants';
 
 // PDF.js worker 설정

@@ -1,6 +1,7 @@
 // OJT Master - Notification Settings Component
 
 import { useState } from 'react';
+
 import { Toast } from '@/contexts/ToastContext';
 
 /**

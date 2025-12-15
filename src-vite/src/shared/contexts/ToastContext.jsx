@@ -1,6 +1,7 @@
 // OJT Master v2.3.0 - Toast Context
 
 import { createContext, useContext } from 'react';
+
 import toast, { Toaster } from 'react-hot-toast';
 
 const ToastContext = createContext(null);

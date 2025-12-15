@@ -8,8 +8,10 @@
 // 4. 사용자가 새로고침하면 새 버전 적용
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { Toast } from './ToastContext';
+
 import { APP_VERSION, BUILD_HASH } from '../version';
+
+import { Toast } from './ToastContext';
 
 const VersionContext = createContext(null);
 

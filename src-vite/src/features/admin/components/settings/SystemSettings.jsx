@@ -1,10 +1,11 @@
 // OJT Master - System Settings Component
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/utils/api';
-import { Toast } from '@/contexts/ToastContext';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { ROLES } from '@/constants';
+import { useAuth } from '@/contexts/AuthContext';
+import { Toast } from '@/contexts/ToastContext';
+import { supabase } from '@/utils/api';
 
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 

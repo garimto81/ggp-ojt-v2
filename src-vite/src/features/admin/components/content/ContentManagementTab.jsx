@@ -1,13 +1,15 @@
 // ContentManagementTab.jsx - 콘텐츠 관리 탭 (Split View 컨테이너)
 
 import { useState, useMemo, useCallback } from 'react';
+
 import { Allotment } from 'allotment';
 import 'allotment/dist/style.css';
 
-import ContentListPanel from './ContentListPanel';
-import ContentPreviewPanel from './ContentPreviewPanel';
 import { Toast } from '@/contexts/ToastContext';
 import { supabase } from '@/utils/api';
+
+import ContentListPanel from './ContentListPanel';
+import ContentPreviewPanel from './ContentPreviewPanel';
 
 export default function ContentManagementTab({ docs, onDocDeleted, isAdmin }) {
   const [selectedDoc, setSelectedDoc] = useState(null);

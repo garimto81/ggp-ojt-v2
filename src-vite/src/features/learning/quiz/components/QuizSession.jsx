@@ -5,12 +5,15 @@
  */
 
 import { useState } from 'react';
-import { Toast } from '@/contexts/ToastContext';
-import { shuffleArray } from '@/utils/helpers';
+
 import { CONFIG } from '@/constants';
 import { WARNING } from '@/constants/messages';
-import QuizResult from './QuizResult';
+import { Toast } from '@/contexts/ToastContext';
+import { shuffleArray } from '@/utils/helpers';
+
 import { useLearningRecord } from '../hooks/useLearningRecord';
+
+import QuizResult from './QuizResult';
 
 // Prepare quiz questions (컴포넌트 외부로 이동 - 호이스팅 문제 해결)
 function prepareQuestions(quiz) {

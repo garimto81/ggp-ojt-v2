@@ -2,8 +2,9 @@
 // Issue #200: AI 상태 표시 개선 (Gemini 단일 엔진)
 
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+
 import { ROLES } from '../constants';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Header({ aiStatus }) {
   const { user, displayRole, sessionMode, handleLogout, handleModeSwitch } = useAuth();

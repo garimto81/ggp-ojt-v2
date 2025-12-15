@@ -3,6 +3,7 @@
 // @agent content-create-agent
 
 import { useState, useEffect } from 'react';
+
 import { fetchWithCorsProxy, extractMetadata, extractTextContent } from '@/utils/cors-proxy';
 
 export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
