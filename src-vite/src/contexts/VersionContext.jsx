@@ -43,11 +43,11 @@ export function VersionProvider({ children }) {
 
       const data = await response.json();
 
-      // 버전 또는 빌드해시가 다르면 업데이트 있음
+      // 버전이 다르면 업데이트 있음
+      // Note: buildHash는 디버깅용으로만 사용 (빌드마다 새 값 생성되므로 비교하지 않음)
       const isNewVersion = data.version !== APP_VERSION;
-      const isNewBuild = data.buildHash !== BUILD_HASH;
 
-      if (isNewVersion || isNewBuild) {
+      if (isNewVersion) {
         setUpdateAvailable(true);
         setNewVersion(data.version);
         setNewBuildHash(data.buildHash);
