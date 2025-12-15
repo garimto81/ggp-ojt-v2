@@ -1,10 +1,12 @@
 // OJT Master v2.3.0 - Documents Context
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+
+import { supabase } from '../utils/api';
 import { dbGetAll, dbSave, dbDelete } from '../utils/db';
 import { sanitizeDocData } from '../utils/helpers';
+
 import { useAuth } from './AuthContext';
-import { supabase } from '../utils/api';
 
 const DocsContext = createContext(null);
 
@@ -195,7 +197,7 @@ export function DocsProvider({ children }) {
 export function useDocs() {
   const context = useContext(DocsContext);
   if (!context) {
-    throw new Error('useDocs must be used within a DocsProvider');
+    throw new Error('useDocs는 DocsProvider 내부에서 사용해야 합니다.');
   }
   return context;
 }

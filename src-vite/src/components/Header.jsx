@@ -1,15 +1,13 @@
 // OJT Master v2.19.0 - Header Component
 // Issue #200: AI 상태 표시 개선 (Gemini 단일 엔진)
+// PRD-0015: shadcn/ui 적용
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+
+import { Button, Badge } from '@/components/ui';
+
+import { ROLES } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
-import {
-  ROLES,
-  ROLE_THEMES,
-  DEFAULT_THEME,
-  DEPARTMENT_THEMES,
-  DEFAULT_DEPARTMENT_THEME,
-} from '../constants';
 import { APP_VERSION, BUILD_HASH, BUILD_SUMMARY } from '../version';
 
 export default function Header({ aiStatus }) {
@@ -19,28 +17,17 @@ export default function Header({ aiStatus }) {
   const isAdmin = user?.role === ROLES.ADMIN;
   const isTempMentorMode = sessionMode === 'mentor';
 
-  // 현재 역할에 따른 테마 결정 (Issue #170)
-  // Admin이 임시 Mentor 모드일 때는 Mentor 테마 적용
-  const currentTheme = useMemo(() => {
-    if (!user) return DEFAULT_THEME;
-    if (isTempMentorMode) return ROLE_THEMES[ROLES.MENTOR];
-    return ROLE_THEMES[user.role] || DEFAULT_THEME;
-  }, [user, isTempMentorMode]);
-
-  // 부서에 따른 테마 결정 (Issue #170)
-  const departmentTheme = useMemo(() => {
-    if (!user?.department) return DEFAULT_DEPARTMENT_THEME;
-    return DEPARTMENT_THEMES[user.department] || DEFAULT_DEPARTMENT_THEME;
-  }, [user]);
+  // NOTE: currentTheme, departmentTheme은 PRD-0015 shadcn/ui 전환으로 Badge variant 사용
+  // 기존 테마 로직은 constants.js에 보존 (향후 커스텀 테마 지원 시 활용)
 
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className="border-b bg-white shadow-sm">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">OJT</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
+              <span className="text-lg font-bold text-white">OJT</span>
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
@@ -57,7 +44,7 @@ export default function Header({ aiStatus }) {
             {/* AI Status (Gemini) */}
             <div className="flex items-center gap-2" title={aiStatus.model || 'Gemini API'}>
               <span
-                className={`w-2 h-2 rounded-full ${
+                className={`h-2 w-2 rounded-full ${
                   aiStatus.online ? 'bg-green-500' : 'bg-red-500'
                 }`}
               />
@@ -68,24 +55,25 @@ export default function Header({ aiStatus }) {
               </span>
             </div>
 
-            {/* Mode Switch (Admin only) */}
+            {/* Mode Switch (Admin only) - PRD-0015 */}
             {isAdmin && (
               <div className="relative">
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setShowModeMenu(!showModeMenu)}
-                  className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition"
                 >
                   모드
-                </button>
+                </Button>
                 {showModeMenu && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border z-50">
+                  <div className="absolute right-0 z-50 mt-2 w-40 rounded-lg border bg-white shadow-lg">
                     <button
                       onClick={() => {
                         handleModeSwitch('admin');
                         setShowModeMenu(false);
                       }}
                       className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${
-                        !isTempMentorMode ? 'bg-blue-50 text-blue-600' : ''
+                        !isTempMentorMode ? 'bg-primary-50 text-primary-600' : ''
                       }`}
                     >
                       Admin 대시보드
@@ -106,53 +94,40 @@ export default function Header({ aiStatus }) {
               </div>
             )}
 
-            {/* User info with Role/Department Badges (Issue #170) */}
+            {/* User info with Role/Department Badges (Issue #170, PRD-0015) */}
             {user && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-800">{user.name}</span>
-                  {/* Role Badge */}
+                  {/* Role Badge - PRD-0015 */}
                   {isTempMentorMode ? (
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 border border-amber-200">
-                      Mentor (임시)
-                    </span>
+                    <Badge variant="mentor">Mentor (임시)</Badge>
                   ) : (
-                    <span
-                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${currentTheme.badge} border ${currentTheme.border}`}
-                    >
-                      {displayRole}
-                    </span>
+                    <Badge variant={user.role || 'default'}>{displayRole}</Badge>
                   )}
                   {/* Department Badge */}
-                  {user.department && (
-                    <span
-                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${departmentTheme.badge} border ${departmentTheme.border}`}
-                    >
-                      {user.department}
-                    </span>
-                  )}
+                  {user.department && <Badge variant="outline">{user.department}</Badge>}
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition"
-                >
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
                   로그아웃
-                </button>
+                </Button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Temp mode warning banner */}
+        {/* Temp mode warning banner - PRD-0015 */}
         {isTempMentorMode && (
-          <div className="mt-3 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
-            <span className="text-sm text-amber-700">MENTOR 모드로 작업 중입니다 (임시)</span>
-            <button
+          <div className="bg-warning-50 border-warning-200 mt-3 flex items-center justify-between rounded-lg border px-4 py-2">
+            <span className="text-warning-700 text-sm">MENTOR 모드로 작업 중입니다 (임시)</span>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-warning-600 hover:text-warning-800"
               onClick={() => handleModeSwitch('admin')}
-              className="text-sm text-amber-600 hover:text-amber-800 font-medium"
             >
               Admin으로 돌아가기
-            </button>
+            </Button>
           </div>
         )}
       </div>

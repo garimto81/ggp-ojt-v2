@@ -1,7 +1,7 @@
 # Supabase Schema Reference
 
-**Last Updated**: 2025-12-10
-**Version**: 3.0.0 (실제 DB 기반)
+**Last Updated**: 2025-12-11
+**Version**: 3.1.0 (실제 DB 기반)
 **Project**: ggp-platform (cbvansmxutnogntbyswi)
 
 ---
@@ -96,7 +96,7 @@ CREATE TABLE public.departments (
 
 **인덱스**: `idx_departments_slug`, `idx_departments_active`, `idx_departments_display_order`
 
-### 1.4 ojt_docs (19 컬럼)
+### 1.4 ojt_docs (20 컬럼)
 
 OJT 교육 문서 테이블.
 
@@ -115,6 +115,7 @@ CREATE TABLE public.ojt_docs (
   source_type TEXT CHECK (source_type IN ('manual', 'url', 'pdf')),
   source_url TEXT,
   source_file TEXT,
+  source_storage_path TEXT,                          -- Supabase Storage 경로 (신규 #202)
   status TEXT DEFAULT 'published',
   report_count INTEGER DEFAULT 0,
   last_reviewed_at TIMESTAMPTZ,
@@ -124,11 +125,17 @@ CREATE TABLE public.ojt_docs (
 );
 ```
 
-**인덱스**: `idx_ojt_docs_author`, `idx_ojt_docs_team`
+**인덱스**: `idx_ojt_docs_author`, `idx_ojt_docs_team`, `idx_ojt_docs_source_storage_path` (WHERE NOT NULL)
 
-### 1.5 learning_records (7 컬럼)
+### 1.5 learning_records (7 컬럼) ✅ 학습 완료 판단 기준
 
-학습 완료 기록 테이블.
+학습 완료 기록 테이블. **퀴즈 결과만으로 학습 완료 여부를 판단합니다.**
+
+| 조건 | 상태 |
+|------|------|
+| 레코드 없음 | 미학습 |
+| `passed = false` | 퀴즈 미통과 |
+| `passed = true` | ✅ 학습 완료 |
 
 ```sql
 CREATE TABLE public.learning_records (
@@ -145,7 +152,11 @@ CREATE TABLE public.learning_records (
 
 **인덱스**: `idx_learning_records_user`
 
-### 1.6 learning_progress (13 컬럼)
+### 1.6 learning_progress (13 컬럼) ⚠️ 미사용
+
+> **참고**: 이 테이블은 DB에 존재하나 **프론트엔드에서 사용하지 않습니다**.
+> 학습 완료 여부는 `learning_records` 테이블의 퀴즈 결과(`passed`)로만 판단합니다.
+> (Issue #221)
 
 학습 진행 상태 테이블.
 
@@ -457,6 +468,41 @@ public.get_role_change_history(user_id) → SETOF audit_logs
 
 ---
 
+## 13. Storage 버킷 (신규 #202)
+
+### 13.1 pdfs 버킷
+
+로컬 PDF 파일 영구 저장용 버킷.
+
+```sql
+-- 버킷 설정
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'pdfs',
+  'pdfs',
+  true,
+  52428800,  -- 50MB
+  ARRAY['application/pdf']::text[]
+);
+```
+
+**RLS 정책** (4개):
+
+| 정책명 | 작업 | 대상 | 조건 |
+|--------|------|------|------|
+| `Mentor and Admin can upload PDFs` | INSERT | authenticated | role IN ('mentor', 'admin') |
+| `Authenticated users can view PDFs` | SELECT | authenticated | bucket_id = 'pdfs' |
+| `Owner or Admin can delete PDFs` | DELETE | authenticated | owner = auth.uid() OR role = 'admin' |
+| `Owner or Admin can update PDFs` | UPDATE | authenticated | owner = auth.uid() OR role = 'admin' |
+
+**경로 규칙**: `documents/{doc_id}/{filename}.pdf`
+
+**ojt_docs 연동**: `source_storage_path` 컬럼에 Storage 경로 저장
+
+**마이그레이션**: `20251211_pdf_storage_bucket.sql`
+
+---
+
 ## Appendix: 두 시스템 관계도
 
 ```
@@ -465,11 +511,11 @@ OJT Master 시스템                  LMS 확장 시스템
 users                              profiles
   ↓                                  ↓
 ojt_docs (JSONB quiz)              lessons ← curriculum_days
+  ↓   ↓                              ↓
+  │   └─ storage.pdfs (PDF 파일)   quizzes ← quiz_pools
   ↓                                  ↓
-learning_progress                  quizzes ← quiz_pools
-learning_records                     ↓
-                                   quiz_attempts
-                                   user_progress
+learning_progress                  quiz_attempts
+learning_records                   user_progress
                                    user_quiz_history
                                    user_question_history
 ```

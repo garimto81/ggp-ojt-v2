@@ -1,10 +1,12 @@
 // ContentListPanel.jsx - 콘텐츠 목록 패널 (Split View 왼쪽)
 
 import { useState, useMemo } from 'react';
-import ContentStatusBadge from './ContentStatusBadge';
-import ContentQuickActions from './ContentQuickActions';
-import { formatDate } from '@/utils/helpers';
+
 import { useDebounce } from '@/hooks/useDebounce';
+import { formatDate } from '@/utils/helpers';
+
+import ContentQuickActions from './ContentQuickActions';
+import ContentStatusBadge from './ContentStatusBadge';
 
 const STATUS_TABS = [
   { key: 'all', label: '전체' },
@@ -72,7 +74,7 @@ export default function ContentListPanel({
   }, [docs, statusFilter, debouncedSearch, teamFilter, authorFilter]);
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="flex h-full flex-col bg-white">
       {/* Status Tabs */}
       <div className="flex border-b px-2 pt-2" role="tablist" aria-label="콘텐츠 상태 필터">
         {STATUS_TABS.map((tab) => (
@@ -81,16 +83,16 @@ export default function ContentListPanel({
             role="tab"
             aria-selected={statusFilter === tab.key}
             onClick={() => setStatusFilter(tab.key)}
-            className={`px-3 py-2 text-sm font-medium transition rounded-t ${
+            className={`rounded-t px-3 py-2 text-sm font-medium transition ${
               statusFilter === tab.key
-                ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+                ? 'border-b-2 border-blue-600 bg-blue-50 text-blue-700'
                 : `text-gray-500 hover:text-gray-700 ${tab.color || ''}`
             }`}
           >
             {tab.label}
             {statusCounts[tab.key] > 0 && (
               <span
-                className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
+                className={`ml-1 rounded-full px-1.5 py-0.5 text-xs ${
                   statusFilter === tab.key ? 'bg-blue-200' : 'bg-gray-200'
                 }`}
               >
@@ -102,20 +104,20 @@ export default function ContentListPanel({
       </div>
 
       {/* Filters */}
-      <div className="p-3 border-b space-y-2">
+      <div className="space-y-2 border-b p-3">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="제목 검색..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           aria-label="제목 검색"
         />
         <div className="flex gap-2">
           <select
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             aria-label="팀 필터"
           >
             <option value="">모든 팀</option>
@@ -128,7 +130,7 @@ export default function ContentListPanel({
           <select
             value={authorFilter}
             onChange={(e) => setAuthorFilter(e.target.value)}
-            className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             aria-label="작성자 필터"
           >
             <option value="">모든 작성자</option>
@@ -142,7 +144,7 @@ export default function ContentListPanel({
       </div>
 
       {/* Results count */}
-      <div className="px-3 py-2 text-xs text-gray-500 border-b">{filteredDocs.length}개 문서</div>
+      <div className="border-b px-3 py-2 text-xs text-gray-500">{filteredDocs.length}개 문서</div>
 
       {/* Document List */}
       <div className="flex-1 overflow-y-auto" role="listbox" aria-label="문서 목록">
@@ -155,22 +157,22 @@ export default function ContentListPanel({
               role="option"
               aria-selected={selectedDocId === doc.id}
               onClick={() => onSelectDoc(doc)}
-              className={`p-3 border-b cursor-pointer transition ${
+              className={`cursor-pointer border-b p-3 transition ${
                 selectedDocId === doc.id
-                  ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                  ? 'border-l-4 border-l-blue-500 bg-blue-50'
                   : 'hover:bg-gray-50'
               }`}
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-gray-900 truncate">{doc.title}</h4>
-                  <p className="text-xs text-gray-500 mt-1">
+                <div className="min-w-0 flex-1">
+                  <h4 className="truncate font-medium text-gray-900">{doc.title}</h4>
+                  <p className="mt-1 text-xs text-gray-500">
                     {doc.author_name} · {doc.team} · {formatDate(doc.created_at)}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mt-2">
+              <div className="mt-2 flex items-center gap-2">
                 <ContentStatusBadge status={doc.status || 'published'} />
                 {doc.report_count > 0 && (
                   <span className="text-xs text-yellow-600">⚠️ 신고 {doc.report_count}건</span>

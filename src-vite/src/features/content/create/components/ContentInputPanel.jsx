@@ -12,14 +12,11 @@
  */
 
 import { useState, useRef } from 'react';
+
 import { Toast } from '@/contexts/ToastContext';
 import { generateOJTContent, extractUrlText } from '@/utils/api';
+import { estimateReadingTime, calculateRequiredSteps, splitContentForSteps } from '@/utils/helpers';
 import { extractPdfText, validatePdfFile, getPdfInfo } from '@/utils/pdf';
-import {
-  estimateReadingTime,
-  calculateRequiredSteps,
-  splitContentForSteps,
-} from '@/utils/helpers';
 
 // Context Quiz Agent - URL/PDF 퀴즈 전용 생성 (#200)
 import {
@@ -35,7 +32,6 @@ export default function ContentInputPanel({
   rawInput,
   setRawInput,
 }) {
-
   // Input states
   const [inputType, setInputType] = useState('text');
   const [urlInput, setUrlInput] = useState('');
@@ -328,16 +324,16 @@ export default function ContentInputPanel({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">콘텐츠 입력</h2>
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-bold text-gray-800">콘텐츠 입력</h2>
 
         {/* Input Type Selector */}
-        <div className="flex gap-2 mb-4">
+        <div className="mb-4 flex gap-2">
           {['text', 'url', 'pdf'].map((type) => (
             <button
               key={type}
               onClick={() => setInputType(type)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 inputType === type
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -356,7 +352,7 @@ export default function ContentInputPanel({
           value={inputTitle}
           onChange={(e) => setInputTitle(e.target.value)}
           placeholder="문서 제목"
-          className="w-full px-4 py-2 border rounded-lg mb-4"
+          className="mb-4 w-full rounded-lg border px-4 py-2"
         />
 
         {/* Content Input */}
@@ -365,7 +361,7 @@ export default function ContentInputPanel({
             value={rawInput}
             onChange={(e) => setRawInput(e.target.value)}
             placeholder="교육 콘텐츠를 입력하세요..."
-            className="w-full h-64 px-4 py-3 border rounded-lg resize-none"
+            className="h-64 w-full resize-none rounded-lg border px-4 py-3"
           />
         )}
 
@@ -375,7 +371,7 @@ export default function ContentInputPanel({
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="https://example.com/article"
-            className="w-full px-4 py-2 border rounded-lg"
+            className="w-full rounded-lg border px-4 py-2"
           />
         )}
 
@@ -396,12 +392,11 @@ export default function ContentInputPanel({
             {!selectedPdf ? (
               <label
                 htmlFor="pdf-upload"
-                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-                           hover:border-blue-400 hover:bg-blue-50 transition block"
+                className="block cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition hover:border-blue-400 hover:bg-blue-50"
               >
                 <div className="flex flex-col items-center gap-2">
                   <svg
-                    className="w-12 h-12 text-gray-400"
+                    className="h-12 w-12 text-gray-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -418,17 +413,17 @@ export default function ContentInputPanel({
                 </div>
               </label>
             ) : (
-              <div className="border rounded-lg p-4 bg-gray-50">
+              <div className="rounded-lg border bg-gray-50 p-4">
                 {/* Selected file info */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
+                      <svg className="h-6 w-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8.5 13.5l1.5 1.5-1.5 1.5L7 15l1.5-1.5zm7 1.5l-1.5 1.5L12.5 15l1.5-1.5 1.5 1.5zM11 18h2v-2h-2v2z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-800 truncate max-w-xs">
+                      <p className="max-w-xs truncate font-medium text-gray-800">
                         {selectedPdf.name}
                       </p>
                       <p className="text-sm text-gray-500">
@@ -443,7 +438,7 @@ export default function ContentInputPanel({
                     title="파일 제거"
                     disabled={isProcessing}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -455,7 +450,7 @@ export default function ContentInputPanel({
                 </div>
 
                 {/* Context API 안내 (#200) */}
-                <p className="mt-3 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded">
+                <p className="mt-3 rounded bg-blue-50 px-3 py-2 text-xs text-blue-600">
                   💡 PDF 원본이 학습 화면에 표시되고, Gemini가 자동으로 퀴즈를 생성합니다.
                 </p>
               </div>
@@ -473,7 +468,7 @@ export default function ContentInputPanel({
 
         {/* Auto Split Toggle - 텍스트 입력 시에만 표시 (#200) */}
         {inputType === 'text' && (
-          <label className="flex items-center gap-2 mt-4">
+          <label className="mt-4 flex items-center gap-2">
             <input
               type="checkbox"
               checked={autoSplit}
@@ -485,7 +480,7 @@ export default function ContentInputPanel({
 
         {/* URL/PDF 안내 메시지 (#200) */}
         {inputType === 'url' && urlInput && (
-          <p className="mt-4 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded">
+          <p className="mt-4 rounded bg-blue-50 px-3 py-2 text-xs text-blue-600">
             💡 URL 원본이 학습 화면에 표시되고, Gemini URL Context Tool로 퀴즈를 생성합니다.
           </p>
         )}
@@ -493,8 +488,13 @@ export default function ContentInputPanel({
         {/* Generate Button - 입력 타입별 텍스트 (#200) */}
         <button
           onClick={handleGenerate}
-          disabled={isProcessing || (inputType === 'url' && !urlInput) || (inputType === 'pdf' && !selectedPdf) || (inputType === 'text' && !rawInput)}
-          className="w-full mt-4 py-3 text-white font-medium rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+          disabled={
+            isProcessing ||
+            (inputType === 'url' && !urlInput) ||
+            (inputType === 'pdf' && !selectedPdf) ||
+            (inputType === 'text' && !rawInput)
+          }
+          className="mt-4 w-full rounded-lg bg-blue-500 py-3 font-medium text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300"
         >
           {isProcessing
             ? processingStatus
@@ -507,7 +507,7 @@ export default function ContentInputPanel({
                   : '원문으로 등록 (AI 오프라인)'}
         </button>
         {inputType === 'text' && !aiStatus.online && (
-          <p className="text-xs text-amber-600 mt-2 text-center">
+          <p className="mt-2 text-center text-xs text-amber-600">
             ⚠️ Gemini 서비스 오프라인 - 원문 그대로 등록됩니다
           </p>
         )}

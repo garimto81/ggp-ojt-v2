@@ -5,6 +5,7 @@
 // Gemini API 단일 엔진으로 단순화
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
 import { checkAIStatus } from '@/utils/api';
 
 const AIContext = createContext(null);
@@ -72,7 +73,7 @@ export function AIProvider({ children }) {
 export function useAI() {
   const context = useContext(AIContext);
   if (!context) {
-    throw new Error('useAI must be used within an AIProvider');
+    throw new Error('useAI는 AIProvider 내부에서 사용해야 합니다.');
   }
   return context;
 }

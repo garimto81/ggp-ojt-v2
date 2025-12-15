@@ -1,5 +1,6 @@
 // OJT Master v2.5.0 - API Utilities Tests
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { validateQuizQuality, generateOJTContent, checkAIStatus } from './api';
 
 describe('validateQuizQuality', () => {

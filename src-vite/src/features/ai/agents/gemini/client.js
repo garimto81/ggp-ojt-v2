@@ -5,17 +5,20 @@
  */
 
 import { GEMINI_CONFIG, CONFIG } from '@/constants';
-import {
-  createOJTContentPrompt,
-  createQuizRegeneratePrompt,
-  createHealthCheckPrompt,
-} from './prompts';
+
 import {
   parseJSONResponse,
   parseJSONArrayResponse,
   validateAndFillResult,
   normalizeQuizQuestion,
+  createPlaceholderQuiz,
 } from './parser';
+import {
+  createOJTContentPrompt,
+  createQuizRegeneratePrompt,
+  createUrlQuizOnlyPrompt,
+  createHealthCheckPrompt,
+} from './prompts';
 
 /** Rate Limiting 설정 */
 const RATE_LIMIT_CONFIG = {
@@ -213,6 +216,48 @@ export async function checkStatus() {
       model: GEMINI_CONFIG.MODEL,
       error: error.message,
     };
+  }
+}
+
+/**
+ * URL 콘텐츠용 퀴즈만 생성 (#211)
+ * URL 학습은 원본 페이지를 직접 보여주므로 섹션 없이 퀴즈만 생성
+ * @param {Object} params - 생성 파라미터
+ * @param {string} params.contentText - URL에서 추출한 텍스트 (퀴즈 생성용)
+ * @param {string} params.title - 문서 제목
+ * @param {Function} params.onProgress - 진행률 콜백
+ * @param {Object} params.options - 추가 옵션
+ * @returns {Promise<Object>} 생성된 퀴즈 콘텐츠 (섹션 없음)
+ */
+export async function generateUrlQuizOnly({ contentText, title, onProgress, options = {} }) {
+  const { quizCount = 20 } = options;
+
+  if (onProgress) onProgress('URL 퀴즈 생성 중 (Gemini)...');
+
+  const prompt = createUrlQuizOnlyPrompt(title, contentText, quizCount);
+
+  try {
+    const responseText = await callGeminiAPI(prompt, options);
+    const result = parseJSONResponse(responseText);
+
+    // URL 콘텐츠는 섹션 없이 퀴즈만 반환
+    const validatedResult = {
+      title: result.title || title,
+      team: result.team || '미분류',
+      sections: [], // URL은 섹션 없음 - 원본 페이지 직접 표시
+      quiz: (result.quiz || []).map((q, i) => normalizeQuizQuestion(q, i, title)),
+    };
+
+    // 퀴즈가 부족하면 플레이스홀더로 채움
+    while (validatedResult.quiz.length < quizCount) {
+      validatedResult.quiz.push(createPlaceholderQuiz(title, validatedResult.quiz.length + 1));
+    }
+
+    validatedResult.ai_engine = 'gemini';
+    return validatedResult;
+  } catch (error) {
+    console.warn('Gemini URL 퀴즈 생성 실패:', error.message);
+    throw error;
   }
 }
 

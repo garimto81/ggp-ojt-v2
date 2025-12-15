@@ -1,17 +1,25 @@
 /**
  * useLearningRecord Hook Tests
  * @agent learning-quiz-agent
+ *
+ * 학습 완료 판단 기준 (Issue #221):
+ * - 퀴즈 있음 → 퀴즈 통과 (passed=true, score>=3)
+ * - 퀴즈 없음 → 열람 완료 (passed=true, score=null)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+import { SUCCESS, WARNING } from '@/constants/messages';
+
 import { useLearningRecord } from './useLearningRecord';
 
-// Mock dependencies
+// Mock Supabase with upsert support
+const mockUpsert = vi.fn(() => Promise.resolve({ data: null, error: null }));
 vi.mock('@/utils/api', () => ({
   supabase: {
     from: vi.fn(() => ({
-      insert: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      upsert: mockUpsert,
     })),
   },
 }));
@@ -87,7 +95,7 @@ describe('useLearningRecord', () => {
       });
     });
 
-    expect(Toast.success).toHaveBeenCalledWith('축하합니다! 퀴즈를 통과했습니다!');
+    expect(Toast.success).toHaveBeenCalledWith(SUCCESS.QUIZ_PASSED);
   });
 
   it('should show warning toast when failed', async () => {
@@ -103,6 +111,98 @@ describe('useLearningRecord', () => {
       });
     });
 
-    expect(Toast.warning).toHaveBeenCalledWith('아쉽습니다. 다시 도전해보세요.');
+    expect(Toast.warning).toHaveBeenCalledWith(WARNING.QUIZ_FAILED);
+  });
+
+  // === Issue #221: 새로운 테스트 케이스 ===
+
+  describe('saveViewCompletion (퀴즈 없는 문서 열람 완료)', () => {
+    it('should return saveViewCompletion function', () => {
+      const { result } = renderHook(() => useLearningRecord());
+
+      expect(result.current.saveViewCompletion).toBeDefined();
+      expect(typeof result.current.saveViewCompletion).toBe('function');
+    });
+
+    it('should save with score=null and passed=true for view completion', async () => {
+      const { supabase } = await import('@/utils/api');
+      const { result } = renderHook(() => useLearningRecord());
+
+      await act(async () => {
+        await result.current.saveViewCompletion({
+          userId: 'user-1',
+          docId: 'doc-1',
+        });
+      });
+
+      // upsert가 호출되었는지 확인
+      expect(supabase.from).toHaveBeenCalledWith('learning_records');
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user-1',
+          doc_id: 'doc-1',
+          score: null,
+          total_questions: 0,
+          passed: true,
+        }),
+        { onConflict: 'user_id,doc_id' }
+      );
+    });
+
+    it('should show success toast on view completion', async () => {
+      const { Toast } = await import('@/contexts/ToastContext');
+      const { result } = renderHook(() => useLearningRecord());
+
+      await act(async () => {
+        await result.current.saveViewCompletion({
+          userId: 'user-1',
+          docId: 'doc-1',
+        });
+      });
+
+      expect(Toast.success).toHaveBeenCalledWith(SUCCESS.VIEW_COMPLETE);
+    });
+
+    it('should return true on successful view completion', async () => {
+      const { result } = renderHook(() => useLearningRecord());
+
+      let completed;
+      await act(async () => {
+        completed = await result.current.saveViewCompletion({
+          userId: 'user-1',
+          docId: 'doc-1',
+        });
+      });
+
+      expect(completed).toBe(true);
+    });
+  });
+
+  describe('upsert behavior (재학습 시나리오)', () => {
+    it('should use upsert with onConflict for saveLearningRecord', async () => {
+      const { supabase } = await import('@/utils/api');
+      const { result } = renderHook(() => useLearningRecord());
+
+      await act(async () => {
+        await result.current.saveLearningRecord({
+          userId: 'user-1',
+          docId: 'doc-1',
+          score: 4,
+          totalQuestions: 5,
+        });
+      });
+
+      expect(supabase.from).toHaveBeenCalledWith('learning_records');
+      expect(mockUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 'user-1',
+          doc_id: 'doc-1',
+          score: 4,
+          total_questions: 5,
+          passed: true,
+        }),
+        { onConflict: 'user_id,doc_id' }
+      );
+    });
   });
 });

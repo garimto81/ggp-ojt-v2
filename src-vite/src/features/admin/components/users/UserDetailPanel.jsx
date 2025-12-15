@@ -2,10 +2,11 @@
 // Displays detailed user information, learning progress, and actions
 
 import { useState, useEffect } from 'react';
+
+import { ROLES } from '@/constants';
+import { Toast } from '@/contexts/ToastContext';
 import { supabase } from '@/utils/api';
 import { formatDate, sanitizeText } from '@/utils/helpers';
-import { Toast } from '@/contexts/ToastContext';
-import { ROLES } from '@/constants';
 
 const DEFAULT_DEPARTMENTS = ['개발팀', '디자인팀', '기획팀', '마케팅팀', '운영팀', '인사팀'];
 
@@ -123,14 +124,14 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
     <aside
       role="complementary"
       aria-label="사용자 상세 정보"
-      className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-50 flex flex-col"
+      className="fixed top-0 right-0 z-50 flex h-full w-96 flex-col bg-white shadow-2xl"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+      <div className="flex items-center justify-between border-b bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
         <h2 className="text-lg font-bold text-gray-800">사용자 상세</h2>
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 text-xl"
+          className="text-xl text-gray-500 hover:text-gray-700"
           aria-label="사이드 패널 닫기"
         >
           ✕
@@ -138,10 +139,10 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
       </div>
 
       {/* Body - Scrollable */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {/* Basic Info */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="text-sm font-bold text-gray-700 mb-3">기본 정보</h3>
+        <div className="rounded-lg bg-gray-50 p-4">
+          <h3 className="mb-3 text-sm font-bold text-gray-700">기본 정보</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">이름</span>
@@ -149,7 +150,7 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">이메일</span>
-              <span className="font-medium text-xs">{user.email || '-'}</span>
+              <span className="text-xs font-medium">{user.email || '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">가입일</span>
@@ -158,7 +159,7 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
             <div className="flex justify-between">
               <span className="text-gray-500">상태</span>
               <span
-                className={`px-2 py-1 rounded text-xs ${
+                className={`rounded px-2 py-1 text-xs ${
                   user.is_active === false
                     ? 'bg-red-100 text-red-700'
                     : 'bg-green-100 text-green-700'
@@ -171,8 +172,8 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
         </div>
 
         {/* Role & Department - Editable */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="rounded-lg bg-gray-50 p-4">
+          <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-bold text-gray-700">역할 및 부서</h3>
             {isAdmin && !editMode && (
               <button
@@ -190,11 +191,11 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
           {editMode ? (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">역할</label>
+                <label className="mb-1 block text-xs text-gray-500">역할</label>
                 <select
                   value={editData.role}
                   onChange={(e) => setEditData({ ...editData, role: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
                   <option value={ROLES.ADMIN}>Admin</option>
                   <option value={ROLES.MENTOR}>Mentor</option>
@@ -202,11 +203,11 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">부서</label>
+                <label className="mb-1 block text-xs text-gray-500">부서</label>
                 <select
                   value={editData.department}
                   onChange={(e) => setEditData({ ...editData, department: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
                   <option value="">선택 안함</option>
                   {DEFAULT_DEPARTMENTS.map((dept) => (
@@ -219,13 +220,13 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveChanges}
-                  className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                  className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
                 >
                   저장
                 </button>
                 <button
                   onClick={() => setEditMode(false)}
-                  className="flex-1 px-3 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300"
+                  className="flex-1 rounded-lg bg-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-300"
                 >
                   취소
                 </button>
@@ -248,27 +249,27 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
         {/* Learning Stats */}
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="h-6 w-6 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
           </div>
         ) : (
           <>
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">학습 현황</h3>
+            <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+              <h3 className="mb-3 text-sm font-bold text-gray-700">학습 현황</h3>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-lg p-3">
-                  <p className="text-xs text-gray-500 mb-1">총 학습</p>
+                <div className="rounded-lg bg-white p-3">
+                  <p className="mb-1 text-xs text-gray-500">총 학습</p>
                   <p className="text-lg font-bold text-blue-600">{learningStats.totalRecords}</p>
                 </div>
-                <div className="bg-white rounded-lg p-3">
-                  <p className="text-xs text-gray-500 mb-1">통과</p>
+                <div className="rounded-lg bg-white p-3">
+                  <p className="mb-1 text-xs text-gray-500">통과</p>
                   <p className="text-lg font-bold text-green-600">{learningStats.passedRecords}</p>
                 </div>
-                <div className="bg-white rounded-lg p-3">
-                  <p className="text-xs text-gray-500 mb-1">평균 점수</p>
+                <div className="rounded-lg bg-white p-3">
+                  <p className="mb-1 text-xs text-gray-500">평균 점수</p>
                   <p className="text-lg font-bold text-purple-600">{learningStats.avgScore}점</p>
                 </div>
-                <div className="bg-white rounded-lg p-3">
-                  <p className="text-xs text-gray-500 mb-1">진도율</p>
+                <div className="rounded-lg bg-white p-3">
+                  <p className="mb-1 text-xs text-gray-500">진도율</p>
                   <p className="text-lg font-bold text-orange-600">
                     {learningStats.progressPercent}%
                   </p>
@@ -278,20 +279,20 @@ export default function UserDetailPanel({ user, onClose, onUpdate, isAdmin, allD
 
             {/* Recent Activity */}
             {learningStats.recentActivity.length > 0 && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-bold text-gray-700 mb-3">최근 활동</h3>
+              <div className="rounded-lg bg-gray-50 p-4">
+                <h3 className="mb-3 text-sm font-bold text-gray-700">최근 활동</h3>
                 <div className="space-y-2">
                   {learningStats.recentActivity.map((activity) => (
                     <div
                       key={activity.id}
-                      className="bg-white rounded-lg p-3 border border-gray-200"
+                      className="rounded-lg border border-gray-200 bg-white p-3"
                     >
-                      <div className="flex items-start justify-between mb-1">
-                        <p className="text-xs font-medium text-gray-800 line-clamp-1">
+                      <div className="mb-1 flex items-start justify-between">
+                        <p className="line-clamp-1 text-xs font-medium text-gray-800">
                           {sanitizeText(activity.docTitle)}
                         </p>
                         <span
-                          className={`px-2 py-0.5 rounded text-xs ${
+                          className={`rounded px-2 py-0.5 text-xs ${
                             activity.passed
                               ? 'bg-green-100 text-green-700'
                               : 'bg-red-100 text-red-700'

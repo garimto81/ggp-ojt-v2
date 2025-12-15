@@ -3,6 +3,7 @@
 // @agent content-create-agent
 
 import { useState, useEffect } from 'react';
+
 import { fetchWithCorsProxy, extractMetadata, extractTextContent } from '@/utils/cors-proxy';
 
 export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
@@ -51,10 +52,10 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
 
   if (!url) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-400 p-8">
+      <div className="flex h-full items-center justify-center p-8 text-gray-400">
         <div className="text-center">
           <svg
-            className="w-16 h-16 mx-auto mb-4 text-gray-300"
+            className="mx-auto mb-4 h-16 w-16 text-gray-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -74,9 +75,9 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4" />
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-blue-500" />
           <p className="text-gray-600">URL 분석 중...</p>
         </div>
       </div>
@@ -85,10 +86,10 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full p-8">
+      <div className="flex h-full items-center justify-center p-8">
         <div className="text-center text-red-500">
           <svg
-            className="w-12 h-12 mx-auto mb-2"
+            className="mx-auto mb-2 h-12 w-12"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -101,10 +102,10 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
             />
           </svg>
           <p className="font-medium">로드 실패</p>
-          <p className="text-sm mt-1">{error}</p>
+          <p className="mt-1 text-sm">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
+            className="mt-4 rounded bg-red-100 px-4 py-2 text-red-700 hover:bg-red-200"
           >
             다시 시도
           </button>
@@ -114,10 +115,10 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Metadata Card */}
       {metadata && (
-        <div className="p-4 border-b bg-white">
+        <div className="border-b bg-white p-4">
           <div className="flex gap-4">
             {/* Thumbnail */}
             {metadata.image && (
@@ -125,32 +126,32 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
                 <img
                   src={metadata.image}
                   alt=""
-                  className="w-24 h-24 object-cover rounded-lg bg-gray-100"
+                  className="h-24 w-24 rounded-lg bg-gray-100 object-cover"
                   onError={(e) => (e.target.style.display = 'none')}
                 />
               </div>
             )}
 
             {/* Info */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               {metadata.siteName && (
-                <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                <p className="mb-1 flex items-center gap-1 text-xs text-gray-500">
                   {metadata.favicon && (
                     <img
                       src={metadata.favicon}
                       alt=""
-                      className="w-4 h-4"
+                      className="h-4 w-4"
                       onError={(e) => (e.target.style.display = 'none')}
                     />
                   )}
                   {metadata.siteName}
                 </p>
               )}
-              <h3 className="font-bold text-gray-900 line-clamp-2 mb-1">
+              <h3 className="mb-1 line-clamp-2 font-bold text-gray-900">
                 {metadata.title || '제목 없음'}
               </h3>
               {metadata.description && (
-                <p className="text-sm text-gray-600 line-clamp-2">{metadata.description}</p>
+                <p className="line-clamp-2 text-sm text-gray-600">{metadata.description}</p>
               )}
             </div>
           </div>
@@ -160,7 +161,7 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-blue-500 hover:text-blue-700 mt-2 block truncate"
+            className="mt-2 block truncate text-xs text-blue-500 hover:text-blue-700"
           >
             {url}
           </a>
@@ -168,17 +169,14 @@ export default function UrlPreviewPanel({ url, onTextExtracted, onError }) {
       )}
 
       {/* Preview Text */}
-      <div className="flex-1 overflow-auto p-4 bg-gray-50">
-        <div className="flex items-center justify-between mb-2">
+      <div className="flex-1 overflow-auto bg-gray-50 p-4">
+        <div className="mb-2 flex items-center justify-between">
           <h4 className="text-sm font-medium text-gray-700">추출된 텍스트</h4>
           <span className="text-xs text-gray-500">{previewText.length.toLocaleString()}자</span>
         </div>
 
         <div
-          className={`
-          text-sm text-gray-600 whitespace-pre-wrap
-          ${!showFullText ? 'line-clamp-[20]' : ''}
-        `}
+          className={`text-sm whitespace-pre-wrap text-gray-600 ${!showFullText ? 'line-clamp-[20]' : ''} `}
         >
           {previewText || '텍스트를 추출할 수 없습니다.'}
         </div>

@@ -10,12 +10,12 @@ export default function GeneratedDocsPreview({ generatedDocs, onSave, onQuizPrev
   if (generatedDocs.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
         <h3 className="font-bold text-gray-800">생성된 문서 ({generatedDocs.length}개)</h3>
         <button
           onClick={onSave}
-          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+          className="rounded-lg bg-green-500 px-4 py-2 text-white transition hover:bg-green-600"
         >
           저장
         </button>
@@ -27,45 +27,45 @@ export default function GeneratedDocsPreview({ generatedDocs, onSave, onQuizPrev
           return (
             <div
               key={i}
-              className={`p-4 border rounded-lg ${isAIFailed ? 'border-amber-300 bg-amber-50' : ''}`}
+              className={`rounded-lg border p-4 ${isAIFailed ? 'border-amber-300 bg-amber-50' : ''}`}
             >
               <div className="flex items-start justify-between">
                 <h4 className="font-medium">{doc.title}</h4>
                 <div className="flex gap-1">
                   {doc.ai_engine && (
                     <span
-                      className={`text-xs px-2 py-1 rounded font-medium ${
+                      className={`rounded px-2 py-1 text-xs font-medium ${
                         doc.ai_engine === 'webllm'
-                          ? 'text-green-700 bg-green-100'
-                          : 'text-blue-700 bg-blue-100'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-blue-100 text-blue-700'
                       }`}
                     >
                       {doc.ai_engine === 'webllm' ? '💻 WebLLM' : '☁️ Gemini'}
                     </span>
                   )}
                   {isAIFailed && (
-                    <span className="text-xs text-amber-700 bg-amber-200 px-2 py-1 rounded font-medium">
+                    <span className="rounded bg-amber-200 px-2 py-1 text-xs font-medium text-amber-700">
                       AI 미처리
                     </span>
                   )}
                 </div>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="mt-1 text-sm text-gray-500">
                 {doc.sections?.length || 0}개 섹션, {doc.quiz?.length || 0}개 퀴즈
               </p>
               {isAIFailed && doc.ai_error && (
-                <p className="text-xs text-amber-600 mt-1">오류: {doc.ai_error}</p>
+                <p className="mt-1 text-xs text-amber-600">오류: {doc.ai_error}</p>
               )}
               {/* Quiz quality indicator */}
               <div className="mt-2 flex items-center gap-2">
                 {isAIFailed ? (
                   <span className="text-xs text-gray-500">퀴즈 없음 (원문 모드)</span>
                 ) : validation.valid ? (
-                  <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                  <span className="rounded bg-green-50 px-2 py-1 text-xs text-green-600">
                     퀴즈 검증 통과
                   </span>
                 ) : (
-                  <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                  <span className="rounded bg-amber-50 px-2 py-1 text-xs text-amber-600">
                     {validation.stats.placeholders}개 더미 문제
                   </span>
                 )}

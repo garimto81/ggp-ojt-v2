@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
 import {
   parseJSONResponse,
   parseJSONArrayResponse,
@@ -158,5 +159,50 @@ describe('validateAndFillResult', () => {
     const validated = validateAndFillResult(result, '테스트', 5);
     expect(validated.quiz).toHaveLength(5);
     expect(validated.quiz[4].isPlaceholder).toBe(true);
+  });
+
+  // Issue #209: team/title 기본값 테스트 추가
+  it('team이 없으면 "미분류"로 설정해야 함', () => {
+    const result = {
+      title: '테스트',
+      sections: [{ title: '섹션', content: '내용' }],
+      quiz: [],
+    };
+
+    const validated = validateAndFillResult(result, '테스트', 5);
+    expect(validated.team).toBe('미분류');
+  });
+
+  it('team이 빈 문자열이면 "미분류"로 설정해야 함', () => {
+    const result = {
+      title: '테스트',
+      team: '',
+      sections: [{ title: '섹션', content: '내용' }],
+      quiz: [],
+    };
+
+    const validated = validateAndFillResult(result, '테스트', 5);
+    expect(validated.team).toBe('미분류');
+  });
+
+  it('title이 없으면 전달된 title로 설정해야 함', () => {
+    const result = {
+      sections: [{ title: '섹션', content: '내용' }],
+      quiz: [],
+    };
+
+    const validated = validateAndFillResult(result, '기본 제목', 5);
+    expect(validated.title).toBe('기본 제목');
+  });
+
+  it('title이 빈 문자열이면 전달된 title로 설정해야 함', () => {
+    const result = {
+      title: '  ',
+      sections: [{ title: '섹션', content: '내용' }],
+      quiz: [],
+    };
+
+    const validated = validateAndFillResult(result, '기본 제목', 5);
+    expect(validated.title).toBe('기본 제목');
   });
 });

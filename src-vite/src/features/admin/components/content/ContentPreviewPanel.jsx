@@ -1,8 +1,10 @@
 // ContentPreviewPanel.jsx - 콘텐츠 미리보기 패널 (Split View 오른쪽)
 
 import { useState } from 'react';
-import ContentStatusBadge from './ContentStatusBadge';
+
 import { formatDate } from '@/utils/helpers';
+
+import ContentStatusBadge from './ContentStatusBadge';
 
 export default function ContentPreviewPanel({
   doc,
@@ -15,9 +17,9 @@ export default function ContentPreviewPanel({
 
   if (!doc) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50">
+      <div className="flex h-full items-center justify-center bg-gray-50">
         <div className="text-center text-gray-500">
-          <div className="text-4xl mb-4">📄</div>
+          <div className="mb-4 text-4xl">📄</div>
           <p>왼쪽 목록에서 문서를 선택하세요</p>
         </div>
       </div>
@@ -29,14 +31,14 @@ export default function ContentPreviewPanel({
 
   return (
     <div
-      className="h-full flex flex-col bg-white"
+      className="flex h-full flex-col bg-white"
       role="region"
       aria-label="콘텐츠 미리보기"
       aria-live="polite"
     >
       {/* Header */}
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-bold text-gray-900 mb-2">{doc.title}</h2>
+      <div className="border-b p-4">
+        <h2 className="mb-2 text-lg font-bold text-gray-900">{doc.title}</h2>
         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
           <span>작성자: {doc.author_name}</span>
           <span>·</span>
@@ -44,7 +46,7 @@ export default function ContentPreviewPanel({
           <span>·</span>
           <span>생성일: {formatDate(doc.created_at)}</span>
         </div>
-        <div className="flex items-center gap-3 mt-3">
+        <div className="mt-3 flex items-center gap-3">
           <ContentStatusBadge status={doc.status || 'published'} showIcon />
           {doc.report_count > 0 && (
             <span className="text-sm text-yellow-600">⚠️ 신고 {doc.report_count}건</span>
@@ -60,7 +62,7 @@ export default function ContentPreviewPanel({
           onClick={() => setActiveTab('content')}
           className={`px-4 py-2 text-sm font-medium transition ${
             activeTab === 'content'
-              ? 'text-blue-600 border-b-2 border-blue-600'
+              ? 'border-b-2 border-blue-600 text-blue-600'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -72,7 +74,7 @@ export default function ContentPreviewPanel({
           onClick={() => setActiveTab('quiz')}
           className={`px-4 py-2 text-sm font-medium transition ${
             activeTab === 'quiz'
-              ? 'text-blue-600 border-b-2 border-blue-600'
+              ? 'border-b-2 border-blue-600 text-blue-600'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -85,7 +87,7 @@ export default function ContentPreviewPanel({
             onClick={() => setActiveTab('reports')}
             className={`px-4 py-2 text-sm font-medium transition ${
               activeTab === 'reports'
-                ? 'text-yellow-600 border-b-2 border-yellow-600'
+                ? 'border-b-2 border-yellow-600 text-yellow-600'
                 : 'text-yellow-500 hover:text-yellow-700'
             }`}
           >
@@ -100,15 +102,15 @@ export default function ContentPreviewPanel({
         {activeTab === 'content' && (
           <div className="space-y-4" role="tabpanel" aria-labelledby="tab-content">
             {sections.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">섹션이 없습니다.</p>
+              <p className="py-8 text-center text-gray-500">섹션이 없습니다.</p>
             ) : (
               sections.map((section, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <h3 className="font-medium text-gray-900 mb-2">
+                <div key={index} className="rounded-lg border p-4">
+                  <h3 className="mb-2 font-medium text-gray-900">
                     {index + 1}. {section.title}
                   </h3>
                   <div
-                    className="text-sm text-gray-600 prose prose-sm max-w-none"
+                    className="prose prose-sm max-w-none text-sm text-gray-600"
                     dangerouslySetInnerHTML={{ __html: section.content }}
                   />
                 </div>
@@ -121,20 +123,20 @@ export default function ContentPreviewPanel({
         {activeTab === 'quiz' && (
           <div className="space-y-4" role="tabpanel" aria-labelledby="tab-quiz">
             {quiz.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">퀴즈가 없습니다.</p>
+              <p className="py-8 text-center text-gray-500">퀴즈가 없습니다.</p>
             ) : (
               quiz.map((q, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <p className="font-medium text-gray-900 mb-3">
+                <div key={index} className="rounded-lg border p-4">
+                  <p className="mb-3 font-medium text-gray-900">
                     Q{index + 1}. {q.question}
                   </p>
                   <ul className="space-y-1">
                     {q.options?.map((opt, optIndex) => (
                       <li
                         key={optIndex}
-                        className={`text-sm px-3 py-1.5 rounded ${
+                        className={`rounded px-3 py-1.5 text-sm ${
                           optIndex === q.correctAnswer
-                            ? 'bg-green-100 text-green-800 font-medium'
+                            ? 'bg-green-100 font-medium text-green-800'
                             : 'text-gray-600'
                         }`}
                       >
@@ -153,12 +155,12 @@ export default function ContentPreviewPanel({
         {activeTab === 'reports' && (
           <div className="space-y-3" role="tabpanel" aria-labelledby="tab-reports">
             {reports?.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">신고 내역이 없습니다.</p>
+              <p className="py-8 text-center text-gray-500">신고 내역이 없습니다.</p>
             ) : (
               reports?.map((report) => (
                 <div
                   key={report.id}
-                  className={`border rounded-lg p-4 ${
+                  className={`rounded-lg border p-4 ${
                     report.status === 'pending' ? 'border-yellow-300 bg-yellow-50' : ''
                   }`}
                 >
@@ -167,24 +169,24 @@ export default function ContentPreviewPanel({
                       <span className="text-sm font-medium text-gray-900">
                         {getReasonLabel(report.reason)}
                       </span>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="mt-1 text-xs text-gray-500">
                         신고자: {report.reporter_name || '익명'} · {formatDate(report.created_at)}
                       </p>
                       {report.description && (
-                        <p className="text-sm text-gray-600 mt-2">{report.description}</p>
+                        <p className="mt-2 text-sm text-gray-600">{report.description}</p>
                       )}
                     </div>
                     {report.status === 'pending' && onResolveReport && (
                       <div className="flex gap-2">
                         <button
                           onClick={() => onResolveReport(report.id, 'resolved')}
-                          className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
+                          className="rounded bg-green-100 px-2 py-1 text-xs text-green-700 hover:bg-green-200"
                         >
                           해결
                         </button>
                         <button
                           onClick={() => onResolveReport(report.id, 'dismissed')}
-                          className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                          className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
                         >
                           기각
                         </button>
@@ -192,7 +194,7 @@ export default function ContentPreviewPanel({
                     )}
                     {report.status !== 'pending' && (
                       <span
-                        className={`text-xs px-2 py-1 rounded ${
+                        className={`rounded px-2 py-1 text-xs ${
                           report.status === 'resolved'
                             ? 'bg-green-100 text-green-700'
                             : 'bg-gray-100 text-gray-700'
@@ -210,11 +212,11 @@ export default function ContentPreviewPanel({
       </div>
 
       {/* Actions Footer */}
-      <div className="p-4 border-t bg-gray-50 flex gap-3">
+      <div className="flex gap-3 border-t bg-gray-50 p-4">
         {doc.status === 'review' && (
           <button
             onClick={() => onStatusChange(doc.id, 'published')}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm"
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm text-white transition hover:bg-green-700"
           >
             📤 게시
           </button>
@@ -222,7 +224,7 @@ export default function ContentPreviewPanel({
         {doc.status === 'published' && (
           <button
             onClick={() => onStatusChange(doc.id, 'hidden')}
-            className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition text-sm"
+            className="rounded-lg bg-yellow-600 px-4 py-2 text-sm text-white transition hover:bg-yellow-700"
           >
             🙈 숨기기
           </button>
@@ -230,7 +232,7 @@ export default function ContentPreviewPanel({
         {doc.status === 'hidden' && (
           <button
             onClick={() => onStatusChange(doc.id, 'published')}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm"
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm text-white transition hover:bg-green-700"
           >
             📤 다시 게시
           </button>
@@ -244,7 +246,7 @@ export default function ContentPreviewPanel({
               }
             }
           }}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm text-white transition hover:bg-red-700"
         >
           🗑️ 삭제
         </button>

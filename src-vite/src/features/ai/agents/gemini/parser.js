@@ -109,6 +109,16 @@ export function createPlaceholderQuiz(title, number) {
  * @returns {Object} 검증/보완된 결과
  */
 export function validateAndFillResult(result, title, minQuizCount = 20) {
+  // team 필드 기본값 설정 (#209 - URL 저장 안됨 수정)
+  if (!result.team || typeof result.team !== 'string' || result.team.trim() === '') {
+    result.team = '미분류';
+  }
+
+  // title 필드 검증
+  if (!result.title || typeof result.title !== 'string' || result.title.trim() === '') {
+    result.title = title || '제목 없음';
+  }
+
   // 섹션 검증
   if (!Array.isArray(result.sections) || result.sections.length === 0) {
     result.sections = [

@@ -1,7 +1,7 @@
 {
   "name": "src-vite",
   "private": true,
-  "version": "2.19.1",
+  "version": "2.34.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,17 +17,21 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
     "@supabase/supabase-js": "^2.86.0",
     "allotment": "^1.20.4",
     "chart.js": "^4.5.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "dexie": "^4.2.1",
     "dompurify": "^3.3.0",
     "pdfjs-dist": "^5.4.449",
-    "quill": "^2.0.3",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.0",
-    "react-hot-toast": "^2.6.0"
+    "react-hot-toast": "^2.6.0",
+    "tailwind-merge": "^3.4.0",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -42,13 +46,14 @@
     "@vitest/coverage-v8": "^4.0.14",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.4",
-    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^27.2.0",
     "prettier": "^3.7.3",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.1.17",
     "vite": "^7.2.4",
     "vitest": "^4.0.14"

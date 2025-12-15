@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react';
+
 import { Toast } from '@/contexts/ToastContext';
 import { validateQuizQuality, regenerateQuizQuestions } from '@/utils/api';
 
@@ -72,43 +73,43 @@ export default function QuizPreviewModal({ previewingDoc, onClose, onQuizUpdated
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+      <div className="mx-4 flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
         {/* Modal Header */}
-        <div className="p-6 border-b flex items-center justify-between">
+        <div className="flex items-center justify-between border-b p-6">
           <div>
             <h3 className="text-lg font-bold text-gray-800">퀴즈 검증: {previewingDoc.title}</h3>
             {quizValidation && (
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="mt-1 text-sm text-gray-500">
                 총 {quizValidation.stats.total}개 중 {quizValidation.stats.validCount}개 유효
                 {quizValidation.stats.placeholders > 0 && (
-                  <span className="text-amber-600 ml-2">
+                  <span className="ml-2 text-amber-600">
                     ({quizValidation.stats.placeholders}개 더미)
                   </span>
                 )}
               </p>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">
+          <button onClick={onClose} className="text-2xl text-gray-400 hover:text-gray-600">
             &times;
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="flex-1 overflow-y-auto p-6">
           {/* Action buttons */}
-          <div className="flex gap-2 mb-4">
+          <div className="mb-4 flex gap-2">
             <button
               onClick={selectProblematicQuizzes}
               disabled={quizValidation?.stats.placeholders === 0}
-              className="px-3 py-1.5 text-sm bg-amber-100 text-amber-700 rounded hover:bg-amber-200 disabled:opacity-50"
+              className="rounded bg-amber-100 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-200 disabled:opacity-50"
             >
               더미 문제 선택
             </button>
             <button
               onClick={handleRegenerateQuizzes}
               disabled={selectedQuizIndices.length === 0 || isRegenerating}
-              className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              className="rounded bg-blue-500 px-3 py-1.5 text-sm text-white hover:bg-blue-600 disabled:opacity-50"
             >
               {isRegenerating
                 ? processingStatus || '재생성 중...'
@@ -126,7 +127,7 @@ export default function QuizPreviewModal({ previewingDoc, onClose, onQuizUpdated
                 <div
                   key={idx}
                   onClick={() => toggleQuizSelection(idx)}
-                  className={`p-4 border rounded-lg cursor-pointer transition ${
+                  className={`cursor-pointer rounded-lg border p-4 transition ${
                     isSelected
                       ? 'border-blue-500 bg-blue-50'
                       : isProblematic
@@ -142,22 +143,22 @@ export default function QuizPreviewModal({ previewingDoc, onClose, onQuizUpdated
                       className="mt-1"
                     />
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="mb-2 flex items-center gap-2">
                         <span className="text-xs font-medium text-gray-500">Q{idx + 1}</span>
                         {isProblematic && (
-                          <span className="text-xs text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-600">
                             더미
                           </span>
                         )}
                       </div>
-                      <p className="font-medium text-gray-800 mb-2">{q.question}</p>
+                      <p className="mb-2 font-medium text-gray-800">{q.question}</p>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {q.options?.map((opt, optIdx) => (
                           <div
                             key={optIdx}
-                            className={`px-2 py-1 rounded ${
+                            className={`rounded px-2 py-1 ${
                               optIdx === q.correct
-                                ? 'bg-green-100 text-green-800 font-medium'
+                                ? 'bg-green-100 font-medium text-green-800'
                                 : 'bg-gray-100 text-gray-600'
                             }`}
                           >
@@ -174,7 +175,7 @@ export default function QuizPreviewModal({ previewingDoc, onClose, onQuizUpdated
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+        <div className="flex justify-end gap-3 border-t bg-gray-50 p-4">
           <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800">
             닫기
           </button>

@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { delay, calculateBackoff, generateOJTContent, checkStatus, getConfig } from './client';
 
 // fetch mock

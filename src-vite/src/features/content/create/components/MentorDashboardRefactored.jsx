@@ -10,15 +10,17 @@
  */
 
 import { useState } from 'react';
-import { useDocs } from '@/contexts/DocsContext';
+
 import { useAuth } from '@/contexts/AuthContext';
+import { useDocs } from '@/contexts/DocsContext';
 import { Toast } from '@/contexts/ToastContext';
 
 // Refactored components
-import ContentInputPanel from './ContentInputPanel';
-import GeneratedDocsPreview from './GeneratedDocsPreview';
 import MyDocsList from '@features/content/manage/components/MyDocsList';
 import QuizPreviewModal from '@features/content/manage/components/QuizPreviewModal';
+
+import ContentInputPanel from './ContentInputPanel';
+import GeneratedDocsPreview from './GeneratedDocsPreview';
 
 export default function MentorDashboard({ aiStatus }) {
   const { saveDocument, loadMyDocs } = useDocs();
@@ -37,8 +39,29 @@ export default function MentorDashboard({ aiStatus }) {
   const [previewingDoc, setPreviewingDoc] = useState(null);
 
   // Handle documents generated from ContentInputPanel
-  const handleDocumentsGenerated = (docs) => {
+  // Issue #209: 생성 후 자동 저장
+  const handleDocumentsGenerated = async (docs) => {
     setGeneratedDocs(docs);
+
+    // 자동 저장 (#209)
+    try {
+      for (const doc of docs) {
+        await saveDocument({
+          ...doc,
+          author_id: user.id,
+          author_name: user.name,
+        });
+      }
+
+      Toast.success(`${docs.length}개 문서가 자동 저장되었습니다.`);
+      setGeneratedDocs([]);
+      setRawInput('');
+      await loadMyDocs();
+    } catch (error) {
+      // 자동 저장 실패 시 미리보기 유지 (수동 저장 가능)
+      Toast.warning('자동 저장 실패. 수동으로 저장해주세요.');
+      console.error('[MentorDashboard] 자동 저장 실패:', error);
+    }
   };
 
   // Handle save

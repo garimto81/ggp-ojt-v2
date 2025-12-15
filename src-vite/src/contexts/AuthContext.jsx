@@ -1,10 +1,11 @@
 // OJT Master v2.3.0 - Authentication Context
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+import { VIEW_STATES, ROLES } from '../constants';
 import { supabase } from '../utils/api';
 import { dbGetAll, dbSave } from '../utils/db';
 import { SecureSession, getViewStateByRole } from '../utils/helpers';
-import { VIEW_STATES, ROLES } from '../constants';
 
 const AuthContext = createContext(null);
 
@@ -208,7 +209,7 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth는 AuthProvider 내부에서 사용해야 합니다.');
   }
   return context;
 }

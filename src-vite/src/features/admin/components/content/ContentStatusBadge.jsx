@@ -30,7 +30,7 @@ export default function ContentStatusBadge({ status, showIcon = false }) {
     <span
       role="status"
       aria-label={`상태: ${config.label}`}
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.className}`}
     >
       {showIcon && <span aria-hidden="true">{config.icon}</span>}
       {config.label}
