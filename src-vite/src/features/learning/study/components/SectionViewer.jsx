@@ -8,16 +8,58 @@
  * - 퀴즈 없음 → 열람 완료 버튼 클릭 시 learning_records 저장
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { sanitizeHtml } from '@/utils/helpers';
 import { useLearningRecord } from '@features/learning/quiz/hooks/useLearningRecord';
+
+// iframe 임베딩이 차단되는 도메인 (X-Frame-Options: SAMEORIGIN)
+const BLOCKED_DOMAINS = [
+  'docs.google.com',
+  'drive.google.com',
+  'sheets.google.com',
+  'slides.google.com',
+  'forms.google.com',
+  'sites.google.com',
+  'calendar.google.com',
+  'mail.google.com',
+  'meet.google.com',
+  'notion.so',
+  'notion.site',
+  'figma.com',
+  'miro.com',
+  'dropbox.com',
+  'onedrive.live.com',
+  'sharepoint.com',
+];
+
+/**
+ * URL이 iframe 임베딩 차단 도메인인지 확인
+ */
+function isBlockedDomain(url) {
+  if (!url) return false;
+  try {
+    const hostname = new URL(url).hostname;
+    return BLOCKED_DOMAINS.some((domain) => hostname.includes(domain));
+  } catch {
+    return false;
+  }
+}
 
 export default function SectionViewer({ doc, userId, onStudyComplete, onBackToList }) {
   const [currentSection, setCurrentSection] = useState(0);
   const [studyCompleted, setStudyCompleted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
 
   const { saveViewCompletion } = useLearningRecord();
+
+  // iframe 로드 오류 핸들러
+  const handleIframeError = useCallback(() => {
+    setIframeError(true);
+  }, []);
+
+  // 차단된 도메인이면 미리 에러 상태로 설정
+  const isBlocked = isBlockedDomain(doc?.source_url);
 
   const sections = doc?.sections || [];
   const totalSections = sections.length;
@@ -237,7 +279,7 @@ export default function SectionViewer({ doc, userId, onStudyComplete, onBackToLi
           </div>
         </div>
       ) : doc.source_type === 'url' && doc.source_url ? (
-        /* URL 학습: 원본 URL 직접 표시 (#211) */
+        /* URL 학습: 원본 URL 직접 표시 (#211, #232 iframe fallback) */
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-800">🔗 원본 웹페이지</h2>
@@ -251,18 +293,46 @@ export default function SectionViewer({ doc, userId, onStudyComplete, onBackToLi
             </a>
           </div>
 
-          {/* URL iframe 뷰어 */}
-          <div className="border rounded-lg overflow-hidden bg-gray-50">
-            <iframe
-              src={doc.source_url}
-              title={doc.title}
-              className="w-full h-[600px] border-0"
-              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-            />
-          </div>
+          {/* iframe 차단 또는 로드 실패 시 폴백 UI (#232) */}
+          {isBlocked || iframeError ? (
+            <div className="border rounded-lg bg-gray-50 p-8 text-center">
+              <div className="text-6xl mb-4">🔒</div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">
+                이 페이지는 미리보기가 지원되지 않습니다
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {isBlocked
+                  ? '보안 정책으로 인해 외부 사이트 콘텐츠를 여기에 표시할 수 없습니다.'
+                  : '페이지 로드 중 오류가 발생했습니다.'}
+              </p>
+              <a
+                href={doc.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition"
+              >
+                🔗 새 창에서 학습하기
+              </a>
+              <p className="text-xs text-gray-400 mt-4">
+                {new URL(doc.source_url).hostname}
+              </p>
+            </div>
+          ) : (
+            /* URL iframe 뷰어 */
+            <div className="border rounded-lg overflow-hidden bg-gray-50">
+              <iframe
+                src={doc.source_url}
+                title={doc.title}
+                className="w-full h-[600px] border-0"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                onError={handleIframeError}
+              />
+            </div>
+          )}
 
           <p className="text-sm text-gray-500 mt-3 text-center">
-            💡 위 콘텐츠를 학습한 후 퀴즈를 풀어보세요
+            💡 {isBlocked || iframeError ? '새 창에서 학습 후' : '위 콘텐츠를 학습한 후'} 퀴즈를
+            풀어보세요
           </p>
 
           {/* URL 학습 완료 버튼 */}
