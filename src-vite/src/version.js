@@ -1,6 +1,11 @@
 // OJT Master - Version Information
 // Single source of truth for version display
 //
+// 2.35.0 - 2025-12-15
+//   - fix(version): buildHash 비교 제거로 버전 알림 오류 수정 (#231)
+//   - feat(learning): Google Docs/Drive URL iframe 임베딩 지원 (#232)
+//   - URL 자동 변환: /edit → /preview, /view → /preview
+//   - 변환 불가 도메인(Notion, Figma)은 폴백 UI 표시
 // 2.34.0 - 2025-12-12
 //   - feat: DepartmentsContext 호환성 레이어 추가 (#178)
 //   - departments 테이블 있으면 사용, 없으면 admin_settings 폴백
@@ -117,7 +122,7 @@
 //   - fix(ux): Header 역할/부서 컬러 뱃지 (#172, #173)
 //   - feat: 버전 표시에 커밋 해시 추가, version.js 도입
 
-export const APP_VERSION = '2.34.0';
-export const BUILD_HASH = '5dc149a';
-export const BUILD_SUMMARY = 'DepartmentsContext';
-export const BUILD_DATE = '2025-12-12';
+export const APP_VERSION = '2.35.0';
+export const BUILD_HASH = '48f2564';
+export const BUILD_SUMMARY = 'Google Docs iframe';
+export const BUILD_DATE = '2025-12-15';
