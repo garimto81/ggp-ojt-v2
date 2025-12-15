@@ -48,11 +48,11 @@ export default function MenteeStudy() {
 
   if (!selectedDoc) {
     return (
-      <div className="text-center py-12">
+      <div className="py-12 text-center">
         <p className="text-gray-500">{EMPTY.NO_SELECTED_DOC}</p>
         <button
           onClick={handleBackToList}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          className="mt-4 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
         >
           목록으로 돌아가기
         </button>

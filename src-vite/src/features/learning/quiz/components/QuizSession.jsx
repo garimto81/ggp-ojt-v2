@@ -109,11 +109,11 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
 
   if (!currentQuestion) {
     return (
-      <div className="text-center py-12">
+      <div className="py-12 text-center">
         <p className="text-gray-500">퀴즈 문제가 없습니다.</p>
         <button
           onClick={onExitQuiz || onBackToList}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          className="mt-4 rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
         >
           돌아가기
         </button>
@@ -122,10 +122,10 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-xl shadow-sm p-6">
+    <div className="mx-auto max-w-2xl">
+      <div className="rounded-xl bg-white p-6 shadow-sm">
         {/* Quiz Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-800">{doc.title}</h2>
           <span className="text-sm text-gray-500">
             {currentQuiz + 1} / {quizQuestions.length}
@@ -133,9 +133,9 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+        <div className="mb-6 h-2 w-full rounded-full bg-gray-200">
           <div
-            className="bg-blue-500 h-2 rounded-full transition-all"
+            className="h-2 rounded-full bg-blue-500 transition-all"
             style={{
               width: `${((currentQuiz + 1) / quizQuestions.length) * 100}%`,
             }}
@@ -144,7 +144,7 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
 
         {/* Question */}
         <div className="mb-6">
-          <p className="text-gray-800 font-medium text-lg mb-4">{currentQuestion.question}</p>
+          <p className="mb-4 text-lg font-medium text-gray-800">{currentQuestion.question}</p>
 
           <div className="space-y-3">
             {currentQuestion.shuffledOptions.map((option, idx) => {
@@ -172,7 +172,7 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
                   disabled={showResult}
                   className={optionClass}
                 >
-                  <span className="font-medium mr-2">{String.fromCharCode(65 + idx)}.</span>
+                  <span className="mr-2 font-medium">{String.fromCharCode(65 + idx)}.</span>
                   {option}
                 </button>
               );
@@ -183,7 +183,7 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
         {/* Result Message */}
         {showResult && (
           <div
-            className={`p-4 rounded-lg mb-6 ${
+            className={`mb-6 rounded-lg p-4 ${
               selectedAnswer === currentQuestion.answer
                 ? 'bg-green-100 text-green-800'
                 : 'bg-red-100 text-red-800'
@@ -205,7 +205,7 @@ export default function QuizSession({ doc, userId, onBackToList, onExitQuiz }) {
         {/* Action Button */}
         <button
           onClick={showResult ? handleNextQuestion : handleSubmitAnswer}
-          className="w-full py-3 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition"
+          className="w-full rounded-lg bg-blue-500 py-3 font-medium text-white transition hover:bg-blue-600"
         >
           {showResult
             ? currentQuiz < quizQuestions.length - 1

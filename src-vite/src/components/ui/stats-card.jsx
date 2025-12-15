@@ -30,13 +30,13 @@ export function StatsCard({ icon, value, label, trend, variant = 'default', clas
   };
 
   return (
-    <Card className={cn('hover:shadow-md transition-shadow', className)} {...props}>
+    <Card className={cn('transition-shadow hover:shadow-md', className)} {...props}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-500">{label}</p>
-            <p className={cn('text-2xl font-bold mt-1', valueColorClass[variant])}>{value}</p>
-            {trend && <p className={cn('text-xs mt-1', trendColorClass[variant])}>{trend}</p>}
+            <p className={cn('mt-1 text-2xl font-bold', valueColorClass[variant])}>{value}</p>
+            {trend && <p className={cn('mt-1 text-xs', trendColorClass[variant])}>{trend}</p>}
           </div>
           {icon && <div className="text-2xl opacity-80">{icon}</div>}
         </div>

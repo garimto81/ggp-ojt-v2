@@ -17,7 +17,7 @@ export default function EmptyState({
 }) {
   const icons = {
     document: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -27,7 +27,7 @@ export default function EmptyState({
       </svg>
     ),
     search: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -37,7 +37,7 @@ export default function EmptyState({
       </svg>
     ),
     user: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -47,7 +47,7 @@ export default function EmptyState({
       </svg>
     ),
     default: (
-      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -59,10 +59,10 @@ export default function EmptyState({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="text-gray-300 mb-4">{icons[icon] || icons.default}</div>
-      <h3 className="text-lg font-medium text-gray-700 mb-1">{title}</h3>
-      {description && <p className="text-sm text-gray-500 mb-4">{description}</p>}
+    <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+      <div className="mb-4 text-gray-300">{icons[icon] || icons.default}</div>
+      <h3 className="mb-1 text-lg font-medium text-gray-700">{title}</h3>
+      {description && <p className="mb-4 text-sm text-gray-500">{description}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>
   );

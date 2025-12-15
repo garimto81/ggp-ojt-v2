@@ -53,19 +53,19 @@ export default function RoleSelectionPage() {
   // Not logged in - show login page
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <span className="text-white font-bold text-2xl">OJT</span>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600">
+            <span className="text-2xl font-bold text-white">OJT</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">OJT Master</h1>
-          <p className="text-gray-600 mb-8">AI 기반 온보딩 교육 플랫폼</p>
+          <h1 className="mb-2 text-2xl font-bold text-gray-800">OJT Master</h1>
+          <p className="mb-8 text-gray-600">AI 기반 온보딩 교육 플랫폼</p>
 
           <button
             onClick={onGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-6 py-3 transition hover:border-gray-300 hover:bg-gray-50"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -86,7 +86,7 @@ export default function RoleSelectionPage() {
             <span className="font-medium text-gray-700">Google로 로그인</span>
           </button>
 
-          <p className="text-xs text-gray-400 mt-6">
+          <p className="mt-6 text-xs text-gray-400">
             로그인 시 서비스 이용약관에 동의하는 것으로 간주됩니다.
           </p>
         </div>
@@ -96,11 +96,11 @@ export default function RoleSelectionPage() {
 
   // Logged in but no role - show role selection
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full">
-        <div className="text-center mb-8">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-xl">
+        <div className="mb-8 text-center">
           <h2 className="text-2xl font-bold text-gray-800">역할 선택</h2>
-          <p className="text-gray-600 mt-2">{user.name}님, 사용할 역할을 선택해주세요.</p>
+          <p className="mt-2 text-gray-600">{user.name}님, 사용할 역할을 선택해주세요.</p>
         </div>
 
         <div className="space-y-4">
@@ -111,11 +111,11 @@ export default function RoleSelectionPage() {
               <button
                 key={role}
                 onClick={() => onRoleSelect(role)}
-                className={`w-full p-6 border-2 border-gray-200 rounded-xl ${style.borderHover} ${style.bgHover} transition text-left group`}
+                className={`w-full rounded-xl border-2 border-gray-200 p-6 ${style.borderHover} ${style.bgHover} group text-left transition`}
               >
                 <div className="flex items-center gap-4">
                   <div
-                    className={`w-12 h-12 ${style.iconBg} rounded-xl flex items-center justify-center ${style.iconBgHover} transition`}
+                    className={`h-12 w-12 ${style.iconBg} flex items-center justify-center rounded-xl ${style.iconBgHover} transition`}
                   >
                     <span className="text-2xl">{style.emoji}</span>
                   </div>

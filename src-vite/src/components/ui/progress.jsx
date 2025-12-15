@@ -18,7 +18,7 @@ const Progress = forwardRef(({ className, value = 0, max = 100, ...props }, ref)
       {...props}
     >
       <div
-        className="h-full bg-primary-500 transition-all duration-300 ease-in-out"
+        className="bg-primary-500 h-full transition-all duration-300 ease-in-out"
         style={{ width: `${percentage}%` }}
       />
     </div>

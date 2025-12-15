@@ -24,7 +24,7 @@ export default function Spinner({ size = 'md', color = 'primary', className = ''
 
   return (
     <div
-      className={`${sizeClasses[size]} ${colorClasses[color]} rounded-full animate-spin ${className}`}
+      className={`${sizeClasses[size]} ${colorClasses[color]} animate-spin rounded-full ${className}`}
       role="status"
       aria-label="로딩 중"
     >
@@ -39,12 +39,12 @@ export default function Spinner({ size = 'md', color = 'primary', className = ''
 export function LoadingOverlay({ message = '로딩 중...' }) {
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       role="dialog"
       aria-modal="true"
       aria-label="로딩 중"
     >
-      <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-4 rounded-xl bg-white p-6">
         <Spinner size="lg" color="primary" />
         <p className="text-gray-600">{message}</p>
       </div>

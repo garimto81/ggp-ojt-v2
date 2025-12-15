@@ -34,11 +34,11 @@ export default function ContentQuickActions({
   };
 
   return (
-    <div className="flex items-center gap-1 mt-2">
+    <div className="mt-2 flex items-center gap-1">
       <button
         onClick={() => onPreview(doc)}
-        className={`p-1.5 rounded text-xs transition ${
-          isSelected ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100 text-gray-600'
+        className={`rounded p-1.5 text-xs transition ${
+          isSelected ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
         }`}
         aria-label={`${doc.title} 미리보기`}
         title="미리보기"
@@ -49,7 +49,7 @@ export default function ContentQuickActions({
       {doc.status === 'review' && (
         <button
           onClick={() => onStatusChange(doc.id, 'published')}
-          className="p-1.5 rounded text-xs hover:bg-green-100 text-green-700 transition"
+          className="rounded p-1.5 text-xs text-green-700 transition hover:bg-green-100"
           aria-label={`${doc.title} 게시`}
           title="게시"
         >
@@ -60,7 +60,7 @@ export default function ContentQuickActions({
       {doc.status === 'published' && (
         <button
           onClick={() => onStatusChange(doc.id, 'hidden')}
-          className="p-1.5 rounded text-xs hover:bg-yellow-100 text-yellow-700 transition"
+          className="rounded p-1.5 text-xs text-yellow-700 transition hover:bg-yellow-100"
           aria-label={`${doc.title} 숨기기`}
           title="숨기기"
         >
@@ -71,7 +71,7 @@ export default function ContentQuickActions({
       {doc.status === 'hidden' && (
         <button
           onClick={() => onStatusChange(doc.id, 'published')}
-          className="p-1.5 rounded text-xs hover:bg-green-100 text-green-700 transition"
+          className="rounded p-1.5 text-xs text-green-700 transition hover:bg-green-100"
           aria-label={`${doc.title} 다시 게시`}
           title="다시 게시"
         >
@@ -82,7 +82,7 @@ export default function ContentQuickActions({
       <button
         onClick={handleDelete}
         disabled={isDeleting}
-        className="p-1.5 rounded text-xs hover:bg-red-100 text-red-600 transition disabled:opacity-50"
+        className="rounded p-1.5 text-xs text-red-600 transition hover:bg-red-100 disabled:opacity-50"
         aria-label={`${doc.title} 삭제`}
         title="삭제"
       >

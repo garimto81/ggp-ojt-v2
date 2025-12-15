@@ -312,7 +312,7 @@ export default function AdminDashboard() {
   if (isLoading || docsLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
       </div>
     );
   }
@@ -328,8 +328,8 @@ export default function AdminDashboard() {
       </StatsCardGrid>
 
       {/* Tabs (Issue #77: Added a11y) */}
-      <div className="bg-white rounded-xl shadow-sm">
-        <div className="border-b flex" role="tablist" aria-label="관리자 대시보드 탭">
+      <div className="rounded-xl bg-white shadow-sm">
+        <div className="flex border-b" role="tablist" aria-label="관리자 대시보드 탭">
           {['users', 'docs', 'stats', 'settings'].map((tab) => (
             <button
               key={tab}
@@ -340,7 +340,7 @@ export default function AdminDashboard() {
               id={`tab-${tab}`}
               className={`px-6 py-3 font-medium transition ${
                 activeTab === tab
-                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -592,11 +592,11 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
   };
 
   return (
-    <nav className="flex items-center justify-center gap-1 mt-4" aria-label="페이지네이션">
+    <nav className="mt-4 flex items-center justify-center gap-1" aria-label="페이지네이션">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="이전 페이지"
       >
         이전
@@ -611,10 +611,10 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
           <button
             key={page}
             onClick={() => onPageChange(page)}
-            className={`px-3 py-2 text-sm font-medium rounded-lg ${
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
               currentPage === page
-                ? 'text-blue-600 bg-blue-50 border border-blue-300'
-                : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-100'
+                ? 'border border-blue-300 bg-blue-50 text-blue-600'
+                : 'border border-gray-300 bg-white text-gray-500 hover:bg-gray-100'
             }`}
             aria-label={`${page}페이지로 이동`}
             aria-current={currentPage === page ? 'page' : undefined}
@@ -627,7 +627,7 @@ function Pagination({ currentPage, totalPages, onPageChange }) {
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="다음 페이지"
       >
         다음

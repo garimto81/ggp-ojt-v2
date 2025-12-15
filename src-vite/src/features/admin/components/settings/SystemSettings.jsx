@@ -178,19 +178,19 @@ export function SystemSettings() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-6 w-6 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white border rounded-lg p-6 space-y-6">
+    <div className="space-y-6 rounded-lg border bg-white p-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-gray-800">시스템 설정</h3>
         <button
           onClick={handleSave}
           disabled={isSaving || !isAdmin}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSaving ? '저장 중...' : '저장'}
         </button>
@@ -199,11 +199,11 @@ export function SystemSettings() {
       {/* Default Departments */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">기본 부서 목록</label>
-        <div className="flex flex-wrap gap-2 mb-2">
+        <div className="mb-2 flex flex-wrap gap-2">
           {departments.map((dept) => (
             <div
               key={dept}
-              className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm"
+              className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1 text-sm text-blue-700"
             >
               <span>{dept}</span>
               <button
@@ -224,12 +224,12 @@ export function SystemSettings() {
             onChange={(e) => setNewDepartment(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddDepartment()}
             placeholder="새 부서명 입력"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <button
             type="button"
             onClick={handleAddDepartment}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+            className="rounded-lg bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-700"
           >
             추가
           </button>
@@ -245,7 +245,7 @@ export function SystemSettings() {
           id="default-role"
           value={defaultRole}
           onChange={(e) => setDefaultRole(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
         >
           <option value="mentee">Mentee (멘티)</option>
           <option value="mentor">Mentor (멘토)</option>
@@ -265,7 +265,7 @@ export function SystemSettings() {
             max="100"
             value={quizPassScore}
             onChange={(e) => setQuizPassScore(Number(e.target.value))}
-            className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <span className="text-sm text-gray-500">점 (0-100)</span>
         </div>
@@ -284,7 +284,7 @@ export function SystemSettings() {
             max="10"
             value={autoHideReportCount}
             onChange={(e) => setAutoHideReportCount(Number(e.target.value))}
-            className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
           <span className="text-sm text-gray-500">건 이상 신고 시 자동으로 콘텐츠 숨김 처리</span>
         </div>

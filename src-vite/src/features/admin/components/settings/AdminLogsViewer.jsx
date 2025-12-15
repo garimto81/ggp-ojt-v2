@@ -117,7 +117,7 @@ export function AdminLogsViewer() {
   if (isLoading && page === 1) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-6 w-6 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
       </div>
     );
   }
@@ -125,18 +125,18 @@ export function AdminLogsViewer() {
   // 테이블 에러 시 안내 메시지 표시
   if (tableError) {
     return (
-      <div className="bg-white border rounded-lg p-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">시스템 로그</h3>
+      <div className="rounded-lg border bg-white p-6">
+        <h3 className="mb-4 text-lg font-bold text-gray-800">시스템 로그</h3>
         <div className="py-8 text-center text-gray-500">
           <p className="text-amber-600">{tableError}</p>
-          <p className="text-sm mt-2">관리자에게 문의하세요.</p>
+          <p className="mt-2 text-sm">관리자에게 문의하세요.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border rounded-lg p-6 space-y-4">
+    <div className="space-y-4 rounded-lg border bg-white p-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-bold text-gray-800">시스템 로그</h3>
         <span className="text-sm text-gray-500">최근 {logs.length}개 표시</span>
@@ -155,7 +155,7 @@ export function AdminLogsViewer() {
               return (
                 <div
                   key={log.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg ${typeStyle.bg} border border-gray-200`}
+                  className={`flex items-start gap-3 rounded-lg p-3 ${typeStyle.bg} border border-gray-200`}
                 >
                   {/* Icon */}
                   <div className="text-xl" aria-hidden="true">
@@ -163,13 +163,13 @@ export function AdminLogsViewer() {
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className={`font-medium ${typeStyle.color}`}>
                         {formatEventType(log.event_type)}
                       </span>
                       {log.table_name && (
-                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">
+                        <span className="rounded bg-gray-200 px-2 py-0.5 text-xs">
                           {formatTableName(log.table_name)}
                         </span>
                       )}
@@ -210,7 +210,7 @@ export function AdminLogsViewer() {
 
                     {/* Record ID (for debugging) */}
                     {log.record_id && (
-                      <div className="mt-1 text-xs text-gray-400 font-mono">
+                      <div className="mt-1 font-mono text-xs text-gray-400">
                         ID: {log.record_id.substring(0, 8)}...
                       </div>
                     )}
@@ -226,7 +226,7 @@ export function AdminLogsViewer() {
               <button
                 onClick={handleLoadMore}
                 disabled={isLoading}
-                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="rounded-lg bg-gray-600 px-4 py-2 text-sm text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isLoading ? '로드 중...' : '더 보기'}
               </button>

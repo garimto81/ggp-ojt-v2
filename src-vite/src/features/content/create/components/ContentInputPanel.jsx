@@ -424,21 +424,21 @@ export default function ContentInputPanel({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">콘텐츠 입력</h2>
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-bold text-gray-800">콘텐츠 입력</h2>
 
         {/* Input Type Selector (#215 - 생성 중 비활성화) */}
-        <div className="flex gap-2 mb-4">
+        <div className="mb-4 flex gap-2">
           {['text', 'url', 'pdf'].map((type) => (
             <button
               key={type}
               onClick={() => setInputType(type)}
               disabled={isProcessing}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                 inputType === type
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              } ${isProcessing ? 'cursor-not-allowed opacity-50' : ''}`}
             >
               {type === 'text' && '텍스트'}
               {type === 'url' && 'URL'}
@@ -454,7 +454,7 @@ export default function ContentInputPanel({
           onChange={(e) => setInputTitle(e.target.value)}
           placeholder="문서 제목"
           disabled={isProcessing}
-          className={`w-full px-4 py-2 border rounded-lg mb-4 ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
+          className={`mb-4 w-full rounded-lg border px-4 py-2 ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
         />
 
         {/* Content Input (#215 - 생성 중 비활성화) */}
@@ -464,7 +464,7 @@ export default function ContentInputPanel({
             onChange={(e) => setRawInput(e.target.value)}
             placeholder="교육 콘텐츠를 입력하세요..."
             disabled={isProcessing}
-            className={`w-full h-64 px-4 py-3 border rounded-lg resize-none ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
+            className={`h-64 w-full resize-none rounded-lg border px-4 py-3 ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
           />
         )}
 
@@ -475,7 +475,7 @@ export default function ContentInputPanel({
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="https://example.com/article"
             disabled={isProcessing}
-            className={`w-full px-4 py-2 border rounded-lg ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
+            className={`w-full rounded-lg border px-4 py-2 ${isProcessing ? 'bg-gray-100 opacity-50' : ''}`}
           />
         )}
 
@@ -496,12 +496,11 @@ export default function ContentInputPanel({
             {!selectedPdf ? (
               <label
                 htmlFor="pdf-upload"
-                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-                           hover:border-blue-400 hover:bg-blue-50 transition block"
+                className="block cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition hover:border-blue-400 hover:bg-blue-50"
               >
                 <div className="flex flex-col items-center gap-2">
                   <svg
-                    className="w-12 h-12 text-gray-400"
+                    className="h-12 w-12 text-gray-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -518,17 +517,17 @@ export default function ContentInputPanel({
                 </div>
               </label>
             ) : (
-              <div className="border rounded-lg p-4 bg-gray-50">
+              <div className="rounded-lg border bg-gray-50 p-4">
                 {/* Selected file info */}
-                <div className="flex items-center justify-between mb-3">
+                <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100">
+                      <svg className="h-6 w-6 text-red-600" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8.5 13.5l1.5 1.5-1.5 1.5L7 15l1.5-1.5zm7 1.5l-1.5 1.5L12.5 15l1.5-1.5 1.5 1.5zM11 18h2v-2h-2v2z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-800 truncate max-w-xs">
+                      <p className="max-w-xs truncate font-medium text-gray-800">
                         {selectedPdf.name}
                       </p>
                       <p className="text-sm text-gray-500">
@@ -542,7 +541,7 @@ export default function ContentInputPanel({
                     className="p-1 text-gray-400 hover:text-gray-600"
                     title="파일 제거"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -556,19 +555,19 @@ export default function ContentInputPanel({
                 {/* Progress bar */}
                 {isProcessing && pdfProgress > 0 && (
                   <div className="mb-3">
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 overflow-hidden rounded-full bg-gray-200">
                       <div
                         className="h-full bg-blue-500 transition-all duration-300"
                         style={{ width: `${pdfProgress}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 text-center">{pdfProgress}%</p>
+                    <p className="mt-1 text-center text-xs text-gray-500">{pdfProgress}%</p>
                   </div>
                 )}
 
                 {/* PDF 선택 완료 안내 (#206) */}
                 {selectedPdf && !rawInput && !isProcessing && (
-                  <p className="text-sm text-green-600 text-center">
+                  <p className="text-center text-sm text-green-600">
                     ✓ PDF 선택 완료 - 아래 &quot;교육 자료 생성&quot; 버튼을 클릭하세요
                   </p>
                 )}
@@ -576,13 +575,13 @@ export default function ContentInputPanel({
                 {/* Extracted text preview */}
                 {rawInput && (
                   <div className="mt-3">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="mb-2 flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700">추출된 텍스트</span>
                       <span className="text-xs text-gray-500">
                         {rawInput.length.toLocaleString()}자
                       </span>
                     </div>
-                    <div className="max-h-32 overflow-y-auto p-3 bg-white border rounded text-sm text-gray-600">
+                    <div className="max-h-32 overflow-y-auto rounded border bg-white p-3 text-sm text-gray-600">
                       {rawInput.substring(0, 500)}
                       {rawInput.length > 500 && '...'}
                     </div>
@@ -602,7 +601,7 @@ export default function ContentInputPanel({
         )}
 
         {/* Auto Split Toggle */}
-        <label className="flex items-center gap-2 mt-4">
+        <label className="mt-4 flex items-center gap-2">
           <input
             type="checkbox"
             checked={autoSplit}
@@ -615,18 +614,18 @@ export default function ContentInputPanel({
         </label>
 
         {/* Skip AI Analysis Toggle (#219) */}
-        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-          <label className="flex items-center gap-2 cursor-pointer">
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
               checked={skipAiAnalysis}
               onChange={(e) => setSkipAiAnalysis(e.target.checked)}
-              className="w-4 h-4 text-amber-500 rounded focus:ring-amber-500"
+              className="h-4 w-4 rounded text-amber-500 focus:ring-amber-500"
             />
             <span className="text-sm font-medium text-amber-800">AI 분석 없이 원본 저장</span>
           </label>
           {skipAiAnalysis && (
-            <p className="text-xs text-amber-700 mt-2 ml-6">
+            <p className="mt-2 ml-6 text-xs text-amber-700">
               ⚠️ 원본 그대로 저장됩니다. 퀴즈가 생성되지 않습니다.
             </p>
           )}
@@ -634,13 +633,13 @@ export default function ContentInputPanel({
 
         {/* Progress Bar (#215 - Gemini 생성 중 프로그레스바) */}
         {isProcessing && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
               <span className="text-sm font-medium text-blue-700">{processingStatus}</span>
             </div>
             <Progress value={progress} className="h-3" />
-            <p className="text-xs text-blue-600 mt-2 text-center">{progress}% 완료</p>
+            <p className="mt-2 text-center text-xs text-blue-600">{progress}% 완료</p>
           </div>
         )}
 
@@ -648,13 +647,13 @@ export default function ContentInputPanel({
         <button
           onClick={handleGenerate}
           disabled={isProcessing}
-          className={`w-full mt-4 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition ${
+          className={`mt-4 w-full rounded-lg py-3 font-medium text-white transition disabled:cursor-not-allowed disabled:bg-gray-300 ${
             skipAiAnalysis ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-500 hover:bg-blue-600'
           }`}
         >
           {isProcessing ? (
             <span className="flex items-center justify-center gap-2">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               처리 중...
             </span>
           ) : skipAiAnalysis ? (
@@ -666,7 +665,7 @@ export default function ContentInputPanel({
           )}
         </button>
         {!aiStatus.online && !skipAiAnalysis && (
-          <p className="text-xs text-amber-600 mt-2 text-center">
+          <p className="mt-2 text-center text-xs text-amber-600">
             ⚠️ Gemini 서비스 오프라인 - 원문 그대로 등록됩니다
           </p>
         )}

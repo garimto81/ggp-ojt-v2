@@ -19,13 +19,13 @@ export default function Header({ aiStatus }) {
   // 기존 테마 로직은 constants.js에 보존 (향후 커스텀 테마 지원 시 활용)
 
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className="border-b bg-white shadow-sm">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">OJT</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600">
+              <span className="text-lg font-bold text-white">OJT</span>
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-800">OJT Master</h1>
@@ -42,7 +42,7 @@ export default function Header({ aiStatus }) {
             {/* AI Status (Gemini) */}
             <div className="flex items-center gap-2" title={aiStatus.model || 'Gemini API'}>
               <span
-                className={`w-2 h-2 rounded-full ${
+                className={`h-2 w-2 rounded-full ${
                   aiStatus.online ? 'bg-green-500' : 'bg-red-500'
                 }`}
               />
@@ -64,7 +64,7 @@ export default function Header({ aiStatus }) {
                   모드
                 </Button>
                 {showModeMenu && (
-                  <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border z-50">
+                  <div className="absolute right-0 z-50 mt-2 w-40 rounded-lg border bg-white shadow-lg">
                     <button
                       onClick={() => {
                         handleModeSwitch('admin');
@@ -116,8 +116,8 @@ export default function Header({ aiStatus }) {
 
         {/* Temp mode warning banner - PRD-0015 */}
         {isTempMentorMode && (
-          <div className="mt-3 px-4 py-2 bg-warning-50 border border-warning-200 rounded-lg flex items-center justify-between">
-            <span className="text-sm text-warning-700">MENTOR 모드로 작업 중입니다 (임시)</span>
+          <div className="bg-warning-50 border-warning-200 mt-3 flex items-center justify-between rounded-lg border px-4 py-2">
+            <span className="text-warning-700 text-sm">MENTOR 모드로 작업 중입니다 (임시)</span>
             <Button
               variant="link"
               size="sm"

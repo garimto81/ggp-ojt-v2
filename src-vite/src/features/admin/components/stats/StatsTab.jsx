@@ -22,64 +22,64 @@ export default function StatsTab({
     <div role="tabpanel" id="tabpanel-stats" aria-labelledby="tab-stats">
       <div className="space-y-6">
         {/* Overview Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 rounded-lg p-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="rounded-lg bg-blue-50 p-4">
             <p className="text-sm text-blue-600">총 멘티</p>
             <p className="text-xl font-bold text-blue-800">{overallStats.totalMentees}명</p>
           </div>
-          <div className="bg-green-50 rounded-lg p-4">
+          <div className="rounded-lg bg-green-50 p-4">
             <p className="text-sm text-green-600">활동 멘티</p>
             <p className="text-xl font-bold text-green-800">{overallStats.activeMentees}명</p>
           </div>
-          <div className="bg-purple-50 rounded-lg p-4">
+          <div className="rounded-lg bg-purple-50 p-4">
             <p className="text-sm text-purple-600">전체 완료</p>
             <p className="text-xl font-bold text-purple-800">
               {overallStats.completedAllMentees}명
             </p>
           </div>
-          <div className="bg-orange-50 rounded-lg p-4">
+          <div className="rounded-lg bg-orange-50 p-4">
             <p className="text-sm text-orange-600">평균 진도</p>
             <p className="text-xl font-bold text-orange-800">{overallStats.avgProgressPercent}%</p>
           </div>
         </div>
 
         {/* Charts Row 1 */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white border rounded-lg p-4">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-lg border bg-white p-4">
             <ActivityChart data={last7Days} title="최근 7일 학습 활동" />
           </div>
-          <div className="bg-white border rounded-lg p-4">
+          <div className="rounded-lg border bg-white p-4">
             <PassRateChart passRate={stats.passRate} />
           </div>
         </div>
 
         {/* Charts Row 2 */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white border rounded-lg p-4">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-lg border bg-white p-4">
             <MentorContributionChart data={mentorContribution} />
           </div>
-          <div className="bg-white border rounded-lg p-4">
+          <div className="rounded-lg border bg-white p-4">
             <ProgressDistributionChart userProgress={userProgress} />
           </div>
         </div>
 
         {/* Team Stats Chart */}
         {teamStats.length > 0 && (
-          <div className="bg-white border rounded-lg p-4">
+          <div className="rounded-lg border bg-white p-4">
             <TeamStatsChart data={teamStats} />
           </div>
         )}
 
         {/* Weakness Table */}
         {quizWeakness.length > 0 && (
-          <div className="bg-white border rounded-lg p-4">
-            <h3 className="text-sm font-bold text-gray-700 mb-4">
+          <div className="rounded-lg border bg-white p-4">
+            <h3 className="mb-4 text-sm font-bold text-gray-700">
               취약 파트 분석 (실패율 높은 문서)
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-500 border-b">
+                  <tr className="border-b text-left text-gray-500">
                     <th className="pb-2">문서</th>
                     <th className="pb-2">팀</th>
                     <th className="pb-2">시도</th>
@@ -95,7 +95,7 @@ export default function StatsTab({
                       <td className="py-2">{item.attempts}</td>
                       <td className="py-2">
                         <span
-                          className={`px-2 py-1 rounded text-xs ${
+                          className={`rounded px-2 py-1 text-xs ${
                             item.failRate >= 50
                               ? 'bg-red-100 text-red-700'
                               : item.failRate >= 30
@@ -117,12 +117,12 @@ export default function StatsTab({
 
         {/* Mentee Progress Table */}
         {userProgress.length > 0 && (
-          <div className="bg-white border rounded-lg p-4">
-            <h3 className="text-sm font-bold text-gray-700 mb-4">멘티별 진도 현황</h3>
+          <div className="rounded-lg border bg-white p-4">
+            <h3 className="mb-4 text-sm font-bold text-gray-700">멘티별 진도 현황</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-500 border-b">
+                  <tr className="border-b text-left text-gray-500">
                     <th className="pb-2">이름</th>
                     <th className="pb-2">부서</th>
                     <th className="pb-2">완료/전체</th>
@@ -140,7 +140,7 @@ export default function StatsTab({
                       </td>
                       <td className="py-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-200">
                             <div
                               className={`h-full rounded-full ${
                                 user.progressPercent === 100
@@ -161,7 +161,7 @@ export default function StatsTab({
                 </tbody>
               </table>
               {userProgress.length > 10 && (
-                <p className="text-xs text-gray-400 mt-2 text-center">
+                <p className="mt-2 text-center text-xs text-gray-400">
                   상위 10명 표시 (전체 {userProgress.length}명)
                 </p>
               )}
