@@ -197,7 +197,7 @@ export function DocsProvider({ children }) {
 export function useDocs() {
   const context = useContext(DocsContext);
   if (!context) {
-    throw new Error('useDocs must be used within a DocsProvider');
+    throw new Error('useDocs는 DocsProvider 내부에서 사용해야 합니다.');
   }
   return context;
 }

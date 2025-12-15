@@ -112,7 +112,7 @@ export function ToastProvider({ children }) {
 export function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
+    throw new Error('useToast는 ToastProvider 내부에서 사용해야 합니다.');
   }
   return context;
 }
