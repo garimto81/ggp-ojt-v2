@@ -12,28 +12,71 @@ import { useState, useCallback } from 'react';
 import { sanitizeHtml } from '@/utils/helpers';
 import { useLearningRecord } from '@features/learning/quiz/hooks/useLearningRecord';
 
-// iframe 임베딩이 차단되는 도메인 (X-Frame-Options: SAMEORIGIN)
-const BLOCKED_DOMAINS = [
-  'docs.google.com',
-  'drive.google.com',
-  'sheets.google.com',
-  'slides.google.com',
-  'forms.google.com',
-  'sites.google.com',
-  'calendar.google.com',
-  'mail.google.com',
-  'meet.google.com',
-  'notion.so',
-  'notion.site',
-  'figma.com',
-  'miro.com',
-  'dropbox.com',
-  'onedrive.live.com',
-  'sharepoint.com',
-];
+// iframe 임베딩이 불가능한 도메인 (변환 방법 없음)
+const BLOCKED_DOMAINS = ['notion.so', 'notion.site', 'figma.com', 'miro.com'];
 
 /**
- * URL이 iframe 임베딩 차단 도메인인지 확인
+ * URL을 iframe 임베딩 가능한 형태로 변환
+ * Google Docs/Drive는 /preview 또는 ?embedded=true로 변환하면 iframe 허용
+ *
+ * @see https://support.google.com/docs/thread/24486495
+ * @see https://requestly.com/blog/bypass-iframe-busting-header/
+ */
+function transformUrlForEmbed(url) {
+  if (!url) return url;
+
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    const pathname = urlObj.pathname;
+
+    // Google Docs: /edit → /preview
+    if (hostname === 'docs.google.com') {
+      // /document/d/{ID}/edit → /document/d/{ID}/preview
+      if (pathname.includes('/document/d/')) {
+        return url.replace(/\/(edit|view)(\?.*)?$/, '/preview');
+      }
+      // /spreadsheets/d/{ID}/edit → /spreadsheets/d/{ID}/preview
+      if (pathname.includes('/spreadsheets/d/')) {
+        return url.replace(/\/(edit|view)(\?.*)?$/, '/preview');
+      }
+      // /presentation/d/{ID}/edit → /presentation/d/{ID}/embed
+      if (pathname.includes('/presentation/d/')) {
+        return url.replace(/\/(edit|view)(\?.*)?$/, '/embed');
+      }
+      // /forms/d/{ID}/viewform → 그대로 (이미 embed 가능)
+      if (pathname.includes('/forms/')) {
+        return url;
+      }
+    }
+
+    // Google Sheets (sheets.google.com)
+    if (hostname === 'sheets.google.com') {
+      return url.replace(/\/(edit|view)(\?.*)?$/, '/preview');
+    }
+
+    // Google Slides (slides.google.com)
+    if (hostname === 'slides.google.com') {
+      return url.replace(/\/(edit|view)(\?.*)?$/, '/embed');
+    }
+
+    // Google Drive: /view → /preview
+    if (hostname === 'drive.google.com') {
+      // /file/d/{ID}/view → /file/d/{ID}/preview
+      if (pathname.includes('/file/d/')) {
+        return url.replace(/\/view(\?.*)?$/, '/preview');
+      }
+    }
+
+    // 변환 불필요한 URL은 그대로 반환
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * URL이 iframe 임베딩이 완전히 불가능한 도메인인지 확인
  */
 function isBlockedDomain(url) {
   if (!url) return false;
@@ -60,6 +103,9 @@ export default function SectionViewer({ doc, userId, onStudyComplete, onBackToLi
 
   // 차단된 도메인이면 미리 에러 상태로 설정
   const isBlocked = isBlockedDomain(doc?.source_url);
+
+  // Google Docs/Drive URL을 iframe 임베딩 가능한 형태로 변환
+  const embedUrl = transformUrlForEmbed(doc?.source_url);
 
   const sections = doc?.sections || [];
   const totalSections = sections.length;
@@ -318,10 +364,10 @@ export default function SectionViewer({ doc, userId, onStudyComplete, onBackToLi
               </p>
             </div>
           ) : (
-            /* URL iframe 뷰어 */
+            /* URL iframe 뷰어 - Google Docs/Drive는 변환된 URL 사용 */
             <div className="border rounded-lg overflow-hidden bg-gray-50">
               <iframe
-                src={doc.source_url}
+                src={embedUrl}
                 title={doc.title}
                 className="w-full h-[600px] border-0"
                 sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
