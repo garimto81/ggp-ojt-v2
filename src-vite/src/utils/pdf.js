@@ -7,7 +7,9 @@
 // react-pdf의 PdfViewer.jsx는 뷰어용, 이 파일은 텍스트 추출용
 
 import * as pdfjsLib from 'pdfjs-dist';
+
 import { CONFIG } from '../constants';
+
 import { extractTextWithOcr, isValidOcrText } from './ocr';
 
 // PDF.js Worker 설정 (CDN 사용)

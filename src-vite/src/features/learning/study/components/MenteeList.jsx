@@ -2,9 +2,10 @@
 // @agent learning-study-agent
 
 import { useState, useMemo } from 'react';
-import { useDocs } from '@/contexts/DocsContext';
-import { useAuth } from '@/contexts/AuthContext';
+
 import { VIEW_STATES } from '@/constants';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDocs } from '@/contexts/DocsContext';
 
 export default function MenteeList() {
   const { allDocs, availableTeams, setSelectedDoc, isLoading } = useDocs();

@@ -9,15 +9,17 @@
  */
 
 import { useState } from 'react';
-import { useDocs } from '@/contexts/DocsContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Toast } from '@/contexts/ToastContext';
+
 import { VIEW_STATES } from '@/constants';
 import { WARNING, EMPTY } from '@/constants/messages';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDocs } from '@/contexts/DocsContext';
+import { Toast } from '@/contexts/ToastContext';
 
 // Refactored components
-import SectionViewer from './SectionViewer';
 import QuizSession from '@features/learning/quiz/components/QuizSession';
+
+import SectionViewer from './SectionViewer';
 
 export default function MenteeStudy() {
   const { selectedDoc, setSelectedDoc } = useDocs();

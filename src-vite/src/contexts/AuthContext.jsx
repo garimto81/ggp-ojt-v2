@@ -1,10 +1,11 @@
 // OJT Master v2.3.0 - Authentication Context
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+import { VIEW_STATES, ROLES } from '../constants';
 import { supabase } from '../utils/api';
 import { dbGetAll, dbSave } from '../utils/db';
 import { SecureSession, getViewStateByRole } from '../utils/helpers';
-import { VIEW_STATES, ROLES } from '../constants';
 
 const AuthContext = createContext(null);
 

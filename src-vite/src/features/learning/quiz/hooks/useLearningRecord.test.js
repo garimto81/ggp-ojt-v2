@@ -7,10 +7,12 @@
  * - 퀴즈 없음 → 열람 완료 (passed=true, score=null)
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useLearningRecord } from './useLearningRecord';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { SUCCESS, WARNING } from '@/constants/messages';
+
+import { useLearningRecord } from './useLearningRecord';
 
 // Mock Supabase with upsert support
 const mockUpsert = vi.fn(() => Promise.resolve({ data: null, error: null }));

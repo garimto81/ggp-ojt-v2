@@ -3,9 +3,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import DOMPurify from 'dompurify';
-import { SUPABASE_CONFIG, CONFIG } from '../constants';
 
-// Import gemini-agent functions
 import {
   generateOJTContent as geminiGenerateOJTContent,
   generateUrlQuizOnly as geminiGenerateUrlQuizOnly,
@@ -13,6 +11,10 @@ import {
   checkStatus as geminiCheckStatus,
   validateQuizQuality as geminiValidateQuizQuality,
 } from '@features/ai/agents/gemini';
+
+import { SUPABASE_CONFIG, CONFIG } from '../constants';
+
+// Import gemini-agent functions
 
 // Initialize Supabase client with session auto-refresh (Issue #188)
 export const supabase = createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.ANON_KEY, {

@@ -2,6 +2,7 @@
 // Native select with consistent styling (no Radix dependency for simplicity)
 
 import { forwardRef } from 'react';
+
 import { cn } from '@/lib/utils';
 
 const Select = forwardRef(({ className, children, ...props }, ref) => {

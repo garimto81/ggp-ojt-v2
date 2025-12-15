@@ -2,6 +2,7 @@
 // Compound component pattern for flexible card layouts
 
 import { forwardRef } from 'react';
+
 import { cn } from '@/lib/utils';
 
 const Card = forwardRef(({ className, ...props }, ref) => (

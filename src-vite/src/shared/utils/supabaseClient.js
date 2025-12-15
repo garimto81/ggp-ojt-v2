@@ -2,6 +2,7 @@
 // Supabase 싱글톤 클라이언트
 
 import { createClient } from '@supabase/supabase-js';
+
 import { SUPABASE_CONFIG } from '../constants';
 
 // Validate Supabase URL at startup (Issue #52)

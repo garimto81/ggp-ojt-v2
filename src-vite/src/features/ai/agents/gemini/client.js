@@ -5,12 +5,7 @@
  */
 
 import { GEMINI_CONFIG, CONFIG } from '@/constants';
-import {
-  createOJTContentPrompt,
-  createQuizRegeneratePrompt,
-  createUrlQuizOnlyPrompt,
-  createHealthCheckPrompt,
-} from './prompts';
+
 import {
   parseJSONResponse,
   parseJSONArrayResponse,
@@ -18,6 +13,12 @@ import {
   normalizeQuizQuestion,
   createPlaceholderQuiz,
 } from './parser';
+import {
+  createOJTContentPrompt,
+  createQuizRegeneratePrompt,
+  createUrlQuizOnlyPrompt,
+  createHealthCheckPrompt,
+} from './prompts';
 
 /** Rate Limiting 설정 */
 const RATE_LIMIT_CONFIG = {

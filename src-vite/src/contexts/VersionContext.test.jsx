@@ -1,8 +1,9 @@
 // VersionContext 테스트
 // Issue #231: 동일 버전에서 업데이트 알림 오류 수정 검증
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { VersionProvider, useVersion } from './VersionContext';
 
 // Mock version.js

@@ -1,6 +1,7 @@
 // OJT Master v2.3.0 - Helper Utilities
 
 import DOMPurify from 'dompurify';
+
 import { CONFIG } from '../constants';
 
 /**

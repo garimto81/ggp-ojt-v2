@@ -3,10 +3,12 @@
  * @agent learning-quiz-agent
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import QuizSession from './QuizSession';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { WARNING } from '@/constants/messages';
+
+import QuizSession from './QuizSession';
 
 // Mock dependencies
 vi.mock('@/contexts/ToastContext', () => ({

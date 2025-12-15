@@ -2,6 +2,7 @@
 // Accessible data table with compound components
 
 import { forwardRef } from 'react';
+
 import { cn } from '@/lib/utils';
 
 const Table = forwardRef(({ className, ...props }, ref) => (

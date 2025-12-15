@@ -3,12 +3,13 @@
 // Issue #200: AI 상태 관리를 AIContext로 통합
 
 import { Suspense, lazy } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useAI } from '@/contexts/AIContext';
+
+import Header from '@/components/Header';
 import { VIEW_STATES } from '@/constants';
+import { useAI } from '@/contexts/AIContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Shared layouts (always loaded)
-import Header from '@/components/Header';
 
 // Feature-based components with lazy loading
 const RoleSelectionPage = lazy(() =>

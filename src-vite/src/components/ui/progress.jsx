@@ -2,6 +2,7 @@
 // Accessible progress bar
 
 import { forwardRef } from 'react';
+
 import { cn } from '@/lib/utils';
 
 const Progress = forwardRef(({ className, value = 0, max = 100, ...props }, ref) => {
