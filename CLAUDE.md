@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **OJT Master** - AI 기반 신입사원 온보딩 교육 자료 생성 및 학습 관리 시스템
 
-- **Version**: 2.32.0 (see `src-vite/src/version.js` for SSOT)
+- **Version**: `src-vite/src/version.js` 참조 (SSOT)
 - **Production**: https://ggp-ojt-v2.vercel.app (Vercel + Supabase Cloud + Gemini API)
 
 ## Tech Stack
@@ -14,11 +14,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 영역 | 기술 |
 |------|------|
 | Frontend | React 19 + Vite 7 + Tailwind CSS 4 |
-| UI Components | shadcn/ui (Button, Card, Input, Badge, Table, Select, Progress) |
+| UI Components | shadcn/ui (Radix UI 기반) |
 | Database | Supabase (PostgreSQL + REST API) |
 | AI | Google Gemini API (gemini-2.5-flash-lite) |
 | Editor | Quill 2.0 (Rich Text) |
 | PDF | pdfjs-dist + Tesseract.js (OCR) |
+| Charts | Chart.js + react-chartjs-2 |
+| Storage | Dexie.js (IndexedDB) |
+| UI Utils | Allotment (분할 패널), React Hot Toast |
 | Package Manager | pnpm 9.15+ (root) / npm (src-vite) |
 
 ## Commands
@@ -86,14 +89,16 @@ ggp_ojt_v2/
 
 ## Path Aliases (vite.config.js)
 
-| Alias | 경로 |
-|-------|------|
-| `@` | `src/` |
-| `@features` | `src/features/` |
-| `@shared` | `src/shared/` |
-| `@utils` | `src/utils/` (legacy) |
-| `@contexts` | `src/contexts/` (legacy) |
-| `@components` | `src/components/` (legacy) |
+| Alias | 경로 | 비고 |
+|-------|------|------|
+| `@` | `src/` | 권장 |
+| `@features` | `src/features/` | 권장 |
+| `@shared` | `src/shared/` | 권장 |
+| `@utils` | `src/utils/` | legacy |
+| `@contexts` | `src/contexts/` | legacy |
+| `@hooks` | `src/hooks/` | legacy |
+| `@layouts` | `src/layouts/` | legacy |
+| `@components` | `src/components/` | legacy |
 
 > **참고**: `@/` 형식과 `@prefix` 형식 모두 지원 (하위 호환)
 
@@ -151,9 +156,26 @@ import { generateOJTContent, checkStatus } from '@features/ai/agents/gemini';
 
 ```javascript
 // src/version.js - 버전 정보 SSOT
-export const APP_VERSION = '2.32.0';
-export const BUILD_HASH = '730f37f';
+export const APP_VERSION = '2.34.0';  // 실제 버전은 version.js 참조
+export const BUILD_HASH = '5dc149a';
+export const BUILD_SUMMARY = 'DepartmentsContext';
+export const BUILD_DATE = '2025-12-12';
 ```
+
+### Code Splitting (vite.config.js)
+
+빌드 시 자동 청킹으로 초기 로드 최적화:
+
+| Chunk | 포함 내용 |
+|-------|----------|
+| `vendor-react` | react, react-dom |
+| `vendor-supabase` | @supabase |
+| `vendor-chart` | chart.js, react-chartjs |
+| `vendor-quill` | quill |
+| `vendor-pdf` | pdfjs-dist |
+| `vendor-dexie` | dexie |
+| `feature-admin` | features/admin/ |
+| `feature-ai` | features/ai/ |
 
 ### shadcn/ui Components (v2.32.0+)
 
@@ -228,4 +250,6 @@ teams (id UUID PK, name, slug, display_order, is_active)
 | `src-vite/src/version.js` | 버전 정보 SSOT + 변경 이력 |
 | `docs/BLOCK_AGENT_SYSTEM.md` | Feature 모듈 상세 |
 | `docs/STATE_MANAGEMENT_GUIDE.md` | 상태 관리 가이드 |
+| `docs/DEBUG_GUIDE.md` | 디버깅 가이드 |
+| `docs/ACCESSIBILITY_CHECKLIST.md` | 접근성 체크리스트 |
 | `database/agents/supabase/SCHEMA.md` | DB 스키마 상세 |
