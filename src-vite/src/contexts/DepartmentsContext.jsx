@@ -154,7 +154,7 @@ export function DepartmentsProvider({ children }) {
 export function useDepartments() {
   const context = useContext(DepartmentsContext);
   if (!context) {
-    throw new Error('useDepartments must be used within DepartmentsProvider');
+    throw new Error('useDepartments는 DepartmentsProvider 내부에서 사용해야 합니다.');
   }
   return context;
 }

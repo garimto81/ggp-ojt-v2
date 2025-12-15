@@ -73,7 +73,7 @@ export function AIProvider({ children }) {
 export function useAI() {
   const context = useContext(AIContext);
   if (!context) {
-    throw new Error('useAI must be used within an AIProvider');
+    throw new Error('useAI는 AIProvider 내부에서 사용해야 합니다.');
   }
   return context;
 }

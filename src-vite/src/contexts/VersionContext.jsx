@@ -133,7 +133,7 @@ export function VersionProvider({ children }) {
 export function useVersion() {
   const context = useContext(VersionContext);
   if (!context) {
-    throw new Error('useVersion must be used within a VersionProvider');
+    throw new Error('useVersion은 VersionProvider 내부에서 사용해야 합니다.');
   }
   return context;
 }
